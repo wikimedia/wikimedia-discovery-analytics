@@ -1,0 +1,7 @@
+[gerrit]
+host=gerrit.wikimedia.org
+port=29418
+project=wikimedia/discovery/analytics.git
+defaultbranch=master
+defaultrebase=0
+
