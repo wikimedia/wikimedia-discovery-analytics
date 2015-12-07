@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bundle-app xmlns="uri:oozie:bundle:0.2"
+    name="transfer_to_es-bundle">
+
+    <parameters>
+
+        <!-- Required properties -->
+        <property><name>queue_name</name></property>
+        <property><name>coordinator_file</name></property>
+        <property><name>name_node</name></property>
+        <property><name>job_tracker</name></property>
+
+        <property><name>start_time</name></property>
+        <property><name>stop_time</name></property>
+    </parameters>
+
+    <coordinator name="transfer_to_es-eqiad-coord">
+        <app-path>${coordinator_file}</app-path>
+        <configuration>
+            <property>
+                <name>elasticsearch_url</name>
+                <value>http://search.svc.eqiad.wmnet</value>
+            </property>
+        </configuration>
+    </coordinator>
+
+    <coordinator name="transfer_to_es-codfw-coord">
+        <app-path>${coordinator_file}</app-path>
+        <configuration>
+            <property>
+                <name>elasticsearch_url</name>
+                <value>http://search.svc.codfw.wmnet</value>
+            </property>
+        </configuration>
+    </coordinator>
+
+</bundle-app>

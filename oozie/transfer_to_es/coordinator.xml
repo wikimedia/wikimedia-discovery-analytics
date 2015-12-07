@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<coordinator-app xmlns="uri:oozie:coordinator:0.4"
+    name="transfer_to_es-coord"
+    frequency="${coord:days(days_aggregated)}"
+    start="${start_time}"
+    end="${stop_time}"
+    timezone="Universal">
+
+    <parameters>
+
+        <!-- Required properties. -->
+        <property><name>workflow_file</name></property>
+        <property><name>start_time</name></property>
+        <property><name>stop_time</name></property>
+
+        <property><name>discovery_data_directory</name></property>
+        <property><name>discovery_datasets_file</name></property>
+        <property><name>popularity_score_data_directory</name></property>
+        <property><name>popularity_score_table</name></property>
+
+        <property><name>days_aggregated</name></property>
+
+        <property><name>queue_name</name></property>
+        <property><name>name_node</name></property>
+        <property><name>job_tracker</name></property>
+
+        <property><name>spark_number_executors</name></property>
+        <property><name>spark_executor_memory</name></property>
+        <property><name>spark_driver_memory</name></property>
+
+        <property><name>send_error_email_workflow_file</name></property>
+
+        <property><name>discovery_oozie_directory</name></property>
+
+        <property><name>transfer_to_es_batch_size</name></property>
+        <property><name>elasticsearch_url</name></property>
+    </parameters>
+
+    <controls>
+        <!--
+        If a materialized job sits around for too long we could end up
+        doing the export during the busiest part of the day for the ES
+        servers. Rather than risking an overload of the servers timeout
+        the job after two hours.
+        -->
+        <timeout>120</timeout>
+
+        <!--
+        transfering these documents can load up elasticsearch, additionally
+        one instance running would overwrite the work of another instance
+        running at the same time. Limit concurrency to prevent this. The
+        timeout setting combined with once a week runs should prevent this
+        anyways, but this is set for safety sake.
+        -->
+        <concurrency>1</concurrency>
+
+        <!--
+        Since we expect only one incarnation per weekly dataset, the
+        default throttle of 12 is way to high, and there is not need
+        to keep that many materialized jobs around.
+        -->
+        <throttle>1</throttle>
+    </controls>
+
+    <datasets>
+        <!--
+        Include discovery datasets files.
+        $discovery_datasets_file will be used as the output events
+        -->
+        <include>${discovery_datasets_file}</include>
+    </datasets>
+
+    <input-events>
+        <data-in name="popularity_score_input" dataset="popularity_score">
+            <instance>${coord:current(0)}</instance>
+        </data-in>
+    </input-events>
+
+    <action>
+        <workflow>
+            <app-path>${workflow_file}</app-path>
+            <configuration>
+
+                <property>
+                    <name>year</name>
+                    <value>${coord:formatTime(coord:nominalTime(), "y")}</value>
+                </property>
+                <property>
+                    <name>month</name>
+                    <value>${coord:formatTime(coord:nominalTime(), "M")}</value>
+                </property>
+                <property>
+                    <name>day</name>
+                    <value>${coord:formatTime(coord:nominalTime(), "d")}</value>
+                </property>
+
+            </configuration>
+        </workflow>
+    </action>
+</coordinator-app>

@@ -6,6 +6,7 @@ from optparse import OptionParser
 import requests
 import json
 import logging
+import subprocess
 
 oparser = OptionParser()
 oparser.add_option("-s", "--source", dest="source", help="source for the data", metavar="SOURCE")
@@ -19,7 +20,10 @@ oparser.add_option("-b", "--batch", dest="batch", help="Items per batch to load 
 ITEMS_PER_BATCH = int(options.batch)
 SOURCE = options.source
 TARGET = options.url
-hostMap = json.load(open(options.hostmap))
+if options.hostmap[0:24] == 'hdfs://analytics-hadoop/':
+    hostMap = json.loads(subprocess.check_output(["hdfs", "dfs", "-cat", options.hostmap[23:]]))
+else:
+    hostMap = json.load(open(options.hostmap))
 
 print "Transferring from %s to %s" % (SOURCE, TARGET)
 

@@ -28,7 +28,7 @@ Use this dataset in your coordinator.xml files by setting:
              frequency="${coord:days(days_aggregated)}"
              initial-instance="${start_time}"
              timezone="Universal">
-        <uri-template>${discovery_data_directory}/popularity_score/agg_days=${days_aggregated}/year=${YEAR}/month=${"$"}{MONTH + 0}/day=${"$"}{DAY + 0}</uri-template>
+        <uri-template>${popularity_score_data_directory}/agg_days=${days_aggregated}/year=${YEAR}/month=${"$"}{MONTH + 0}/day=${"$"}{DAY + 0}</uri-template>
         <done-flag>_SUCCESS</done-flag>
     </dataset>
 </datasets>
