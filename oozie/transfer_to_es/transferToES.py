@@ -14,12 +14,16 @@ oparser.add_option("-u", "--url", dest="url", help="URL to send the data to", me
 oparser.add_option("-m", "--hostmap", dest="hostmap", help="Hostnames map in JSON",
     metavar="FILE", default="hostmap.json")
 oparser.add_option("-b", "--batch", dest="batch", help="Items per batch to load into ES", metavar="NUM", default="10")
+oparser.add_option("-n", "--noop-within", dest="noop",
+    help="Only perform update if value has changed by more than this percentage",
+    metavar="NOOP_WITHIN")
 
 (options, args) = oparser.parse_args()
 
 ITEMS_PER_BATCH = int(options.batch)
 SOURCE = options.source
 TARGET = options.url
+NOOP_WITHIN = options.noop
 if options.hostmap[0:24] == 'hdfs://analytics-hadoop/':
     hostMap = json.loads(subprocess.check_output(["hdfs", "dfs", "-cat", options.hostmap[23:]]))
 else:
@@ -41,7 +45,18 @@ if __name__ == "__main__":
         Create textual representation of the document data for one document
         """
         updateData = {"update": {"_id": document.page_id}}
-        updateDoc = {"doc": {"score": document.score}}
+        if NOOP_WITHIN:
+            updateDoc = {"script": {
+                "script": "super_detect_noop",
+                "lang": "native",
+                "params": {
+                    "detectors": {"score": "within " + NOOP_WITHIN + "%"},
+                    "source": {"score": document.score},
+                },
+            }}
+        else:
+            updateDoc = {"doc": {"score": document.score}}
+
         return json.dumps(updateData) + "\n" + json.dumps(updateDoc) + "\n"
 
     def getTargetURL(wikihost):
