@@ -17,6 +17,8 @@ oparser.add_option("-b", "--batch", dest="batch", help="Items per batch to load 
 oparser.add_option("-n", "--noop-within", dest="noop",
     help="Only perform update if value has changed by more than this percentage",
     metavar="NOOP_WITHIN")
+oparser.add_option("-f", "--field-name", dest="field", help="Name of elasticsearch field to populate",
+    metavar="FIELD", default="score")
 
 (options, args) = oparser.parse_args()
 
@@ -24,6 +26,7 @@ ITEMS_PER_BATCH = int(options.batch)
 SOURCE = options.source
 TARGET = options.url
 NOOP_WITHIN = options.noop
+FIELD = options.field
 if options.hostmap[0:24] == 'hdfs://analytics-hadoop/':
     hostMap = json.loads(subprocess.check_output(["hdfs", "dfs", "-cat", options.hostmap[23:]]))
 else:
@@ -50,12 +53,12 @@ if __name__ == "__main__":
                 "script": "super_detect_noop",
                 "lang": "native",
                 "params": {
-                    "detectors": {"score": "within " + NOOP_WITHIN + "%"},
-                    "source": {"score": document.score},
+                    "detectors": {FIELD: "within " + NOOP_WITHIN + "%"},
+                    "source": {FIELD: document.score},
                 },
             }}
         else:
-            updateDoc = {"doc": {"score": document.score}}
+            updateDoc = {"doc": {FIELD: document.score}}
 
         return json.dumps(updateData) + "\n" + json.dumps(updateDoc) + "\n"
 
