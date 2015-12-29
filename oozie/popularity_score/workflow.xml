@@ -149,7 +149,7 @@
         </spark>
 
         <ok to="add_hive_partition"/>
-        <error to="kill"/>
+        <error to="send_error_email"/>
     </action>
 
     <action name="add_hive_partition">
@@ -172,7 +172,7 @@
             </configuration>
         </sub-workflow>
         <ok to="mark_popularity_score_dataset_done"/>
-        <error to="kill"/>
+        <error to="send_error_email"/>
     </action>
 
     <action name="mark_popularity_score_dataset_done">
@@ -186,7 +186,7 @@
             </configuration>
         </sub-workflow>
         <ok to="end"/>
-        <error to="kill"/>
+        <error to="send_error_email"/>
     </action>
 
     <action name="send_error_email">
@@ -197,6 +197,14 @@
                 <property>
                     <name>parent_name</name>
                     <value>${wf:name()}</value>
+                </property>
+                <property>
+                    <name>parent_failed_action</name>
+                    <value>${wf:lastErrorNode()}</value>
+                </property>
+                <property>
+                    <name>to</name>
+                    <value>ebernhardson@wikimedia.org,dcausse@wikimedia.org,smalyshev@wikimedia.org</value>
                 </property>
             </configuration>
         </sub-workflow>
