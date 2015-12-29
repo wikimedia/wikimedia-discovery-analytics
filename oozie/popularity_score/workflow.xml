@@ -23,70 +23,70 @@
             <name>hive_site_xml</name>
             <description>hive-site.xml file path in HDFS</description>
         </property>
-		<property>
-			<name>hive_lib_path></name>
-			<description>Local path to hive jars on executor instances</description>
-		</property>
+        <property>
+            <name>hive_lib_path></name>
+            <description>Local path to hive jars on executor instances</description>
+        </property>
 
-		<property>
-			<name>spark_assembly_jar</name>
-			<description>HDFS path to spark-assembly.jar</description>
-		</property>
-		<property>
-			<name>spark_number_executors</name>
-			<description>Number of executors to run job with</description>>
-		</property>
-		<property>
-			<name>spark_executor_memory</name>
-			<description>Amount of memory to reserve on executor instances</description>
-		</property>
-		<property>
-			<name>spark_driver_memory</name>
-			<description>Amount of memory to reserve on driver instance</description>
-		</property>
+        <property>
+            <name>spark_assembly_jar</name>
+            <description>HDFS path to spark-assembly.jar</description>
+        </property>
+        <property>
+            <name>spark_number_executors</name>
+            <description>Number of executors to run job with</description>>
+        </property>
+        <property>
+            <name>spark_executor_memory</name>
+            <description>Amount of memory to reserve on executor instances</description>
+        </property>
+        <property>
+            <name>spark_driver_memory</name>
+            <description>Amount of memory to reserve on driver instance</description>
+        </property>
 
-		<property>
-			<name>pageview_hourly_table</name>
-			<description>Fully qualified name of the pageview_hourly table in hive</description>
-		</property>
-		<property>
-			<name>pageview_hourly_data_directory</name>
-			<description>Directory which contains the data for hive wmf.pageview_hourly table</description>
-		</property>
-		<property>
-			<name>popularity_score_table</name>
-			<description>Fully qualified name of the popularity_score table in hive</description>
-		</property>
+        <property>
+            <name>pageview_hourly_table</name>
+            <description>Fully qualified name of the pageview_hourly table in hive</description>
+        </property>
+        <property>
+            <name>pageview_hourly_data_directory</name>
+            <description>Directory which contains the data for hive wmf.pageview_hourly table</description>
+        </property>
+        <property>
+            <name>popularity_score_table</name>
+            <description>Fully qualified name of the popularity_score table in hive</description>
+        </property>
         <property>
             <name>popularity_score_data_directory</name>
             <description>The popularity_score directory path in HDFS</description>
         </property>
-		<property>
-			<name>popularity_score_partition_directory</name>
-			<value>${popularity_score_data_directory}/agg_days=${days_aggregated}/year=${year}/month=${month}/day=${day}</value>
-		</property>
+        <property>
+            <name>popularity_score_partition_directory</name>
+            <value>${popularity_score_data_directory}/agg_days=${days_aggregated}/year=${year}/month=${month}/day=${day}</value>
+        </property>
 
-		<property>
-			<name>days_aggregated</name>
-			<description>Number of days to aggregate page views over</description>
-		</property>
+        <property>
+            <name>days_aggregated</name>
+            <description>Number of days to aggregate page views over</description>
+        </property>
 
         <property>
             <name>start_date</name>
             <description>The inclusive date to start aggregation on in YYYY/MM/DD format</description>
         </property>
-		<property>
-			<name>year</name>
-			<description>Exlusive four digit year portion of date to end aggregation on</description>
-		</property>
-		<property>
-			<name>month</name>
-			<description>Exclusive unpadded month portion of date to end aggregation on</description>
-		</property>
-		<property>
-			<name>day</name>
-			<description>Exclusive unpadded day portion of date to end aggregation on</description>
-		</property>
+        <property>
+            <name>year</name>
+            <description>Exlusive four digit year portion of date to end aggregation on</description>
+        </property>
+        <property>
+            <name>month</name>
+            <description>Exclusive unpadded month portion of date to end aggregation on</description>
+        </property>
+        <property>
+            <name>day</name>
+            <description>Exclusive unpadded day portion of date to end aggregation on</description>
+        </property>
 
         <property>
             <name>add_partition_workflow_file</name>
@@ -165,10 +165,10 @@
                     <name>partition_spec</name>
                     <value>agg_days=${days_aggregated},year=${year},month=${month},day=${day}</value>
                 </property>
-				<property>
-					<name>location</name>
-					<value>${popularity_score_partition_directory}</value>
-				</property>
+                <property>
+                    <name>location</name>
+                    <value>${popularity_score_partition_directory}</value>
+                </property>
             </configuration>
         </sub-workflow>
         <ok to="mark_popularity_score_dataset_done"/>

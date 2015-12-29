@@ -15,26 +15,26 @@
 
         <property><name>pageview_datasets_file</name></property>
         <property><name>pageview_data_directory</name></property>
-		<property><name>pageview_hourly_data_directory</name></property>
-		<property><name>pageview_hourly_table</name></property>
+        <property><name>pageview_hourly_data_directory</name></property>
+        <property><name>pageview_hourly_table</name></property>
 
         <property><name>discovery_data_directory</name></property>
         <property><name>discovery_datasets_file</name></property>
-		<property><name>popularity_score_data_directory</name></property>
-		<property><name>popularity_score_table</name></property>
+        <property><name>popularity_score_data_directory</name></property>
+        <property><name>popularity_score_table</name></property>
 
-		<property><name>days_aggregated</name></property>
+        <property><name>days_aggregated</name></property>
 
         <property><name>queue_name</name></property>
         <property><name>name_node</name></property>
         <property><name>job_tracker</name></property>
 
         <property><name>hive_site_xml</name></property>
-		<property><name>hive_lib_path</name></property>
+        <property><name>hive_lib_path</name></property>
 
-		<property><name>spark_number_executors</name></property>
-		<property><name>spark_executor_memory</name></property>
-		<property><name>spark_driver_memory</name></property>
+        <property><name>spark_number_executors</name></property>
+        <property><name>spark_executor_memory</name></property>
+        <property><name>spark_driver_memory</name></property>
 
         <property><name>mark_directory_done_workflow_file</name></property>
         <property><name>send_error_email_workflow_file</name></property>
