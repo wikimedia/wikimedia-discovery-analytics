@@ -153,7 +153,7 @@
                 </property>
                 <property>
                     <name>to</name>
-                    <value>ebernhardson@wikimedia.org,dcausse@wikimedia.org,smalyshev@wikimedia.org</value>
+                    <value>discovery-alerts@lists.wikimedia.org</value>
                 </property>
             </configuration>
         </sub-workflow>
