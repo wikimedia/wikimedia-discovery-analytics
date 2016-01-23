@@ -132,6 +132,10 @@
             <arg>${transfer_to_es_batch_size}</arg>
             <arg>--hostmap</arg>
             <arg>${transfer_to_es_hostmap_file}</arg>
+            <arg>--noop-within</arg>
+            <arg>20</arg>
+            <arg>--field-name</arg>
+            <arg>popularity_score</arg>
         </spark>
 
         <ok to="end"/>
