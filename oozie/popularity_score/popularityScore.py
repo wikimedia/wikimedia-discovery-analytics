@@ -1,4 +1,5 @@
 import pyspark
+import pyspark.sql
 import pyspark.sql.functions
 import pyspark.sql.types
 import argparse
@@ -79,6 +80,8 @@ if __name__ == "__main__":
     sqlContext = pyspark.sql.SqlContext(sc)
 
     parquetPaths = pageViewHourlyPathList(args.source_dir, args.start_date, args.end_date)
+    print("loading pageview data from:")
+    print("\t" + "\n\t".join(parquetPaths) + "\n")
     dataFrame = sqlContext.parquetFile(*parquetPaths)
 
     aggregated = dataFrame.groupBy(
@@ -98,6 +101,7 @@ if __name__ == "__main__":
         pyspark.sql.types.DoubleType(),
     )
 
+    print("Calculating popularity score")
     result = aggregated.select(
         aggregated.project,
         aggregated.page_id,
@@ -110,4 +114,5 @@ if __name__ == "__main__":
     deleteHdfsDir(args.output_dir)
     # the default spark.sql.shuffle.partitions creates 200 partitions, resulting in 3mb files.
     # repartition to achieve result files close to 256mb (our default hdfs block size)
+    print("Writing results to " + args.output_dir)
     result.repartition(3).saveAsParquetFile(args.output_dir)

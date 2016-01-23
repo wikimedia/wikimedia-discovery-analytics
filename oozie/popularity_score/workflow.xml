@@ -24,7 +24,7 @@
             <description>hive-site.xml file path in HDFS</description>
         </property>
         <property>
-            <name>hive_lib_path></name>
+            <name>hive_lib_path</name>
             <description>Local path to hive jars on executor instances</description>
         </property>
 
@@ -34,7 +34,7 @@
         </property>
         <property>
             <name>spark_number_executors</name>
-            <description>Number of executors to run job with</description>>
+            <description>Number of executors to run job with</description>
         </property>
         <property>
             <name>spark_executor_memory</name>
