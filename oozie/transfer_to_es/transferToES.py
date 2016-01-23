@@ -93,7 +93,7 @@ if __name__ == "__main__":
 
     def parseResponse(resp):
         respData = resp.json()
-        for item in respData.get('items', default={}):
+        for item in respData.get('items', {}):
             if 'update' not in item:
                 continue
             if 'status' not in item['update']:
