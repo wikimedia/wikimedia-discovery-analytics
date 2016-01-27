@@ -119,37 +119,25 @@ if __name__ == "__main__":
         if not sendDataToES(data, url):
             failedDocumentCounter.add(len(documents))
 
-    def addToList(listNow, element):
+    def groupAndSend(rows):
         """
-        Add element to list, will send the data out once batch is full
+        Group together documents from the same project and batch them
+        to elasticsearch
         """
-        if len(listNow) < ITEMS_PER_BATCH:
-            return listNow + [element]
-        # Treshold reached, send the list out
-        sendDocumentsToES(listNow)
-        return [element]
-
-    def mergeLists(listOne, listTwo):
-        """
-        Merge two lists, will send the data out once batch is full
-        """
-        newList = listOne + listTwo
-        if len(newList) < ITEMS_PER_BATCH:
-            return newList
-        sendDocumentsToES(newList)
-        return []
-
-    def sendCombined(data):
-        """
-        Send data for the key (hostname) to ES
-        """
-        sendDocumentsToES(data[1])
+        group = []
+        for row in rows:
+            if len(group) > 0 and group[0].project != row.project:
+                sendDocumentsToES(group)
+                group = []
+            group.append(row)
+            if len(group) >= ITEMS_PER_BATCH:
+                sendDocumentsToES(group)
+                group = []
+        if len(group) > 0:
+            sendDocumentsToES(group)
 
     data = sqlContext.load(SOURCE)
     # print "Count: %d\n" % data.count()
-    # Here's what is going on here: we combine the data by project,
-    # and when the list of projects reaches ITEMS_PER_BATCH we send them out
-    # The foreach() part will send out the ones that remained
-    data.map(lambda x: (x.project, x)).combineByKey(lambda x: [x], addToList, mergeLists).foreach(sendCombined)
+    data.sort(data.project).foreachPartition(groupAndSend)
     print "%d documents processed, %d failed." % (documentCounter.value, failedDocumentCounter.value,)
     print "%d requests successful, %d requests failed." % (updateCounter.value, errorCounter.value)
