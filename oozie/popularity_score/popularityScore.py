@@ -77,7 +77,7 @@ def calcProjectPageViews(dataFrame):
 if __name__ == "__main__":
     args = parser.parse_args()
     sc = pyspark.SparkContext(appName="Discovery Popularity Score")
-    sqlContext = pyspark.sql.SqlContext(sc)
+    sqlContext = pyspark.sql.SQLContext(sc)
 
     parquetPaths = pageViewHourlyPathList(args.source_dir, args.start_date, args.end_date)
     print("loading pageview data from:")
