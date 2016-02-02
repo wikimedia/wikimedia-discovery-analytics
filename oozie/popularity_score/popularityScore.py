@@ -115,4 +115,5 @@ if __name__ == "__main__":
     # the default spark.sql.shuffle.partitions creates 200 partitions, resulting in 3mb files.
     # repartition to achieve result files close to 256mb (our default hdfs block size)
     print("Writing results to " + args.output_dir)
-    result.repartition(3).saveAsParquetFile(args.output_dir)
+    # In pyspark 1.4 this can be updated to use coalesce which is more performant
+    result.repartition(16).saveAsParquetFile(args.output_dir)
