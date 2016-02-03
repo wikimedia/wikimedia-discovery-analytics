@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <coordinator-app xmlns="uri:oozie:coordinator:0.4"
-    name="transfer_to_es-coord"
+		name="transfer_to_es-${elasticsearch_url}-coord"
     frequency="${coord:days(days_aggregated)}"
     start="${start_time}"
     end="${stop_time}"

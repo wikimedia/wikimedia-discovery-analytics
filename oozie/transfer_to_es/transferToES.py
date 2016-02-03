@@ -35,7 +35,7 @@ else:
 print "Transferring from %s to %s" % (SOURCE, TARGET)
 
 if __name__ == "__main__":
-    sc = SparkContext(appName="Send To ES")
+    sc = SparkContext(appName="Send To ES: %s" % (TARGET))
     sqlContext = SQLContext(sc)
     broardcastMap = sc.broadcast(hostMap)
     documentCounter = sc.accumulator(0)
