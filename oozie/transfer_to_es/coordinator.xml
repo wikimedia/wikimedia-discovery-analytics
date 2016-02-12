@@ -38,12 +38,10 @@
 
     <controls>
         <!--
-        If a materialized job sits around for too long we could end up
-        doing the export during the busiest part of the day for the ES
-        servers. Rather than risking an overload of the servers timeout
-        the job after two hours.
+		This job only runs once a week, we can be patient and wait up to
+		24 hours for the data to be ready.
         -->
-        <timeout>120</timeout>
+        <timeout>1440</timeout>
 
         <!--
         transfering these documents can load up elasticsearch, additionally
