@@ -74,6 +74,39 @@ def calcProjectPageViews(dataFrame):
 
     return {item.project: item.view_count for item in data}
 
+
+def calcPopularityScore(sc, source):
+    filtered = source.filter(
+        source.page_id.isNotNull()
+    )
+
+    aggregated = filtered.groupBy(
+        source.page_id,
+        source.project,
+    ).agg(
+        source.project,
+        source.page_id,
+        pyspark.sql.functions.sum(source.view_count).alias("view_count"),
+    )
+
+    projectPageViews = sc.broadcast(calcProjectPageViews(filtered))
+    # This is a very naive version of the popularity score, likely it will be extended over
+    # time to be more robust. For the initial iterations this should be sufficient though.
+    popularityScore = pyspark.sql.functions.udf(
+        lambda view_count, project: view_count / float(projectPageViews.value[project]),
+        pyspark.sql.types.DoubleType(),
+    )
+
+    print("Calculating popularity score")
+    return aggregated.select(
+        aggregated.project,
+        aggregated.page_id,
+        popularityScore(
+            aggregated.view_count,
+            aggregated.project
+        ).alias('score'),
+    )
+
 if __name__ == "__main__":
     args = parser.parse_args()
     sc = pyspark.SparkContext(appName="Discovery Popularity Score")
@@ -83,33 +116,7 @@ if __name__ == "__main__":
     print("loading pageview data from:")
     print("\t" + "\n\t".join(parquetPaths) + "\n")
     dataFrame = sqlContext.parquetFile(*parquetPaths)
-
-    aggregated = dataFrame.groupBy(
-        dataFrame.page_id,
-        dataFrame.project,
-    ).agg(
-        dataFrame.project,
-        dataFrame.page_id,
-        pyspark.sql.functions.sum(dataFrame.view_count).alias("view_count"),
-    )
-
-    projectPageViews = sc.broadcast(calcProjectPageViews(dataFrame))
-    # This is a very naive version of the popularity score, likely it will be extended over
-    # time to be more robust. For the initial iterations this should be sufficient though.
-    popularityScore = pyspark.sql.functions.udf(
-        lambda view_count, project: view_count / float(projectPageViews.value[project]),
-        pyspark.sql.types.DoubleType(),
-    )
-
-    print("Calculating popularity score")
-    result = aggregated.select(
-        aggregated.project,
-        aggregated.page_id,
-        popularityScore(
-            aggregated.view_count,
-            aggregated.project
-        ).alias('score'),
-    )
+    result = calcPopularityScore(sc, dataFrame)
 
     deleteHdfsDir(args.output_dir)
     # the default spark.sql.shuffle.partitions creates 200 partitions, resulting in 3mb files.
