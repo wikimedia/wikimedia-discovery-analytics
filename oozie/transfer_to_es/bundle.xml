@@ -19,7 +19,7 @@
         <configuration>
             <property>
                 <name>elasticsearch_url</name>
-                <value>http://search.svc.eqiad.wmnet:9200</value>
+                <value>http://elastic1017.eqiad.wmnet:9200</value>
             </property>
         </configuration>
     </coordinator>
@@ -29,7 +29,7 @@
         <configuration>
             <property>
                 <name>elasticsearch_url</name>
-                <value>http://search.svc.codfw.wmnet:9200</value>
+                <value>http://elastic2010.codfw.wmnet:9200</value>
             </property>
         </configuration>
     </coordinator>
