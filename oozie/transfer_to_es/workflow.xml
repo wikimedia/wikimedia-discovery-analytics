@@ -117,12 +117,16 @@
                     <name>oozie.launcher.mapreduce.map.memory.mb</name>
                     <value>${oozie_launcher_memory}</value>
                 </property>
+                <property>
+                    <name>oozie.launcher.mapreduce.map.env</name>
+                    <value>SPARK_HOME=/usr/lib/spark</value>
+                </property>
             </configuration>
             <master>yarn-cluster</master>
             <mode>cluster</mode>
             <name>Discovery Transfer To ${elasticsearch_url}</name>
             <jar>${pyspark_transfer_to_es_script}</jar>
-            <spark-opts>--conf spark.yarn.jar=${spark_assembly_jar} --conf spark.sql.shuffle.partitions=${spark_sql_shuffle_partitions} --executor-memory ${spark_executor_memory} --driver-memory ${spark_driver_memory} --num-executors ${spark_number_executors} --queue ${queue_name} --conf spark.yarn.appMasterEnv.SPARK_HOME=/bogus</spark-opts>
+            <spark-opts>--conf spark.yarn.jar=${spark_assembly_jar} --conf spark.sql.shuffle.partitions=${spark_sql_shuffle_partitions} --executor-memory ${spark_executor_memory} --driver-memory ${spark_driver_memory} --num-executors ${spark_number_executors} --queue ${queue_name}</spark-opts>
             <!-- arguments for pyspark script -->
             <arg>--source</arg>
             <arg>${popularity_score_partition_directory}</arg>
