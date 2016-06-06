@@ -99,8 +99,11 @@ if __name__ == "__main__":
             if 'status' not in item['update']:
                 continue
             if item['update']['status'] != 200:
-                if 'error' in item['update'] and item['update']['error'][0:24] == 'DocumentMissingException':
-                    continue
+                try:
+                    if item['update']['error']['type'] == 'document_missing_exception':
+                        continue
+                except KeyError:
+                    pass
                 failedDocumentCounter.add(1)
 
     def sendDocumentsToES(documents):
