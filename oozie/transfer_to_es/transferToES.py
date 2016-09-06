@@ -53,7 +53,7 @@ if __name__ == "__main__":
                 "script": "super_detect_noop",
                 "lang": "native",
                 "params": {
-                    "detectors": {FIELD: "within " + NOOP_WITHIN + "%"},
+                    "handlers": {FIELD: "within " + NOOP_WITHIN + "%"},
                     "source": {FIELD: document.score},
                 },
             }}
