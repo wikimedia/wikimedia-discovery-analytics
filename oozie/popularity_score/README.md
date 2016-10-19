@@ -20,6 +20,3 @@ for the first day of the week calculated in
 Note that this job uses the pageview_hourly dataset.  If a pageview
 aggregation job does not have the _SUCCESS done-flag in the directory,
 the data for that week will not be aggregated until it does.
-
-@TODO is that desirable? We can probably get reasonable results if an
-hour or two from the week is missing

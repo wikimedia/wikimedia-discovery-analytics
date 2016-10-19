@@ -4,14 +4,9 @@ CREATE EXTERNAL TABLE `popularity_score`(
   `score` double COMMENT 'Popularity score between 0 and 1')
 PARTITIONED BY (
   `agg_days` int COMMENT 'Unpadded number of days aggregated over',
-  `year` int COMMENT 'Unpadded year score aggregation starts at',
-  `month` int COMMENT 'Unpadded month score aggregation starts at',
-  `day` int COMMENT 'Unpadded day score aggregation starts at',
-ROW FORMAT SERDE
-  'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'
-STORED AS INPUTFORMAT
-  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat'
-OUTPUTFORMAT
-  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
+  `year` int COMMENT 'Unpadded year score aggregation ends at',
+  `month` int COMMENT 'Unpadded month score aggregation ends at',
+  `day` int COMMENT 'Unpadded day score aggregation ends at')
+STORED AS PARQUET
 LOCATION
   'hdfs://analytics-hadoop/wmf/data/wmf/discovery/popularity_score'
