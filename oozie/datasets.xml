@@ -31,4 +31,5 @@ Use this dataset in your coordinator.xml files by setting:
         <uri-template>${popularity_score_data_directory}/agg_days=${days_aggregated}/year=${YEAR}/month=${"$"}{MONTH + 0}/day=${"$"}{DAY + 0}</uri-template>
         <done-flag>_SUCCESS</done-flag>
     </dataset>
+
 </datasets>
