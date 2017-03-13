@@ -50,7 +50,7 @@ if __name__ == "__main__":
         updateData = {"update": {"_id": document.page_id}}
         if NOOP_WITHIN:
             updateDoc = {"script": {
-                "script": "super_detect_noop",
+                "inline": "super_detect_noop",
                 "lang": "native",
                 "params": {
                     "handlers": {FIELD: "within " + NOOP_WITHIN + "%"},
