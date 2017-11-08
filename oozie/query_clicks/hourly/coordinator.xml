@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<coordinator-app xmlns="uri:oozie:coordinator:0.4"
+    name="query_clicks_hourly-coord"
+    frequency="${coord:hours(1)}"
+    start="${start_time}"
+    end="${stop_time}"
+    timezone="Universal">
+
+    <parameters>
+
+        <!-- Required properties. -->
+        <property><name>workflow_file</name></property>
+        <property><name>start_time</name></property>
+        <property><name>stop_time</name></property>
+
+        <property><name>webrequest_datasets_file</name></property>
+        <property><name>webrequest_data_directory</name></property>
+        <property><name>webrequest_table</name></property>
+
+        <property><name>query_clicks_datasets_file</name></property>
+        <property><name>discovery_data_directory</name></property>
+        <property><name>cirrussearchrequestset_table</name></property>
+        <property><name>query_clicks_hourly_table</name></property>
+        <property><name>mediawiki_raw_log_data_directory</name></property>
+
+        <property><name>analytics_artifacts_directory</name></property>
+        <property><name>refinery_jar_version</name></property>
+        <property><name>namespace_map_table</name></property>
+        <property><name>namespace_map_snapshot_id</name></property>
+
+        <property><name>queue_name</name></property>
+        <property><name>name_node</name></property>
+        <property><name>job_tracker</name></property>
+
+        <property><name>hive_site_xml</name></property>
+
+        <property><name>mark_directory_done_workflow_file</name></property>
+        <property><name>send_error_email_workflow_file</name></property>
+        <property><name>send_error_email_address</name></property>
+
+    </parameters>
+
+    <controls>
+        <!--
+        By having materialized jobs not timeout, we ease backfilling incidents
+        after recoverable hiccups on the dataset producers.
+        @TODO not sure if this is needed
+        -->
+        <timeout>-1</timeout>
+
+        <!--
+        query_clicks hourly aggregation can be a bit heavy, limit
+        concurrency for resource sharing.
+
+        Also note, that back-filling is not limited by the
+        coordinator's frequency, so back-filling works nicely
+        even-though the concurrency is low.
+        -->
+        <concurrency>4</concurrency>
+
+        <!--
+        Since we expect only one incarnation per weekly dataset, the
+        default throttle of 12 is way to high, and there is not need
+        to keep that many materialized jobs around.
+
+        By resorting to 2, we keep the hdfs checks on the datasets
+        low, while still being able to easily feed the concurrency.
+        -->
+        <throttle>5</throttle>
+    </controls>
+
+    <datasets>
+        <!--
+        Include pageview and discovery datasets files.
+        $pageview_datasets_file will be used as the input events
+        $query_clicks_datasets_file will be used as the output events
+        -->
+        <include>${webrequest_datasets_file}</include>
+        <include>${query_clicks_datasets_file}</include>
+    </datasets>
+
+    <input-events>
+        <data-in name="webrequest_input" dataset="webrequest_text">
+            <start-instance>${coord:current(0)}</start-instance>
+            <end-instance>${coord:current(1)}</end-instance>
+        </data-in>
+        <data-in name="cirrussearchrequestset_input" dataset="cirrussearchrequestset">
+            <start-instance>${coord:current(0)}</start-instance>
+            <end-instance>${coord:current(0)}</end-instance>
+        </data-in>
+    </input-events>
+
+    <output-events>
+        <data-out name="query_clicks_hourly_output" dataset="query_clicks_hourly">
+            <instance>${coord:current(0)}</instance>
+        </data-out>
+    </output-events>
+
+    <action>
+        <workflow>
+            <app-path>${workflow_file}</app-path>
+            <configuration>
+
+                <property>
+                    <name>year</name>
+                    <value>${coord:formatTime(coord:nominalTime(), "y")}</value>
+                </property>
+                <property>
+                    <name>month</name>
+                    <value>${coord:formatTime(coord:nominalTime(), "M")}</value>
+                </property>
+                <property>
+                    <name>day</name>
+                    <value>${coord:formatTime(coord:nominalTime(), "d")}</value>
+                </property>
+                <property>
+                    <name>hour</name>
+                    <value>${coord:formatTime(coord:nominalTime(), "H")}</value>
+                </property>
+                <property>
+                    <!-- To mark directory done after success -->
+                    <name>query_clicks_hourly_dataset_directory</name>
+                    <value>${coord:dataOut('query_clicks_hourly_output')}</value>
+                </property>
+
+            </configuration>
+        </workflow>
+    </action>
+</coordinator-app>

@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<workflow-app xmlns="uri:oozie:workflow:0.4"
+        name="discovery-query-clicks-hourly-${query_clicks_hourly_table}-${year}-${month}-${day}-${hour}-wf">
+
+    <parameters>
+        <!-- Default values for inner oozie settings -->
+        <property>
+            <name>oozie_launcher_queue_name</name>
+            <value>${queue_name}</value>
+        </property>
+        <property>
+            <name>oozie_launcher_memory</name>
+            <value>256</value>
+        </property>
+
+        <!-- Required properties -->
+        <property><name>queue_name</name></property>
+        <property><name>name_node</name></property>
+        <property><name>job_tracker</name></property>
+
+        <!-- Aggregation related configuration properties -->
+        <property>
+            <name>hive_query_clicks_hourly_script_aggregate</name>
+            <!-- This is relative to the containing directory of this file. -->
+            <value>query_clicks_hourly.hql</value>
+            <description>Hive script to run.</description>
+        </property>
+
+        <property>
+            <name>hive_site_xml</name>
+            <description>hive-site.xml file path in HDFS</description>
+        </property>
+        <property>
+            <name>analytics_artifacts_directory</name>
+            <description>Path in HDFS to artifcats. refinery-hive.jar should be here.</description>
+        </property>
+        <property>
+            <name>refinery_jar_version</name>
+            <description>Version of the refinery-hive jar file to import for UDFs</description>
+        </property>
+        <property>
+            <name>cirrussearchrequestset_table</name>
+            <description>Fully qualified name of the cirrussearchrequestset table in hive</description>
+        </property>
+        <property>
+            <name>webrequest_table</name>
+            <description>Fully qualified name of the webrequest table in hive</description>
+        </property>
+        <property>
+            <name>namespace_map_table</name>
+            <description>Full qualified name of the mediawiki_namespace_map table in hive</description>
+        </property>
+        <property>
+            <name>namespace_map_snapshot_id</name>
+            <description>Specific snapshot (partition) of the namespace_map_table to collect ids from</description>
+        </property>
+
+        <property>
+            <name>query_clicks_hourly_table</name>
+            <description>Fully qualified name of the query_clicks_hourly table in hive</description>
+        </property>
+
+        <property>
+            <name>year</name>
+            <description>The year to aggregate</description>
+        </property>
+        <property>
+            <name>month</name>
+            <description>The month to aggregate</description>
+        </property>
+        <property>
+            <name>day</name>
+            <description>The day to aggregate</description>
+        </property>
+        <property>
+            <name>hour</name>
+            <description>The hour to aggregate</description>
+        </property>
+        <property>
+            <name>mark_directory_done_workflow_file</name>
+            <description>Workflow for marking a directory as complete</description>
+        </property>
+        <property>
+            <name>query_clicks_hourly_dataset_directory</name>
+            <description>Query clicks hourlydirectory to generate the done flag in</description>
+        </property>
+        <property>
+            <name>send_error_email_workflow_file</name>
+            <description>Workflow for sending an email</description>
+        </property>
+        <property>
+            <name>send_error_email_address</name>
+            <description>Email address to send error emails to</description>
+        </property>
+    </parameters>
+
+    <start to="aggregate"/>
+
+    <action name="aggregate">
+        <hive xmlns="uri:oozie:hive-action:0.2">
+            <job-tracker>${job_tracker}</job-tracker>
+            <name-node>${name_node}</name-node>
+            <job-xml>${hive_site_xml}</job-xml>
+            <configuration>
+                <property>
+                    <name>mapreduce.job.queuename</name>
+                    <value>${queue_name}</value>
+                </property>
+                <property>
+                    <name>oozie.launcher.mapred.job.queue.name</name>
+                    <value>${oozie_launcher_queue_name}</value>
+                </property>
+                <property>
+                    <name>oozie.launcher.mapred.map.memory.mb</name>
+                    <value>${oozie_launcher_memory}</value>
+                </property>
+                <property>
+                    <name>hive.exec.scratchdir</name>
+                    <value>/tmp/hive-${user}</value>
+                </property>
+            </configuration>
+            <script>${hive_query_clicks_hourly_script_aggregate}</script>
+            <param>refinery_jar_version=${refinery_jar_version}</param>
+            <param>analytics_artifacts_directory=${analytics_artifacts_directory}</param>
+            <param>source_cirrus_table=${cirrussearchrequestset_table}</param>
+            <param>source_webrequest_table=${webrequest_table}</param>
+            <param>source_namespace_map_table=${namespace_map_table}</param>
+            <param>source_namespace_map_snapshot_id=${namespace_map_snapshot_id}</param>
+            <param>destination_table=${query_clicks_hourly_table}</param>
+            <param>year=${year}</param>
+            <param>month=${month}</param>
+            <param>day=${day}</param>
+            <param>hour=${hour}</param>
+        </hive>
+
+        <ok to="mark_query_clicks_hourly_dataset_done"/>
+        <error to="send_error_email"/>
+    </action>
+
+    <action name="mark_query_clicks_hourly_dataset_done">
+        <sub-workflow>
+            <app-path>${mark_directory_done_workflow_file}</app-path>
+            <configuration>
+                <property>
+                    <name>directory</name>
+                    <value>${query_clicks_hourly_dataset_directory}</value>
+                </property>
+            </configuration>
+        </sub-workflow>
+        <ok to="end"/>
+        <error to="send_error_email"/>
+    </action>
+
+    <action name="send_error_email">
+        <sub-workflow>
+            <app-path>${send_error_email_workflow_file}</app-path>
+            <propagate-configuration/>
+            <configuration>
+                <property>
+                    <name>parent_name</name>
+                    <value>${wf:name()}</value>
+                </property>
+                <property>
+                    <name>parent_failed_action</name>
+                    <value>${wf:lastErrorNode()}</value>
+                </property>
+                <property>
+                    <name>to</name>
+                    <value>${send_error_email_address}</value>
+                </property>
+            </configuration>
+        </sub-workflow>
+        <ok to="kill"/>
+        <error to="kill"/>
+    </action>
+
+    <kill name="kill">
+        <message>Action failed, error message[${wf:errorMessage(wf:lastErrorNode())}]</message>
+    </kill>
+    <end name="end"/>
+</workflow-app>
