@@ -138,7 +138,7 @@ search_req AS (
         csrs.identity,
         csrs.id AS request_set_token,
         csrs.ts AS timestamp,
-        csrs.hits
+        get_main_search_request(csrs.wikiid, csrs.requests).hits AS hits
     FROM
         ${source_cirrus_table} csrs
     JOIN
@@ -156,9 +156,11 @@ search_req AS (
         -- Make sure we only extract from content index
         AND SIZE(get_main_search_request(csrs.wikiid, csrs.requests).indices) == 1
         AND get_main_search_request(csrs.wikiid, csrs.requests).indices[0] LIKE '%_content'
+        -- Only fetch first page for simplicity
+        AND get_main_search_request(csrs.wikiid, csrs.requests).hitsoffset = 0
         -- We only want 'normal' requests here. if the user requested more than
         -- the default 20 results filter them out
-        AND SIZE(csrs.hits) <= 20
+        AND SIZE(get_main_search_request(csrs.wikiid, csrs.requests).hits) <= 20
 )
 
 INSERT OVERWRITE TABLE
