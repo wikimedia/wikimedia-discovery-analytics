@@ -19,6 +19,11 @@
         <configuration>
             <property>
                 <name>elasticsearch_url</name>
+                <!--
+                    alternate servers are:
+                    * elastic1051
+                    * elastic1052
+                -->
                 <value>https://elastic1017.eqiad.wmnet:9243</value>
             </property>
         </configuration>
@@ -29,6 +34,11 @@
         <configuration>
             <property>
                 <name>elasticsearch_url</name>
+                <!--
+                    alternate servers are:
+                    * elastic2035
+                    * elastic2036
+                -->
                 <value>https://elastic2010.codfw.wmnet:9243</value>
             </property>
         </configuration>
