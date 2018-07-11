@@ -1,7 +1,8 @@
 # Transfer phase of discovery popularity score to elasticsearch clusters
 
-This job is reposible for transfering popularity score information from
-the hadoop cluster to the elasticsearch cluster.
+This job is reposible for transfering popularity score information from the
+hadoop cluster to the elasticsearch cluster. It is transferered via a kafka
+topic which is expected to be read and executed by a MjoLniR kafka daemon.
 
 # Outline
 

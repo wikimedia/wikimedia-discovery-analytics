@@ -79,7 +79,7 @@
 
         <property>
             <name>pyspark_transfer_to_es_script</name>
-            <value>${discovery_oozie_directory}/transfer_to_es/transferToES.py</value>
+            <value>${discovery_oozie_directory}/transfer_to_es/transferToKafka.py</value>
             <description>Path to Pyspark script to run for generating the popularity score in HDFS.</description>
         </property>
         <property>
@@ -92,8 +92,12 @@
             <description>Items per batch to load into ES</description>
         </property>
         <property>
-            <name>elasticsearch_url</name>
-            <description>URL to send the data to with no trailing /</description>
+            <name>kafka_broker</name>
+            <description>csv of host:port to bootstrap the kafka connection</description>
+        </property>
+        <property>
+            <name>kafka_topic</name>
+            <description>kafka topic to produce requests to</description>
         </property>
 
     </parameters>
@@ -130,8 +134,10 @@
             <!-- arguments for pyspark script -->
             <arg>--source</arg>
             <arg>${popularity_score_partition_directory}</arg>
-            <arg>--url</arg>
-            <arg>${elasticsearch_url}</arg>
+            <arg>--kafka-broker</arg>
+            <arg>${kafka_broker}</arg>
+            <arg>--topic</arg>
+            <arg>${kafka_topic}</arg>
             <arg>--batch</arg>
             <arg>${transfer_to_es_batch_size}</arg>
             <arg>--hostmap</arg>
