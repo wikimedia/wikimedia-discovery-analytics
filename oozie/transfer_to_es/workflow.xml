@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <workflow-app xmlns="uri:oozie:workflow:0.4"
-    name="discovery-transfer_to_es-${popularity_score_table}-${year},${month},${day}->${elasticsearch_url}-wf">
+    name="discovery-transfer_to_es-${popularity_score_table}-${year},${month},${day}->cirrussearch-wf">
 
     <parameters>
 
@@ -88,10 +88,6 @@
             <description>Path to JSON hostmap for domain -> wiki conversion in HDFS</description>
         </property>
         <property>
-            <name>transfer_to_es_batch_size</name>
-            <description>Items per batch to load into ES</description>
-        </property>
-        <property>
             <name>kafka_broker</name>
             <description>csv of host:port to bootstrap the kafka connection</description>
         </property>
@@ -131,9 +127,9 @@
             </configuration>
             <master>yarn-cluster</master>
             <mode>cluster</mode>
-            <name>Discovery Transfer To ${elasticsearch_url}</name>
+            <name>Discovery Transfer To CirrusSearch</name>
             <jar>${pyspark_transfer_to_es_script}</jar>
-            <spark-opts>--conf spark.yarn.jar=${spark_assembly_jar} --conf spark.sql.shuffle.partitions=${spark_sql_shuffle_partitions} --executor-memory ${spark_executor_memory} --driver-memory ${spark_driver_memory} --num-executors ${spark_number_executors} --queue ${queue_name}</spark-opts>
+            <spark-opts>--artifacts ${virtualenv_zip_path} --conf spark.pyspark.python=${pyspark_python} --conf spark.yarn.jar=${spark_assembly_jar} --conf spark.sql.shuffle.partitions=${spark_sql_shuffle_partitions} --executor-memory ${spark_executor_memory} --driver-memory ${spark_driver_memory} --conf spark.dynamicAllocation.maxExecutors=${spark_number_executors} --queue ${queue_name}</spark-opts>
             <!-- arguments for pyspark script -->
             <arg>--source</arg>
             <arg>${popularity_score_partition_directory}</arg>
@@ -141,12 +137,8 @@
             <arg>${kafka_broker}</arg>
             <arg>--topic</arg>
             <arg>${kafka_topic}</arg>
-            <arg>--batch</arg>
-            <arg>${transfer_to_es_batch_size}</arg>
             <arg>--hostmap</arg>
             <arg>${transfer_to_es_hostmap_file}</arg>
-            <arg>--noop-within</arg>
-            <arg>20</arg>
             <arg>--field-name</arg>
             <arg>popularity_score</arg>
             <arg>--rate-limit</arg>

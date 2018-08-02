@@ -35,7 +35,7 @@ if not TOPIC:
 FIELD = options.field
 RATE = int(options.rate)
 if options.hostmap[0:24] == 'hdfs://analytics-hadoop/':
-    hostMap = json.loads(subprocess.check_output(["hdfs", "dfs", "-cat", options.hostmap[23:]]))
+    hostMap = json.loads(subprocess.check_output(["hdfs", "dfs", "-cat", options.hostmap[23:]]).decode('utf8'))
 else:
     hostMap = json.load(open(options.hostmap))
 

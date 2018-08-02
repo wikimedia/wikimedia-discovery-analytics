@@ -1,1 +1,3 @@
 Here be scripts to process analytics and extract usable things into ElasticSearch.
+
+See https://wikitech.wikimedia.org/wiki/Discovery/Analytics for deployment information.
