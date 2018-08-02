@@ -99,7 +99,10 @@
             <name>kafka_topic</name>
             <description>kafka topic to produce requests to</description>
         </property>
-
+        <property>
+            <name>kafka_rate_limit</name>
+            <description>Maximum number of kafka messages to produce per second per executor</description>
+        </property>
     </parameters>
 
     <start to="transfer"/>
@@ -146,6 +149,8 @@
             <arg>20</arg>
             <arg>--field-name</arg>
             <arg>popularity_score</arg>
+            <arg>--rate-limit</arg>
+            <arg>${kafka_rate_limit}</arg>
         </spark>
 
         <ok to="end"/>
