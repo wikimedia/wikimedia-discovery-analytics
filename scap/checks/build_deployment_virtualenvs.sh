@@ -5,7 +5,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-BASE_DIR="$(dirname $(dirname $(realpath $0)))"
+BASE_DIR="$(dirname $(dirname $(dirname $(realpath $0))))"
 OOZIE_DIR="${BASE_DIR}/oozie"
 WHEEL_DIR="${BASE_DIR}/artifacts"
 
