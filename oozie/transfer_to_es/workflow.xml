@@ -3,6 +3,10 @@
     name="discovery-transfer_to_es-${popularity_score_table}-${year},${month},${day}->cirrussearch-wf">
 
     <parameters>
+        <property>
+            <name>oozie.action.sharelib.for.spark</name>
+            <value>spark2.3.1</value>
+        </property>
 
         <!-- Default values for inner oozie settings -->
         <property>
