@@ -4,4 +4,4 @@ checks:
         stage: promote
         timeout: 300
         group: default
-        command: /srv/deployment/wikimedia/search/analytics/scap/checks/build_deployment_virtualenvs.sh
+        command: /srv/deployment/wikimedia/discovery/analytics/scap/checks/build_deployment_virtualenvs.sh
