@@ -129,7 +129,7 @@
             <mode>cluster</mode>
             <name>Discovery Transfer To CirrusSearch</name>
             <jar>${pyspark_transfer_to_es_script}</jar>
-            <spark-opts>--artifacts ${virtualenv_zip_path} --conf spark.pyspark.python=${pyspark_python} --conf spark.yarn.jar=${spark_assembly_jar} --conf spark.sql.shuffle.partitions=${spark_sql_shuffle_partitions} --executor-memory ${spark_executor_memory} --driver-memory ${spark_driver_memory} --conf spark.dynamicAllocation.maxExecutors=${spark_number_executors} --queue ${queue_name}</spark-opts>
+            <spark-opts>--archives ${virtualenv_zip_path} --conf spark.pyspark.python=${pyspark_python} --conf spark.yarn.jar=${spark_assembly_jar} --conf spark.sql.shuffle.partitions=${spark_sql_shuffle_partitions} --executor-memory ${spark_executor_memory} --driver-memory ${spark_driver_memory} --conf spark.dynamicAllocation.maxExecutors=${spark_number_executors} --queue ${queue_name}</spark-opts>
             <!-- arguments for pyspark script -->
             <arg>--source</arg>
             <arg>${popularity_score_partition_directory}</arg>
