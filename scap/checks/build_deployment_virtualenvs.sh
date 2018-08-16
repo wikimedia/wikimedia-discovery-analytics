@@ -18,7 +18,9 @@ for TASK_DIR in ${OOZIE_DIR}/*; do
         TASK_NAME="$(basename $TASK_DIR)"
         ZIP_PATH="${TASK_DIR}/venv.zip"
         VENV="${TASK_DIR}/venv"
-        PIP="${VENV}/bin/pip"
+        # The shebang line in linux has a limit of 128 bytes, which
+        # we can overrun. Call python directly with pip to avoid shebang
+        PIP="${VENV}/bin/python ${VENV}/bin/pip"
 
         # Ensure we have a virtualenv
         if [ ! -x "$PIP" ];then
