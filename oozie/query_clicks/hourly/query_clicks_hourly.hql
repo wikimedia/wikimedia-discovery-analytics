@@ -155,7 +155,25 @@ search_req AS (
         AND get_main_search_request(csrs.wikiid, csrs.requests) IS NOT NULL
         -- Make sure we only extract from content index
         AND SIZE(get_main_search_request(csrs.wikiid, csrs.requests).indices) == 1
-        AND get_main_search_request(csrs.wikiid, csrs.requests).indices[0] LIKE '%_content'
+        AND (
+            get_main_search_request(csrs.wikiid, csrs.requests).indices[0] RLIKE '.*_(content|file)'
+            OR
+            (
+                -- Comonswiki has different defaults which results in the standard query hitting
+                -- the top level alias.
+                csrs.wikiid == 'commonswiki'
+                AND get_main_search_request(csrs.wikiid, csrs.requests).indices[0] == 'commonswiki'
+                -- Since we don't have _content to filter non-content queries, restrict to the default
+                -- selected namespaces. Also hive doesn't have an array_equals function...
+                AND size(get_main_search_request(csrs.wikiid, csrs.requests).namespaces) == 6
+                AND array_contains(get_main_search_request(csrs.wikiid, csrs.requests).namespaces, 0)
+                AND array_contains(get_main_search_request(csrs.wikiid, csrs.requests).namespaces, 6)
+                AND array_contains(get_main_search_request(csrs.wikiid, csrs.requests).namespaces, 12)
+                AND array_contains(get_main_search_request(csrs.wikiid, csrs.requests).namespaces, 14)
+                AND array_contains(get_main_search_request(csrs.wikiid, csrs.requests).namespaces, 100)
+                AND array_contains(get_main_search_request(csrs.wikiid, csrs.requests).namespaces, 106)
+            )
+        )
         -- Only fetch first page for simplicity
         AND get_main_search_request(csrs.wikiid, csrs.requests).hitsoffset = 0
         -- We only want 'normal' requests here. if the user requested more than
