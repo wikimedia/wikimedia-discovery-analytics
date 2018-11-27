@@ -120,6 +120,10 @@
                     <name>oozie.launcher.mapreduce.map.memory.mb</name>
                     <value>${oozie_launcher_memory}</value>
                 </property>
+                <property>
+                    <name>oozie.launcher.mapreduce.map.env</name>
+                    <value>SPARK_HOME=/usr/lib/spark2</value>
+                </property>
             </configuration>
             <master>yarn-cluster</master>
             <mode>cluster</mode>

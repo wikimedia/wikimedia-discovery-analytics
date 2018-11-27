@@ -202,7 +202,7 @@ TIMESTAMP="$(echo_timestamp)"
 #  * against ':' in timestamp, as HDFS chokes on colons, and
 #  * against '/' in branch names, as we want to deploy to directly to
 #      a directory underneath the base directory.
-GIT_DESCRIPTION="${TIMESTAMP//:/.}--${GIT_DESCRIPTION////_}"
+GIT_DESCRIPTION="${TIMESTAMP//:/.}-${GIT_DESCRIPTION////_}"
 
 verbose_log "Current git description: '$GIT_DESCRIPTION'"
 
