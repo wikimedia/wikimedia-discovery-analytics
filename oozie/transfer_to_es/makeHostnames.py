@@ -35,7 +35,7 @@ staticMap = {
 }
 chapters = set(['ar', 'bd', 'be', 'br', 'ca', 'cn', 'co', 'dk', 'et', 'fi', 'il', 'mk', 'mx', 'nl',
     'noboard-chapters', 'no', 'nyc', 'nz', 'pa-us', 'pl', 'rs', 'ru', 'se', 'tr', 'ua', 'uk', 've'])
-hostmatch = re.compile('^(.*)\.([a-z]+)$')
+hostmatch = re.compile('^(.*)\\.([a-z]+)$')
 for hostname in hostnames:
     if hostname == 'project' or len(hostname) == 0:
         # skip this hive artifact
