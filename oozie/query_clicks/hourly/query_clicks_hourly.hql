@@ -31,17 +31,17 @@
 --
 --
 -- Usage:
---     hive -f query_clicks.hql                                       \
---          -d refinery_jar_version=0.40                              \
---          -d artifacts_directory=/wmf/refinery/current/artifacts    \
---          -d source_cirrus_table=wmf_raw.cirrussearchrequestset     \
---          -d source_webrequest_table=wmf.webrequest                 \
---          -d source_namespace_map_table=wmf.mediawiki_namespace_map \
---          -d source_namespace_map_snapshot_id=2017-01_private       \
---          -d destination_table=discovery.query_clicks               \
---          -d year=2016                                              \
---          -d month=12                                               \
---          -d day=4                                                  \
+--     hive -f query_clicks.hql                                                   \
+--          -d refinery_jar_version=0.40                                          \
+--          -d artifacts_directory=/wmf/refinery/current/artifacts                \
+--          -d source_cirrus_table=wmf_raw.cirrussearchrequestset                 \
+--          -d source_webrequest_table=wmf.webrequest                             \
+--          -d source_namespace_map_table=wmf_raw.mediawiki_project_namespace_map \
+--          -d source_namespace_map_snapshot_id=2018-10                           \
+--          -d destination_table=discovery.query_clicks_hourly                    \
+--          -d year=2016                                                          \
+--          -d month=12                                                           \
+--          -d day=4                                                              \
 --          -d hour=16
 --
 
@@ -160,7 +160,7 @@ search_req AS (
         AND get_main_search_request(csrs.wikiid, csrs.requests).hitsoffset = 0
         -- We only want 'normal' requests here. if the user requested more than
         -- the default 20 results filter them out
-        AND SIZE(get_main_search_request(csrs.wikiid, csrs.requests).hits) <= 20
+        AND SIZE(get_main_search_request(csrs.wikiid, csrs.requests).hits) <= 21
 )
 
 INSERT OVERWRITE TABLE
