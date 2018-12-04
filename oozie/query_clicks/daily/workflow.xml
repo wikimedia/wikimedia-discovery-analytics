@@ -25,10 +25,6 @@
             <value>query_clicks_daily.hql</value>
             <description>Hive script to run.</description>
         </property>
-        <property>
-            <name>hive_drop_query_clicks_hourly_partitions</name>
-            <value>drop_query_clicks_hourly_partitions.hql</value>
-        </property>
 
         <property>
             <name>hive_site_xml</name>
@@ -131,41 +127,6 @@
                 </property>
             </configuration>
         </sub-workflow>
-        <ok to="drop_query_clicks_hourly_partitions"/>
-        <error to="send_error_email"/>
-    </action>
-
-    <action name="drop_query_clicks_hourly_partitions">
-        <hive xmlns="uri:oozie:hive-action:0.2">
-            <job-tracker>${job_tracker}</job-tracker>
-            <name-node>${name_node}</name-node>
-            <job-xml>${hive_site_xml}</job-xml>
-            <configuration>
-                <property>
-                    <name>mapreduce.job.queuename</name>
-                    <value>${queue_name}</value>
-                </property>
-                <property>
-                    <name>oozie.launcher.mapred.job.queue.name</name>
-                    <value>${oozie_launcher_queue_name}</value>
-                </property>
-                <property>
-                    <name>oozie.launcher.mapred.map.memory.mb</name>
-                    <value>${oozie_launcher_memory}</value>
-                </property>
-                <property>
-                    <name>hive.exec.scratchdir</name>
-                    <value>/tmp/hive-${user}</value>
-                </property>
-            </configuration>
-            <script>${hive_drop_query_clicks_hourly_partitions}</script>
-            <param>source_table=${query_clicks_hourly_table}</param>
-            <param>year=${year}</param>
-            <param>month=${month}</param>
-            <param>day=${day}</param>
-        </hive>
-
-        <!-- TODO: Did this delete the directorys with data as well? double check -->
         <ok to="end"/>
         <error to="send_error_email"/>
     </action>
