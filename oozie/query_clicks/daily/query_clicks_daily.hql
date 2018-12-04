@@ -45,7 +45,8 @@ WITH sessionized AS (
         *,
         -- The first session in each day per identity is null, convert those into
         -- session 0 and everything else into session 1+
-        CONCAT_WS('_', identity, CAST(IF(session_num IS NULL, 0, session_num + 1) AS string)) AS session_id
+        -- Include ymd in session id so they are unique across days.
+        CONCAT_WS('_', year, month, day, identity, CAST(IF(session_num IS NULL, 0, session_num + 1) AS string)) AS session_id
     FROM (
         SELECT
             *,
