@@ -1,4 +1,5 @@
 CREATE TABLE `discovery.query_clicks_daily`(
+  `request_set_token` string,
   `query` string,
   `q_by_ip_day` int,
   `timestamp` bigint,

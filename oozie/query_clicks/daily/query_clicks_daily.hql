@@ -98,6 +98,7 @@ INSERT OVERWRITE TABLE
     ${destination_table}
 PARTITION(year=${year},month=${month},day=${day})
 SELECT
+    sessionized.request_set_token,
     sessionized.query,
     q_by_ip_day_tbl.count AS q_by_ip_day,
     sessionized.timestamp,

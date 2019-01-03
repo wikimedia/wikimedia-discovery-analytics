@@ -1,4 +1,5 @@
 CREATE TABLE `discovery.query_clicks_hourly` (
+  `request_set_token` string,
   `query` string,
   `ip` string,
   `identity` string,

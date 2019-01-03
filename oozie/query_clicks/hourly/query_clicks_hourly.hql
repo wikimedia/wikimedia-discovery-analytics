@@ -167,9 +167,8 @@ INSERT OVERWRITE TABLE
     ${destination_table}
 PARTITION(year=${year},month=${month},day=${day},hour=${hour})
 -- Join our search request data against clicks in web_request.
--- stem the query so grouping can be done more easily against the resulting table
--- and assign a session number to requests from the same identity
 SELECT
+    search_req.request_set_token,
     search_req.query,
     search_req.ip,
     search_req.identity,
