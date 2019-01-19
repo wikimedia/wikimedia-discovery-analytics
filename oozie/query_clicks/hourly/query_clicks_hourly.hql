@@ -186,7 +186,7 @@ INSERT OVERWRITE TABLE
 PARTITION(year=${year},month=${month},day=${day},hour=${hour})
 -- Join our search request data against clicks in web_request.
 SELECT
-    search_req.request_set_token,
+    -- Order here must match the create_table statement
     search_req.query,
     search_req.ip,
     search_req.identity,
@@ -194,7 +194,8 @@ SELECT
     search_req.wikiid,
     search_req.project,
     search_req.hits,
-    web_req.clicks
+    web_req.clicks,
+    search_req.request_set_token
 FROM
     search_req
 -- left join ensures we keep all full text search requests, even if they didn't

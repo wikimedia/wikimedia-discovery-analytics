@@ -46,7 +46,7 @@ WITH sessionized AS (
         -- The first session in each day per identity is null, convert those into
         -- session 0 and everything else into session 1+
         -- Include ymd in session id so they are unique across days.
-        CONCAT_WS('_', year, month, day, identity, CAST(IF(session_num IS NULL, 0, session_num + 1) AS string)) AS session_id
+        CONCAT_WS('_', CAST(year AS string), CAST(month AS string), CAST(day AS string), identity, CAST(IF(session_num IS NULL, 0, session_num + 1) AS string)) AS session_id
     FROM (
         SELECT
             *,
@@ -98,7 +98,7 @@ INSERT OVERWRITE TABLE
     ${destination_table}
 PARTITION(year=${year},month=${month},day=${day})
 SELECT
-    sessionized.request_set_token,
+    -- Order here must match the create_table statement
     sessionized.query,
     q_by_ip_day_tbl.count AS q_by_ip_day,
     sessionized.timestamp,
@@ -106,7 +106,8 @@ SELECT
     sessionized.project,
     sessionized.hits,
     sessionized.clicks,
-    sessionized.session_id
+    sessionized.session_id,
+    sessionized.request_set_token
 FROM
     sessionized
 JOIN

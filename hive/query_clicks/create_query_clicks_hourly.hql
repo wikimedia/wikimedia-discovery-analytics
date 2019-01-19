@@ -1,5 +1,4 @@
 CREATE TABLE `discovery.query_clicks_hourly` (
-  `request_set_token` string,
   `query` string,
   `ip` string,
   `identity` string,
@@ -7,7 +6,9 @@ CREATE TABLE `discovery.query_clicks_hourly` (
   `wikiid` string,
   `project` string,
   `hits` array<struct<title:string,index:string,pageid:int,score:float,profilename:string>>,
-  `clicks` array<struct<pageid:int,timestamp:bigint,referer:string>>
+  `clicks` array<struct<pageid:int,timestamp:bigint,referer:string>>,
+  `request_set_token` string
+  -- new fields must be added to end to match alter table behaviour
 )
 PARTITIONED BY (
   `year` int,
