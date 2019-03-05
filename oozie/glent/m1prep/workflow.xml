@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<workflow-app xmlns="uri:oozie:workflow:0.4"
+    name="discovery-glent-${glent_action}-${current_partition}-wf">
+
+    <parameters>
+        <!-- Oozie configuration -->
+        <property>
+            <name>oozie.action.sharelib.for.spark</name>
+            <value>${oozie_spark_lib}</value>
+        </property>
+        <property>
+            <name>oozie.launcher.mapred.job.queue.name</name>
+            <value>${queue_name}</value>
+        </property>
+        <property>
+            <name>oozie.launcher.mapreduce.map.memory.mb</name>
+            <value>${oozie_launcher_memory}</value>
+        </property>
+    </parameters>
+
+    <start to="run_glent"/>
+
+    <action name="run_glent">
+        <spark xmlns="uri:oozie:spark-action:0.1">
+            <job-tracker>${job_tracker}</job-tracker>
+            <name-node>${name_node}</name-node>
+            <master>${spark_master}</master>
+            <mode>${spark_deploy}</mode>
+            <name>Glent ${glent_action} - ${current_partition}</name>
+            <class>${spark_job_class}</class>
+            <jar>${spark_job_jar}</jar>
+            <spark-opts>
+                --conf spark.yarn.archive=${spark_assembly_zip}
+                --conf spark.yarn.executor.memoryOverhead=${spark_executor_memory_overhead}
+                --executor-memory ${spark_executor_memory}
+                --conf spark.dynamicAllocation.maxExecutors=${spark_max_executors}
+                --conf spark.executor.cores=${spark_executor_cores}
+                --driver-memory ${spark_driver_memory}
+                --queue ${queue_name}
+                --conf spark.dynamicAllocation.enabled=true
+                --conf spark.shuffle.service.enabled=true
+                --conf spark.sql.shuffle.partitions=${spark_sql_shuffle_partitions}
+            </spark-opts>
+            <arg>${glent_action}</arg>
+
+            <arg>--wmf-log-name</arg><arg>${mediawiki_cirrussearch_request_table}</arg>
+            <arg>--log-ts-from</arg><arg>${previous_instance}</arg>
+            <arg>--log-ts-to</arg><arg>${current_instance}</arg>
+            <arg>--max-n-queries-per-ident</arg><arg>2000</arg>
+            <arg>--map-wikiid-to-lang-name</arg><arg>${canonical_data_wikis_table}</arg>
+
+            <arg>--input-table</arg><arg>${glent_m1prep_table}</arg>
+            <arg>--input-partition</arg><arg>${previous_partition}</arg>
+
+            <arg>--earliest-legal-ts</arg><arg>${earliest_instance}</arg>
+
+            <arg>--output-table</arg><arg>${glent_m1prep_table}</arg>
+            <arg>--output-partition</arg><arg>${current_partition}</arg>
+        </spark>
+
+        <ok to="mark_dataset_done"/>
+        <error to="send_error_email"/>
+    </action>
+
+    <action name="mark_dataset_done">
+        <sub-workflow>
+            <app-path>${mark_directory_done_workflow_file}</app-path>
+            <configuration>
+                <property>
+                    <name>directory</name>
+                    <value>${mark_dataset_done_directory}</value>
+                </property>
+            </configuration>
+        </sub-workflow>
+        <ok to="end"/>
+        <error to="send_error_email"/>
+    </action>
+
+    <action name="send_error_email">
+        <sub-workflow>
+            <app-path>${send_error_email_workflow_file}</app-path>
+            <propagate-configuration/>
+            <configuration>
+                <property>
+                    <name>parent_name</name>
+                    <value>${wf:name()}</value>
+                </property>
+                <property>
+                    <name>parent_failed_action</name>
+                    <value>${wf:lastErrorNode()}</value>
+                </property>
+                <property>
+                    <name>parent_error_code</name>
+                    <value>${wf:errorCode(wf:lastErrorNode())}</value>
+                </property>
+                <property>
+                    <name>parent_error_message</name>
+                    <value>${wf:errorMessage(wf:lastErrorNode())}</value>
+                </property>
+                <property>
+                    <name>to</name>
+                    <value>${send_error_email_address}</value>
+                </property>
+            </configuration>
+        </sub-workflow>
+        <ok to="kill"/>
+        <error to="kill"/>
+    </action>
+
+    <kill name="kill">
+        <message>Action failed, error message[${wf:errorMessage(wf:lastErrorNode())}]</message>
+    </kill>
+
+    <end name="end"/>
+</workflow-app>

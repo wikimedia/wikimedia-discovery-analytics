@@ -1,3 +1,4 @@
 .tox/
 .*.sw?
 /_build
+/oozie/glent/coordinator-*.xml
