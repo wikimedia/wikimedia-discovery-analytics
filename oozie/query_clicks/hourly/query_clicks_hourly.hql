@@ -31,18 +31,18 @@
 --
 --
 -- Usage:
---     hive -f query_clicks.hql                                                   \
---          -d refinery_jar_version=0.40                                          \
+--     hive -f query_clicks_hourly.hql                                            \
+--          -d refinery_jar_version=0.91                                          \
 --          -d artifacts_directory=/wmf/refinery/current/artifacts                \
---          -d source_cirrus_table=wmf_raw.cirrussearchrequestset                 \
+--          -d source_cirrus_table=event.mediawiki_cirrussearch_request           \
 --          -d source_webrequest_table=wmf.webrequest                             \
 --          -d source_namespace_map_table=wmf_raw.mediawiki_project_namespace_map \
---          -d source_namespace_map_snapshot_id=2018-10                           \
---          -d destination_table=discovery.query_clicks_hourly                    \
---          -d year=2016                                                          \
---          -d month=12                                                           \
---          -d day=4                                                              \
---          -d hour=16
+--          -d source_namespace_map_snapshot_id=2019-04                           \
+--          -d destination_table=${USER}.query_clicks_hourly                      \
+--          -d year=2019                                                          \
+--          -d month=5                                                            \
+--          -d day=29                                                             \
+--          -d hour=0
 --
 
 
@@ -53,7 +53,7 @@ SET parquet.compression = SNAPPY;
 SET mapreduce.map.memory.mb=1500;
 
 --ADD JAR ${analytics_artifacts_directory}/org/wikimedia/analytics/refinery/refinery-hive-${refinery_jar_version}.jar;
-ADD JAR hdfs://analytics-hadoop/user/ebernhardson/refinery-hive-0.0.39-SNAPSHOT.jar;
+ADD JAR hdfs://analytics-hadoop/user/ebernhardson/refinery-hive-0.0.91-SNAPSHOT.jar;
 CREATE TEMPORARY FUNCTION get_pageview_info AS 'org.wikimedia.analytics.refinery.hive.GetPageviewInfoUDF';
 CREATE TEMPORARY FUNCTION get_main_search_request AS 'org.wikimedia.analytics.refinery.hive.GetMainSearchRequestUDF';
 
@@ -126,25 +126,25 @@ namespace_map AS (
         snapshot = "${source_namespace_map_snapshot_id}"
 ),
 
--- Collect full text search requests against Special:Search
+-- Collect full text search requests against Special:Search.
 search_req AS (
     SELECT
-        csrs.requests[SIZE(csrs.requests)-1].query AS query,
+        csrs.elasticsearch_requests[SIZE(csrs.elasticsearch_requests)-1].query AS query,
         -- This would return a bigint, but we know we shouldn't ever seen anything
         -- that even fills an int.
-        csrs.ip,
-        namespace_map.project AS project,
-        csrs.wikiid,
+        csrs.http.client_ip,
+        namespace_map.project,
+        csrs.`database`,
         csrs.identity,
-        csrs.id AS request_set_token,
-        csrs.ts AS timestamp,
-        get_main_search_request(csrs.wikiid, csrs.requests).hits AS hits
+        csrs.search_id AS request_set_token,
+        csrs.meta.dt,
+        get_main_search_request(csrs.`database`, csrs.elasticsearch_requests).hits AS hits
     FROM
         ${source_cirrus_table} csrs
     JOIN
         namespace_map
     ON
-        namespace_map.dbname = csrs.wikiid
+        namespace_map.dbname = csrs.`database`
     WHERE
         year = ${year} AND month = ${month} AND day = ${day} AND hour = ${hour}
         -- We only want requests from the web, because their clicks are recorded
@@ -152,33 +152,69 @@ search_req AS (
         AND csrs.source = 'web'
         -- Only take requests that include a full text search against the current wiki
         -- (excludes completion suggester and other outliers).
-        AND get_main_search_request(csrs.wikiid, csrs.requests) IS NOT NULL
+        AND get_main_search_request(csrs.`database`, csrs.elasticsearch_requests) IS NOT NULL
         -- Make sure we only extract from content index
-        AND SIZE(get_main_search_request(csrs.wikiid, csrs.requests).indices) == 1
+        AND SIZE(get_main_search_request(csrs.`database`, csrs.elasticsearch_requests).indices) == 1
         AND (
-            get_main_search_request(csrs.wikiid, csrs.requests).indices[0] RLIKE '.*_(content|file)'
+            get_main_search_request(csrs.`database`, csrs.elasticsearch_requests).indices[0] RLIKE '.*_(content|file)'
             OR
             (
                 -- Comonswiki has different defaults which results in the standard query hitting
                 -- the top level alias.
-                csrs.wikiid == 'commonswiki'
-                AND get_main_search_request(csrs.wikiid, csrs.requests).indices[0] == 'commonswiki'
+                csrs.`database` == 'commonswiki'
+                AND get_main_search_request(csrs.`database`, csrs.elasticsearch_requests).indices[0] == 'commonswiki'
                 -- Since we don't have _content to filter non-content queries, restrict to the default
                 -- selected namespaces. Also hive doesn't have an array_equals function...
-                AND size(get_main_search_request(csrs.wikiid, csrs.requests).namespaces) == 6
-                AND array_contains(get_main_search_request(csrs.wikiid, csrs.requests).namespaces, 0)
-                AND array_contains(get_main_search_request(csrs.wikiid, csrs.requests).namespaces, 6)
-                AND array_contains(get_main_search_request(csrs.wikiid, csrs.requests).namespaces, 12)
-                AND array_contains(get_main_search_request(csrs.wikiid, csrs.requests).namespaces, 14)
-                AND array_contains(get_main_search_request(csrs.wikiid, csrs.requests).namespaces, 100)
-                AND array_contains(get_main_search_request(csrs.wikiid, csrs.requests).namespaces, 106)
+                AND size(get_main_search_request(csrs.`database`, csrs.elasticsearch_requests).namespaces) == 6
+                AND array_contains(get_main_search_request(csrs.`database`, csrs.elasticsearch_requests).namespaces, CAST(0 AS BIGINT))
+                AND array_contains(get_main_search_request(csrs.`database`, csrs.elasticsearch_requests).namespaces, CAST(6 AS BIGINT))
+                AND array_contains(get_main_search_request(csrs.`database`, csrs.elasticsearch_requests).namespaces, CAST(12 AS BIGINT))
+                AND array_contains(get_main_search_request(csrs.`database`, csrs.elasticsearch_requests).namespaces, CAST(14 AS BIGINT))
+                AND array_contains(get_main_search_request(csrs.`database`, csrs.elasticsearch_requests).namespaces, CAST(100 AS BIGINT))
+                AND array_contains(get_main_search_request(csrs.`database`, csrs.elasticsearch_requests).namespaces, CAST(106 AS BIGINT))
             )
         )
         -- Only fetch first page for simplicity
-        AND get_main_search_request(csrs.wikiid, csrs.requests).hitsoffset = 0
+        AND get_main_search_request(csrs.`database`, csrs.elasticsearch_requests).hits_offset = 0
         -- We only want 'normal' requests here. if the user requested more than
         -- the default 20 results filter them out
-        AND SIZE(get_main_search_request(csrs.wikiid, csrs.requests).hits) <= 21
+        AND SIZE(get_main_search_request(csrs.`database`, csrs.elasticsearch_requests).hits) <= 21
+),
+
+-- When converting from the CirrusSearchRequests avro schema to mediawiki.cirrussearch-request json schema
+-- the names and types of the hits field changed. To avoid changing all the downstream tasks reshape hits
+-- from the json format into the old avro format.
+search_req_old AS (
+    SELECT
+        request_set_token,
+        query,
+        client_ip as ip,
+        identity,
+        unix_timestamp(dt, "yyyy-MM-dd'T'HH:mm:ss'Z'") AS timestamp,
+        wikiid,
+        project,
+        -- Sorts ascending based on first struct property
+        sort_array(collect_list(named_struct(
+            'hit_pos', hit_pos,
+            'hit', named_struct(
+                'title', hit.page_title,
+                'index', hit.index,
+                'pageid', CAST(hit.page_id AS int),
+                'score', CAST(hit.score AS float),
+                'profilename', hit.profile_name
+            )
+        ))).hit as hits
+    FROM (
+        SELECT
+            query, client_ip, identity, dt, `database` as wikiid, project, request_set_token,
+            hit_pos, hit
+        FROM
+            search_req
+        LATERAL VIEW
+            POSEXPLODE(hits) hit_ AS hit_pos, hit
+    ) x
+    GROUP BY
+        query, client_ip, identity, dt, wikiid, project, request_set_token
 )
 
 INSERT OVERWRITE TABLE
@@ -187,24 +223,24 @@ PARTITION(year=${year},month=${month},day=${day},hour=${hour})
 -- Join our search request data against clicks in web_request.
 SELECT
     -- Order here must match the create_table statement
-    search_req.query,
-    search_req.ip,
-    search_req.identity,
-    search_req.timestamp,
-    search_req.wikiid,
-    search_req.project,
-    search_req.hits,
+    search_req_old.query,
+    search_req_old.ip,
+    search_req_old.identity,
+    search_req_old.timestamp,
+    search_req_old.wikiid,
+    search_req_old.project,
+    search_req_old.hits,
     web_req.clicks,
-    search_req.request_set_token
+    search_req_old.request_set_token
 FROM
-    search_req
+    search_req_old
 -- left join ensures we keep all full text search requests, even if they didn't
 -- have any recorded clicks. This is necessary for the script that merges hourly
 -- data into daily to be able to sessionize correctly.
 LEFT JOIN
     web_req
 ON
-    web_req.search_token = search_req.request_set_token
-    AND web_req.project = search_req.project
+    web_req.search_token = search_req_old.request_set_token
+    AND web_req.project = search_req_old.project
 ;
 

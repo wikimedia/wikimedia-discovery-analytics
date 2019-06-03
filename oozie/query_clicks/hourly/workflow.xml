@@ -39,8 +39,8 @@
             <description>Version of the refinery-hive jar file to import for UDFs</description>
         </property>
         <property>
-            <name>cirrussearchrequestset_table</name>
-            <description>Fully qualified name of the cirrussearchrequestset table in hive</description>
+            <name>cirrus_event_table</name>
+            <description>Fully qualified name of the cirrus request eventgate table in hive</description>
         </property>
         <property>
             <name>webrequest_table</name>
@@ -122,7 +122,7 @@
             <script>${hive_query_clicks_hourly_script_aggregate}</script>
             <param>refinery_jar_version=${refinery_jar_version}</param>
             <param>analytics_artifacts_directory=${analytics_artifacts_directory}</param>
-            <param>source_cirrus_table=${cirrussearchrequestset_table}</param>
+            <param>source_cirrus_table=${cirrus_event_table}</param>
             <param>source_webrequest_table=${webrequest_table}</param>
             <param>source_namespace_map_table=${namespace_map_table}</param>
             <param>source_namespace_map_snapshot_id=${namespace_map_snapshot_id}</param>

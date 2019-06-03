@@ -19,9 +19,9 @@
 
         <property><name>query_clicks_datasets_file</name></property>
         <property><name>discovery_data_directory</name></property>
-        <property><name>cirrussearchrequestset_table</name></property>
+        <property><name>cirrus_event_table</name></property>
         <property><name>query_clicks_hourly_table</name></property>
-        <property><name>mediawiki_raw_log_data_directory</name></property>
+        <property><name>eventgate_data_directory</name></property>
 
         <property><name>analytics_artifacts_directory</name></property>
         <property><name>refinery_jar_version</name></property>
@@ -84,9 +84,8 @@
             <start-instance>${coord:current(0)}</start-instance>
             <end-instance>${coord:current(1)}</end-instance>
         </data-in>
-        <data-in name="cirrussearchrequestset_input" dataset="cirrussearchrequestset">
-            <start-instance>${coord:current(0)}</start-instance>
-            <end-instance>${coord:current(0)}</end-instance>
+        <data-in name="cirrus_request_event_input" dataset="cirrus_request_event">
+            <instance>${coord:current(0)}</instance>
         </data-in>
     </input-events>
 
