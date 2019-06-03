@@ -3,8 +3,6 @@
 -- collapsing the 24 hourly partitions into a single daily partition.
 --
 -- Parameters:
---     cirrussearchrequestset_table
---                       -- Fully qualified table name of cirrus search request logs
 --     source_table      -- Fully qualified table name to source data from
 --     destination_table -- Fully qualified table name to write data to
 --     session_timeout   -- Number of seconds with a search after which a search
@@ -14,15 +12,14 @@
 --     day               -- Day of partition to compute
 --
 -- Usage:
---     hive -f query_clicks_daily.hql
---          -d cirrussearchrequestset_table=wmf_raw.cirrussearchrequestset
---          -d source_table=discovery.query_clicks_hourly
---          -d destination_table=discovery.query_clicks_daily
---          -d session_timeout=1800
---          -d year=2016
---          -d month=12
+--     hive -f query_clicks_daily.hql \
+--          -d source_table=discovery.query_clicks_hourly \
+--          -d destination_table=${USER}.query_clicks_daily \
+--          -d session_timeout=1800 \
+--          -d year=2016 \
+--          -d month=12 \
 --          -d day=4
-
+--
 -- Be explicit about the compression format to use
 SET parquet.compression = SNAPPY;
 
@@ -62,7 +59,8 @@ WITH sessionized AS (
             FROM (
                 SELECT
                     *,
-                    COUNT(1) OVER (PARTITION BY identity) AS rows_by_identity
+                    COUNT(1) OVER (PARTITION BY identity) AS rows_by_identity,
+                    COUNT(1) OVER (PARTITION BY ip) AS q_by_ip_day
                 FROM
                     ${source_table}
                 WHERE
@@ -76,22 +74,6 @@ WITH sessionized AS (
                 rows_by_identity < 1000
         ) y
     ) z
-),
-
--- Count the number of queries issued by a single ip over the day.
--- This allows consumers of the data to apply brute force automata
--- removal by choosing some threshold they are happy with.
-q_by_ip_day_tbl AS (
-    SELECT
-        ip,
-        COUNT(1) as count
-    FROM
-        ${cirrussearchrequestset_table}
-    WHERE
-        year = ${year} AND month=${month} AND day=${day}
-        AND source = 'web'
-    GROUP BY
-        ip
 )
 
 INSERT OVERWRITE TABLE
@@ -100,7 +82,7 @@ PARTITION(year=${year},month=${month},day=${day})
 SELECT
     -- Order here must match the create_table statement
     sessionized.query,
-    q_by_ip_day_tbl.count AS q_by_ip_day,
+    sessionized.q_by_ip_day,
     sessionized.timestamp,
     sessionized.wikiid,
     sessionized.project,
@@ -110,10 +92,6 @@ SELECT
     sessionized.request_set_token
 FROM
     sessionized
-JOIN
-    q_by_ip_day_tbl
-ON
-    sessionized.ip = q_by_ip_day_tbl.ip
 WHERE
     -- Filter down to searches with clicks
     sessionized.clicks IS NOT NULL

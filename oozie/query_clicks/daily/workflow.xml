@@ -31,10 +31,6 @@
             <description>hive-site.xml file path in HDFS</description>
         </property>
         <property>
-            <name>cirrussearchrequestset_table</name>
-            <description>Fully qualified name of the cirrussearchrequestset table in hive</description>
-        </property>
-        <property>
             <name>query_clicks_hourly_table</name>
             <description>Fully qualified name of the query_clicks_hourly table in hive</description>
         </property>
@@ -104,7 +100,6 @@
                 </property>
             </configuration>
             <script>${hive_query_clicks_daily_script}</script>
-            <param>cirrussearchrequestset_table=${cirrussearchrequestset_table}</param>
             <param>source_table=${query_clicks_hourly_table}</param>
             <param>destination_table=${query_clicks_daily_table}</param>
             <param>session_timeout=${session_timeout}</param>

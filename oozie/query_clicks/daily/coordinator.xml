@@ -15,7 +15,6 @@
 
         <property><name>discovery_data_directory</name></property>
         <property><name>query_clicks_datasets_file</name></property>
-        <property><name>cirrussearchrequestset_table</name></property>
         <property><name>query_clicks_hourly_data_directory</name></property>
         <property><name>query_clicks_hourly_table</name></property>
         <property><name>query_clicks_daily_data_directory</name></property>
@@ -43,17 +42,13 @@
         <timeout>-1</timeout>
 
         <!--
-        query_clicks hourly aggregation can be a bit heavy, limit
-        concurrency for resource sharing.
-
-        Also note, that back-filling is not limited by the
-        coordinator's frequency, so back-filling works nicely
-        even-though the concurrency is low.
+        query_clicks daily aggregation is relatively low resource, let a few
+        run in parallel during backfilling.
         -->
-        <concurrency>1</concurrency>
+        <concurrency>4</concurrency>
 
         <!--
-        Since we expect only one incarnation per weekly dataset, the
+        Since we expect only one incarnation per daily dataset, the
         default throttle of 12 is way to high, and there is not need
         to keep that many materialized jobs around.
 
@@ -65,7 +60,6 @@
 
     <datasets>
         <!--
-        Include pageview and discovery datasets files.
         $query_clicks_datasets_file will be used as the
         input events and output events
         -->
@@ -75,10 +69,6 @@
     <input-events>
         <data-in name="query_clicks_hourly_input" dataset="query_clicks_hourly">
             <!-- TODO: is this correct? or should it be -24, 0 -->
-            <start-instance>${coord:current(0)}</start-instance>
-            <end-instance>${coord:current(23)}</end-instance>
-        </data-in>
-        <data-in name="cirrussearchrequestset_input" dataset="cirrussearchrequestset">
             <start-instance>${coord:current(0)}</start-instance>
             <end-instance>${coord:current(23)}</end-instance>
         </data-in>
