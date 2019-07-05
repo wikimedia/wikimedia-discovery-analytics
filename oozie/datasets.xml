@@ -14,7 +14,7 @@ Use this dataset in your coordinator.xml files by setting:
     <!--
     The discovery_popularity_score dataset contains aggregated pageviews
     over a week stored as the percentage of page views of the
-	project.
+    project.
 
     Note that we do not use “${...}” but “${"$"}{...}", as dataset files are
     passed to EL twice in cascade, and in the first EL level, ${MONTH}
