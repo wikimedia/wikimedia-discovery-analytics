@@ -6,32 +6,12 @@
     end="${stop_time}"
     timezone="Universal">
 
+    <!-- NOTE: You cannot override coordinator.properties values here -->
     <parameters>
-
         <!-- Required properties. -->
         <property><name>workflow_file</name></property>
         <property><name>start_time</name></property>
         <property><name>stop_time</name></property>
-
-        <property><name>discovery_data_directory</name></property>
-        <property><name>discovery_datasets_file</name></property>
-        <property><name>popularity_score_data_directory</name></property>
-        <property><name>popularity_score_table</name></property>
-
-        <property><name>days_aggregated</name></property>
-
-        <property><name>queue_name</name></property>
-        <property><name>name_node</name></property>
-        <property><name>job_tracker</name></property>
-
-        <property><name>spark_number_executors</name></property>
-        <property><name>spark_executor_memory</name></property>
-        <property><name>spark_driver_memory</name></property>
-
-        <property><name>send_error_email_workflow_file</name></property>
-
-        <property><name>discovery_oozie_directory</name></property>
-
     </parameters>
 
     <controls>
@@ -42,11 +22,9 @@
         <timeout>1440</timeout>
 
         <!--
-        transfering these documents can load up elasticsearch, additionally
-        one instance running would overwrite the work of another instance
-        running at the same time. Limit concurrency to prevent this. The
-        timeout setting combined with once a week runs should prevent this
-        anyways, but this is set for safety sake.
+        Really we should fail anything other than the newest version, sending
+        an old one only to overwrite it is a bit silly. But 1 is the lowest this
+        goes.
         -->
         <concurrency>1</concurrency>
 
@@ -72,24 +50,28 @@
         </data-in>
     </input-events>
 
+    <output-events>
+        <data-out name="popularity_score_esbulk_output" dataset="popularity_score_esbulk">
+            <instance>${coord:current(0)}</instance>
+        </data-out>
+    </output-events>
+
     <action>
         <workflow>
             <app-path>${workflow_file}</app-path>
             <configuration>
-
                 <property>
-                    <name>year</name>
-                    <value>${coord:formatTime(coord:nominalTime(), "y")}</value>
+                    <name>popularity_score_partition_directory</name>
+                    <value>${coord:dataIn('popularity_score_input')}</value>
                 </property>
                 <property>
-                    <name>month</name>
-                    <value>${coord:formatTime(coord:nominalTime(), "M")}</value>
+                    <name>popularity_score_esbulk_partition_directory</name>
+                    <value>${coord:dataOut('popularity_score_esbulk_output')}</value>
                 </property>
                 <property>
-                    <name>day</name>
-                    <value>${coord:formatTime(coord:nominalTime(), "d")}</value>
+                    <name>current_esbulk_partition</name>
+                    <value>${coord:formatTime(coord:nominalTime(), "yyyyMMdd")}</value>
                 </property>
-
             </configuration>
         </workflow>
     </action>

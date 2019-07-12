@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <workflow-app xmlns="uri:oozie:workflow:0.4"
-    name="discovery-transfer_to_es-${popularity_score_table}-${year},${month},${day}->cirrussearch-wf">
+        name="discovery-transfer_to_es-hive:${popularity_score_table}->esbulk:${current_esbulk_partition}->swift-wf">
 
     <parameters>
         <property>
@@ -22,88 +22,11 @@
         <property><name>queue_name</name></property>
         <property><name>name_node</name></property>
         <property><name>job_tracker</name></property>
-
-        <property>
-            <name>spark_number_executors</name>
-            <description>Number of executors to run job with</description>
-        </property>
-        <property>
-            <name>spark_executor_memory</name>
-            <description>Amount of memory to reserve on executor instances</description>
-        </property>
-        <property>
-            <name>spark_driver_memory</name>
-            <description>Amount of memory to reserve on driver instance</description>
-        </property>
-
-        <property>
-            <name>popularity_score_table</name>
-            <description>Fully qualified name of the popularity_score table in hive</description>
-        </property>
-        <property>
-            <name>popularity_score_data_directory</name>
-            <description>The popularity_score directory path in HDFS</description>
-        </property>
-        <property>
-            <name>popularity_score_partition_directory</name>
-            <value>${popularity_score_data_directory}/agg_days=${days_aggregated}/year=${year}/month=${month}/day=${day}</value>
-        </property>
-
-        <property>
-            <name>days_aggregated</name>
-            <description>Number of days to aggregate page views over</description>
-        </property>
-
-        <property>
-            <name>year</name>
-            <description>Exlusive four digit year portion of date to end aggregation on</description>
-        </property>
-        <property>
-            <name>month</name>
-            <description>Exclusive unpadded month portion of date to end aggregation on</description>
-        </property>
-        <property>
-            <name>day</name>
-            <description>Exclusive unpadded day portion of date to end aggregation on</description>
-        </property>
-
-        <property>
-            <name>send_error_email_workflow_file</name>
-            <description>Workflow for sending an email</description>
-        </property>
-
-        <property>
-            <name>discovery_oozie_directory</name>
-            <description>The path to this repositories oozie directory in HDFS</description>
-        </property>
-
-        <property>
-            <name>pyspark_transfer_to_es_script</name>
-            <value>${discovery_oozie_directory}/transfer_to_es/transferToKafka.py</value>
-            <description>Path to Pyspark script to run for generating the popularity score in HDFS.</description>
-        </property>
-        <property>
-            <name>transfer_to_es_hostmap_file</name>
-            <value>${discovery_oozie_directory}/transfer_to_es/hostmap.json</value>
-            <description>Path to JSON hostmap for domain -> wiki conversion in HDFS</description>
-        </property>
-        <property>
-            <name>kafka_broker</name>
-            <description>csv of host:port to bootstrap the kafka connection</description>
-        </property>
-        <property>
-            <name>kafka_topic</name>
-            <description>kafka topic to produce requests to</description>
-        </property>
-        <property>
-            <name>kafka_rate_limit</name>
-            <description>Maximum number of kafka messages to produce per second per executor</description>
-        </property>
     </parameters>
 
-    <start to="transfer"/>
+    <start to="convert_to_esbulk"/>
 
-    <action name="transfer">
+    <action name="convert_to_esbulk">
         <spark xmlns="uri:oozie:spark-action:0.1">
             <job-tracker>${job_tracker}</job-tracker>
             <name-node>${name_node}</name-node>
@@ -127,24 +50,52 @@
             </configuration>
             <master>yarn-cluster</master>
             <mode>cluster</mode>
-            <name>Discovery Transfer To CirrusSearch</name>
-            <jar>${pyspark_transfer_to_es_script}</jar>
-            <spark-opts>--archives ${virtualenv_zip_path} --conf spark.pyspark.python=${pyspark_python} --conf spark.sql.shuffle.partitions=${spark_sql_shuffle_partitions} --executor-memory ${spark_executor_memory} --driver-memory ${spark_driver_memory} --conf spark.dynamicAllocation.maxExecutors=${spark_number_executors} --num-executors ${spark_number_executors} --queue ${queue_name}</spark-opts>
+            <name>Discovery popularity_score to esbulk</name>
+            <jar>${pyspark_convert_to_esbulk_script}</jar>
+            <spark-opts>
+                --conf spark.pyspark.python=python3
+                --driver-memory ${spark_driver_memory}
+                --executor-memory ${spark_executor_memory}
+                --conf spark.dynamicAllocation.maxExecutors=${spark_number_executors}
+                --queue ${queue_name}
+            </spark-opts>
             <!-- arguments for pyspark script -->
             <arg>--source</arg>
             <arg>${popularity_score_partition_directory}</arg>
-            <arg>--kafka-broker</arg>
-            <arg>${kafka_broker}</arg>
-            <arg>--topic</arg>
-            <arg>${kafka_topic}</arg>
-            <arg>--hostmap</arg>
-            <arg>${transfer_to_es_hostmap_file}</arg>
+            <arg>--output</arg>
+            <arg>${popularity_score_esbulk_partition_directory}</arg>
             <arg>--field-name</arg>
             <arg>popularity_score</arg>
-            <arg>--rate-limit</arg>
-            <arg>${kafka_rate_limit}</arg>
         </spark>
 
+        <ok to="swift_upload"/>
+        <error to="send_error_email"/>
+    </action>
+
+    <action name="swift_upload">
+        <sub-workflow>
+            <app-path>${swift_upload_workflow_file}</app-path>
+            <propagate-configuration/>
+            <configuration>
+                <property>
+                    <name>source_directory</name>
+                    <value>${popularity_score_esbulk_partition_directory}</value>
+                </property>
+                <property>
+                    <name>swift_container</name>
+                    <value>search_popularity_score</value>
+                </property>
+                <property>
+                    <name>swift_object_prefix</name>
+                    <value>${current_esbulk_partition}</value>
+                </property>
+                <property>
+                    <!-- Must be true to allow re-runs of workflow -->
+                    <name>should_overwrite</name>
+                    <value>true</value>
+                </property>
+            </configuration>
+        </sub-workflow>
         <ok to="end"/>
         <error to="send_error_email"/>
     </action>
