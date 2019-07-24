@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<coordinator-app xmlns="uri:oozie:coordinator:0.4"
+    name="search_satisfaction-druid-daily-coord"
+    frequency="${coord:days(1)}"
+    start="${start_time}"
+    end="${stop_time}"
+    timezone="Universal">
+
+    <controls>
+        <!--(timeout is measured in minutes)-->
+        <timeout>-1</timeout>
+
+        <!-- Setting medium concurrency for backfill of lightweight tasks -->
+        <concurrency>6</concurrency>
+        <throttle>6</throttle>
+    </controls>
+
+    <datasets>
+        <include>${search_satisfaction_datasets_file}</include>
+    </datasets>
+
+    <input-events>
+        <data-in name="search_satisfaction_daily_input" dataset="search_satisfaction_daily">
+            <instance>${coord:current(0)}</instance>
+        </data-in>
+    </input-events>
+
+    <action>
+        <workflow>
+            <app-path>${workflow_file}</app-path>
+            <configuration>
+                <property>
+                    <name>year</name>
+                    <value>${coord:formatTime(coord:nominalTime(), "y")}</value>
+                </property>
+                <property>
+                    <name>month</name>
+                    <value>${coord:formatTime(coord:nominalTime(), "M")}</value>
+                </property>
+                <property>
+                    <name>day</name>
+                    <value>${coord:formatTime(coord:nominalTime(), "d")}</value>
+                </property>
+
+                <property>
+                    <name>loaded_period</name>
+                    <value>${coord:formatTime(coord:nominalTime(), "yyyy-MM-dd")}/${coord:formatTime(coord:dateOffset(coord:nominalTime(), 1, "DAY"), "yyyy-MM-dd")}</value>
+                </property>
+            </configuration>
+        </workflow>
+    </action>
+</coordinator-app>

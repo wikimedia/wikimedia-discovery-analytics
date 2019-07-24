@@ -1,0 +1,76 @@
+{
+  "type" : "index_hadoop",
+  "spec" : {
+    "ioConfig" : {
+      "type" : "hadoop",
+      "inputSpec" : {
+        "type" : "static",
+        "paths" : "*INPUT_PATH*"
+      },
+      "appendToExisting": false
+    },
+    "dataSchema" : {
+      "dataSource" : "*DRUID_DATASOURCE*",
+      "granularitySpec" : {
+        "type" : "uniform",
+        "segmentGranularity" : "day",
+        "queryGranularity" : "hour",
+        "rollup": true,
+        "intervals" : *INTERVALS_ARRAY*
+      },
+      "parser" : {
+        "type" : "string",
+        "parseSpec" : {
+          "format" : "json",
+          "dimensionsSpec" : {
+            "dimensions" : [
+              "wiki",
+              "bucket",
+              "is_autorewrite_dym",
+              "is_dym",
+              "dym_shown",
+              "dym_clicked",
+              "hits_returned",
+              "hit_interact",
+              "continent",
+              "country_code",
+              "country",
+              "ua_browser_family",
+              "ua_os_family"
+            ]
+          },
+          "timestampSpec" : {
+            "format" : "auto",
+            "column" : "dt"
+          }
+        }
+      },
+      "metricsSpec" : [
+        {
+          "name" : "search_count",
+          "type" : "floatSum",
+          "fieldName": "search_count"
+        },
+        {
+          "name" : "search_count_norm",
+          "type" : "floatSum",
+          "fieldName": "search_count_norm"
+        }
+      ]
+    },
+    "tuningConfig" : {
+      "type" : "hadoop",
+      "overwriteFiles": true,
+      "ignoreInvalidRows" : false,
+      "partitionsSpec" : {
+        "type" : "hashed",
+        "numShards" : 1
+      },
+      "jobProperties" : {
+        "mapreduce.reduce.memory.mb" : "8192",
+        "mapreduce.output.fileoutputformat.compress": "org.apache.hadoop.io.compress.GzipCodec",
+        "mapreduce.job.queuename": "*HADOOP_QUEUE*"
+      }
+    }
+  }
+}

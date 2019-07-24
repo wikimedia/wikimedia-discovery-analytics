@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Defines datasets necessary for the search_satisfaction workflows.  Use this
+  dataset in your coordinator.xml files by setting:
+
+    ${cirrus_request_event_data_directory} - Path to directory where eventgate mediawiki_cirrussearch_request table is stored
+                        Example: /wmf/data/wmf/event/mediawiki_cirrussearch_request
+    ${search_satisfaction_event_data_directory} - Path to directory where eventlogging testsearchsatisfaction2 table is stored
+                        Example: /wmf/data/wmf/event/testsearchsatisfaction2
+    ${search_satisfaction_data_directory} - Path to discovery search satisfaction data outputs
+                        Example: /wmf/data/discovery/search_satisfaction
+-->
+
+<datasets>
+
+    <dataset name="mediawiki_cirrussearch_request"
+             frequency="${coord:hours(1)}"
+             initial-instance="2019-05-01T00:00Z"
+             timezone="Universal">
+         <uri-template>${cirrus_request_event_data_directory}/datacenter=eqiad/year=${YEAR}/month=${"$"}{MONTH + 0}/day=${"$"}{DAY + 0}/hour=${"$"}{HOUR + 0}</uri-template>
+        <done-flag>_SUCCESS</done-flag>
+    </dataset>
+
+    <dataset name="event_testsearchsatisfaction2"
+            frequency="${coord:hours(1)}"
+            initial-instance="2019-05-01T00:00Z"
+            timezone="Universal">
+        <uri-template>${search_satisfaction_event_data_directory}/year=${YEAR}/month=${"$"}{MONTH + 0}/day=${"$"}{DAY + 0}/hour=${"$"}{HOUR + 0}</uri-template>
+        <done-flag>_SUCCESS</done-flag>
+    </dataset>
+
+    <dataset name="search_satisfaction_daily"
+             frequency="${coord:days(1)}"
+             initial-instance="2019-06-01T00:00Z"
+             timezone="Universal">
+         <uri-template>${search_satisfaction_data_directory}/daily/year=${YEAR}/month=${"$"}{MONTH + 0}/day=${"$"}{DAY + 0}</uri-template>
+        <done-flag>_SUCCESS</done-flag>
+    </dataset>
+
+</datasets>
