@@ -76,7 +76,7 @@
                 </property>
                 <property>
                     <name>mark_dataset_done_directory</name>
-                    <value>${glent_data_directory}/${glent_action}/part=${coord:formatTime(coord:nominalTime(), "yyyyMMdd")}</value>
+                    <value>${glent_data_directory}/${glent_action}/date=${coord:formatTime(coord:nominalTime(), "yyyyMMdd")}</value>
                 </property>
             </configuration>
         </workflow>
