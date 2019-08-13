@@ -66,16 +66,12 @@
                     <value>${output_directory}</value>
                 </property>
                 <property>
-                    <name>swift_container</name>
-                    <value>search_glent</value>
-                </property>
-                <property>
                     <name>swift_object_prefix</name>
                     <value>${current_partition}</value>
                 </property>
                 <property>
                     <!-- Must be true to allow re-runs of workflow -->
-                    <name>should_overwrite</name>
+                    <name>swift_overwrite</name>
                     <value>true</value>
                 </property>
             </configuration>
