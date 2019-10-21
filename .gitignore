@@ -2,3 +2,10 @@
 .*.sw?
 /_build
 /oozie/glent/coordinator-*.xml
+.mypy_cache
+.cache
+/airflow/airflow.db
+/airflow/airflow.cfg
+/airflow/unittests.cfg
+/airflow/logs
+__pycache__
