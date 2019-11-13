@@ -5,7 +5,7 @@
     <parameters>
         <property>
             <name>oozie.action.sharelib.for.spark</name>
-            <value>spark2.3.1</value>
+            <value>spark-2.4.4</value>
         </property>
 
         <!-- Default values for inner oozie settings -->
@@ -43,7 +43,7 @@
                     <value>SPARK_HOME=/usr/lib/spark2</value>
                 </property>
             </configuration>
-            <master>yarn-cluster</master>
+            <master>yarn</master>
             <mode>cluster</mode>
             <name>Discovery Generate Daily Druid Search Satisfaction</name>
             <jar>${discovery_oozie_directory}/search_satisfaction/druid/daily/generate_daily_druid_search_satisfaction.py</jar>

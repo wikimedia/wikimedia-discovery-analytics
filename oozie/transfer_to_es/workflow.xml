@@ -5,7 +5,7 @@
     <parameters>
         <property>
             <name>oozie.action.sharelib.for.spark</name>
-            <value>spark2.3.1</value>
+            <value>spark-2.4.4</value>
         </property>
 
         <!-- Default values for inner oozie settings -->
@@ -48,7 +48,7 @@
                     <value>SPARK_HOME=/usr/lib/spark2</value>
                 </property>
             </configuration>
-            <master>yarn-cluster</master>
+            <master>yarn</master>
             <mode>cluster</mode>
             <name>Discovery popularity_score to esbulk</name>
             <jar>${pyspark_convert_to_esbulk_script}</jar>
