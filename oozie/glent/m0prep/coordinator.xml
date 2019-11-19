@@ -63,10 +63,6 @@
                     <value>${coord:formatTime(coord:dateOffset(coord:nominalTime(), -7, 'DAY'), "yyyy-MM-dd'T00:00:00Z'")}</value>
                 </property>
                 <property>
-                    <name>earliest_instance</name>
-                    <value>${coord:formatTime(coord:dateOffset(coord:nominalTime(), -84, 'DAY'), "yyyy-MM-dd'T00:00:00Z'")}</value>
-                </property>
-                <property>
                     <name>current_partition</name>
                     <value>${coord:formatTime(coord:nominalTime(), "yyyyMMdd")}</value>
                 </property>

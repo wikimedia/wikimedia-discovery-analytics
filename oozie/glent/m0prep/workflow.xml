@@ -59,8 +59,6 @@
             <arg>--min-hits-perc-diff</arg><arg>10</arg>
             <arg>--sugg-max-ts-diff</arg><arg>PT120S</arg>
 
-            <arg>--earliest-legal-ts</arg><arg>${earliest_instance}</arg>
-
             <arg>--output-table</arg><arg>${glent_m0prep_table}</arg>
             <arg>--output-partition</arg><arg>${current_partition}</arg>
             <arg>--max-output-partitions</arg><arg>5</arg>
