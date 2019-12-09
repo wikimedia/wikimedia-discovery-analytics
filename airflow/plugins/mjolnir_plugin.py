@@ -279,6 +279,9 @@ class MjolnirOperator(BaseOperator, LoggingMixin):
         # Fetch jars from archiva. This must be a local file,
         # it cannot be an hdfs path.
         conf['spark.jars.ivySettings'] = '/etc/maven/ivysettings.xml'
+        # By default ivy will use $HOME/.ivy2, but the airflow user
+        # has no home directory. Use /tmp for now...
+        conf['spark.jars.ivy'] = '/tmp/airflow_ivy2'
         # Default resources limits
         conf['spark.executor.memory'] = '2g'
         conf['spark.dynamicAllocation.maxExecutors'] = '600'
