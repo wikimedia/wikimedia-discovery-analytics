@@ -94,9 +94,21 @@
         </property>
     </parameters>
 
+    <credentials>
+        <credential name="hive-cred" type="hive2">
+            <property>
+                <name>hive2.server.principal</name>
+                <value>${hive2_principal}</value>
+            </property>
+            <property>
+               <name>hive2.jdbc.url</name>
+               <value>${hive2_jdbc_url}</value>
+            </property>
+        </credential>
+    </credentials>
     <start to="aggregate"/>
 
-    <action name="aggregate">
+    <action name="aggregate" cred="hive-cred">
         <hive2 xmlns="uri:oozie:hive2-action:0.2">
             <job-tracker>${job_tracker}</job-tracker>
             <name-node>${name_node}</name-node>
