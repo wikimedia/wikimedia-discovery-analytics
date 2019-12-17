@@ -98,7 +98,7 @@
         <credential name="hive-cred" type="hive2">
             <property>
                 <name>hive2.server.principal</name>
-                <value>${hive2_principal}</value>
+                <value>${hive_principal}</value>
             </property>
             <property>
                <name>hive2.jdbc.url</name>
