@@ -55,6 +55,11 @@
                     <value>${coord:formatTime(coord:nominalTime(), "yyyyMMdd")}</value>
                 </property>
                 <property>
+                    <name>previous_partition</name>
+                    <value>${coord:formatTime(coord:dateOffset(coord:nominalTime(), -7, 'DAY'), "yyyyMMdd")}</value>
+                </property>
+
+                <property>
                     <name>current_instance</name>
                     <value>${coord:formatTime(coord:nominalTime(), "yyyy-MM-dd'T00:00:00Z'")}</value>
                 </property>

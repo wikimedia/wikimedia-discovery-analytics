@@ -61,6 +61,8 @@
             <arg>--log-ts-to</arg><arg>${current_instance}</arg>
             <arg>--max-n-queries-per-ident</arg><arg>2000</arg>
             <arg>--map-wikiid-to-lang-name</arg><arg>${canonical_data_wikis_table}</arg>
+            <arg>--input-table</arg><arg>${glent_suggestions_table}</arg>
+            <arg>--input-partition</arg><arg>${previous_partition}</arg>
 
             <arg>--output-table</arg><arg>${glent_suggestions_table}</arg>
             <arg>--output-partition</arg><arg>${current_partition}</arg>
