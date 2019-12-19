@@ -59,7 +59,6 @@
 
             <arg>--input-table</arg><arg>${glent_suggestions_table}</arg>
             <arg>--input-partition</arg><arg>${current_partition}</arg>
-            <arg>--min-m2run-partition</arg><arg>${earliest_partition}</arg>
 
             <arg>--output-path</arg><arg>${output_directory}</arg>
             <arg>--max-output-partitions</arg><arg>5</arg>
