@@ -1,0 +1,45 @@
+{
+    "acls": {
+        "enable": false,
+        "modify_groups": [],
+        "modify_users": [],
+        "ui_users": [],
+        "view_groups": [],
+        "view_users": []
+    },
+    "file_systems": [],
+    "master": {
+        "env": {},
+        "files": {
+            "swift_auth.env": {
+                "size": 0,
+                "source": "hdfs://analytics-hadoop/user/analytics/swift_auth_analytics_admin.env",
+                "timestamp": 0,
+                "type": "FILE",
+                "visibility": "APPLICATION"
+            },
+            "swift_upload.py": {
+                "size": 0,
+                "source": "hdfs://analytics-hadoop/wmf/refinery/current/oozie/util/swift/upload/swift_upload.py",
+                "timestamp": 0,
+                "type": "FILE",
+                "visibility": "APPLICATION"
+            }
+        },
+        "log_level": "INFO",
+        "resources": {
+            "fpgas": 0,
+            "gpus": 0,
+            "memory": 1024,
+            "vcores": 1
+        },
+        "script": "python3 swift_upload.py --swift-overwrite true --swift-delete-after 604800 --swift-auto-version true --swift-object-prefix '{{ ds_nodash }}' --event-per-object false --event-stream swift.search_mjolnir_model.upload-complete --event-service-url http://eventgate-analytics.svc.eqiad.wmnet:31192/v1/events swift_auth.env search_mjolnir_model '{{ task_instance.xcom_pull(task_ids='\"'\"'train-fiwiki-dbn-20180215-query_explorer-pruned_mrmr'\"'\"', key='\"'\"'output-path'\"'\"') }}'"
+    },
+    "max_attempts": 1,
+    "name": "upload-fiwiki-dbn-20180215-query_explorer-pruned_mrmr",
+    "node_label": "",
+    "queue": "default",
+    "services": {},
+    "tags": [],
+    "user": ""
+}

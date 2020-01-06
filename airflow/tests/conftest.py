@@ -17,7 +17,7 @@ def on_disk_fixture(path):
             assert expect == other
         elif os.environ.get('REBUILD_FIXTURES') == 'yes':
             with open(path, 'w') as f:
-                json.dump(other, f, indent=4)
+                json.dump(other, f, indent=4, sort_keys=True)
             pytest.skip("Rebuilt fixture")
         else:
             raise Exception('No fixture [{}] and REBUILD_FIXTURES != yes'.format(path))

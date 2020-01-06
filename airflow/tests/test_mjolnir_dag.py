@@ -6,26 +6,26 @@ from airflow.contrib.hooks.spark_submit_hook import SparkSubmitHook
 from airflow.hooks.hive_hooks import HiveMetastoreHook
 from airflow.hooks.hdfs_cli_plugin import HdfsCliHook
 from airflow.operators.mjolnir_plugin import MjolnirOperator
-from airflow.operators.swift_plugin import SwiftUploadOperator
+from airflow.operators.skein_plugin import SkeinOperator
 import pytest
 
 
-def dag_tasks(dag_id):
-    return list(DagBag().get_dag(dag_id).tasks)
+def dag_tasks(dag_id, kind):
+    return [task for task in DagBag().get_dag(dag_id).tasks if isinstance(task, kind)]
 
 
-@pytest.mark.parametrize('task', dag_tasks('mjolnir'))
+@pytest.mark.parametrize('task', dag_tasks('mjolnir', SkeinOperator))
+def test_skein_spec_against_fixtures(fixture_factory, task):
+    spec = task._build_spec()
+    comparer = fixture_factory('skein_operator', task.task_id)
+    comparer(spec.to_dict())
+
+
+@pytest.mark.parametrize('task', dag_tasks('mjolnir', MjolnirOperator))
 def test_spark_submit_cli_args_against_fixtures(mocker, fixture_factory, task):
-    # Make sure we pass any pre-task validation
-    if isinstance(task, MjolnirOperator):
-        mocker.patch.object(task, '_marker_exists').return_value = False
-        mocker.patch.object(task, '_output_path').return_value = \
-            'hdfs://pytest/path/to/output'
-    elif isinstance(task, SwiftUploadOperator):
-        mocker.patch.object(task, '_validate').return_value = []
-    else:
-        # These don't run spark
-        return
+    mocker.patch.object(task, '_marker_exists').return_value = False
+    mocker.patch.object(task, '_output_path').return_value = \
+        'hdfs://pytest/path/to/output'
 
     # TODO: Don't duplicate WIKIS list
     WIKIS = [
