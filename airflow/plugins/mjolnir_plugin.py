@@ -203,6 +203,7 @@ class MjolnirOperator(BaseOperator, LoggingMixin):
         spark_args: Mapping[str, Any] = {},
         metastore_conn_id: str = 'metastore_default',
         auto_size_metadata_dir: Optional[str] = None,
+        python_version: str = 'python3.5',
         *args, **kwargs
     ):
         super().__init__(*args, **kwargs)
@@ -218,6 +219,7 @@ class MjolnirOperator(BaseOperator, LoggingMixin):
         self._marker = marker
         self._metastore_conn_id = metastore_conn_id
         self._auto_size_metadata_dir = auto_size_metadata_dir
+        self._python_version = python_version
 
     def _output_path(self):
         hive = HiveMetastoreHook(self._metastore_conn_id)
@@ -282,11 +284,6 @@ class MjolnirOperator(BaseOperator, LoggingMixin):
         # By default ivy will use $HOME/.ivy2, but the airflow user
         # has no home directory. Use /tmp for now...
         conf['spark.jars.ivy'] = '/tmp/airflow_ivy2'
-        # spark-env.sh will incorrectly detect the system python version
-        # and adjust PYTHONPATH, even though we are using deploy-mode=cluster
-        # which never uses the system python on the airflow instance. Work
-        # around by explicitly overriding the pythonpath
-        conf['spark.executorEnv.PYTHONPATH'] = '/usr/lib/spark2/python3.5'
         # Default resources limits
         conf['spark.executor.memory'] = '2g'
         conf['spark.dynamicAllocation.maxExecutors'] = '600'
@@ -332,10 +329,23 @@ class MjolnirOperator(BaseOperator, LoggingMixin):
                 self.task_id, context['ds_nodash']),
             application_args=application_args,
             **spark_args)
+
+        # spark-env.sh shipped to wmf analytics will incorrectly detect the
+        # system python version and adjust PYTHONPATH, even though we are using
+        # deploy-mode=cluster which never uses the system python on the airflow
+        # instance. Work around by telling it what python version to expect.
+        env = os.environ.copy()
+        if 'PYSPARK_PYTHON_VERSION' not in env:
+            env['PYSPARK_PYTHON_VERSION'] = self._python_version
+        # Temp hack until gerrit patches 562589 and 562651 are merged/deployed
+        # to support PYSPARK_PYTHON_VERSION and repair hive metastore connections.
+        if 'SPARK_CONF_DIR' not in env:
+            env['SPARK_CONF_DIR'] = '/home/ebernhardson/spark-conf'
+
         # Dummy script that imports and runs mjolnir.__main__.main
         application_path = os.path.join(
             self._deploys['discovery-analytics'], 'spark/mjolnir-utilities.py')
-        self._hook.submit(application_path)
+        self._hook.submit(application_path, env=env)
 
     def on_kill(self):
         self._hook.on_kill()

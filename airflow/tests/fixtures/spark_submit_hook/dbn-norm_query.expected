@@ -9,8 +9,6 @@
     "--conf",
     "spark.executor.memory=6g",
     "--conf",
-    "spark.executorEnv.PYTHONPATH=/usr/lib/spark2/python3.5",
-    "--conf",
     "spark.jars.ivy=/tmp/airflow_ivy2",
     "--conf",
     "spark.jars.ivySettings=/etc/maven/ivysettings.xml",
