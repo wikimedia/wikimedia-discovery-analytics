@@ -282,6 +282,11 @@ class MjolnirOperator(BaseOperator, LoggingMixin):
         # By default ivy will use $HOME/.ivy2, but the airflow user
         # has no home directory. Use /tmp for now...
         conf['spark.jars.ivy'] = '/tmp/airflow_ivy2'
+        # spark-env.sh will incorrectly detect the system python version
+        # and adjust PYTHONPATH, even though we are using deploy-mode=cluster
+        # which never uses the system python on the airflow instance. Work
+        # around by explicitly overriding the pythonpath
+        conf['spark.executorEnv.PYTHONPATH'] = '/usr/lib/spark2/python3.5'
         # Default resources limits
         conf['spark.executor.memory'] = '2g'
         conf['spark.dynamicAllocation.maxExecutors'] = '600'
@@ -327,6 +332,7 @@ class MjolnirOperator(BaseOperator, LoggingMixin):
                 self.task_id, context['ds_nodash']),
             application_args=application_args,
             **spark_args)
+        # Dummy script that imports and runs mjolnir.__main__.main
         application_path = os.path.join(
             self._deploys['discovery-analytics'], 'spark/mjolnir-utilities.py')
         self._hook.submit(application_path)
