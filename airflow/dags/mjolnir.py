@@ -59,8 +59,7 @@ KAFKA_CLI_ARGS = {
 default_args = {
     'owner': 'discovery-analytics',
     'depends_on_past': False,
-    'start_date': datetime(2019, 10, 15),
-    'catchup': False,
+    'start_date': datetime(2020, 1, 8),
     'email': ['ebernhardson@wikimedia.org'],
     'email_on_failure': True,
     'email_on_retry': False,
@@ -322,7 +321,8 @@ def upload(trained_model: TrainedModel) -> SwiftUploadOperator:
 with DAG(
     'mjolnir',
     default_args=default_args,
-    schedule_interval=timedelta(days=7)
+    schedule_interval=timedelta(days=7),
+    catchup=False,
 ) as dag:
     clicks = query_clicks_ltr()
     clusters = norm_query(clicks)
