@@ -248,6 +248,7 @@ def hyperparam(training_files: TrainingFiles) -> ModelParameters:
     op = MjolnirOperator(
         task_id='hyperparam-{wikiid}-{labeling_algorithm}-{feature_set}'.format(
             **dict(training_files._partition_spec)),
+        pool='sequential',
         transformer='hyperparam',
         table=TABLES['model_parameters'],
         partition_spec=training_files._partition_spec,
