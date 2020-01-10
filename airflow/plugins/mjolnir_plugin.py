@@ -214,8 +214,7 @@ class MjolnirOperator(BaseOperator, LoggingMixin):
         self._deploys = deploys
         self._spark_args = dict(spark_args)
         self._table = table
-        # All partition specs are prefixed with the run date
-        self._partition_spec = [('date', '{{ ds_nodash }}')] + list(partition_spec)
+        self._partition_spec = list(partition_spec)
         self._marker = marker
         self._metastore_conn_id = metastore_conn_id
         self._auto_size_metadata_dir = auto_size_metadata_dir

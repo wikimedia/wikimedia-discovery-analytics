@@ -90,7 +90,9 @@ def query_clicks_ltr() -> QueryClicks:
     op = MjolnirOperator(
         task_id='query_clicks_ltr',
         table=TABLES['query_clicks'],
-        partition_spec=[],
+        partition_spec=[
+            ('date', '{{ ds_nodash }}'),
+        ],
         transformer_args={
             'input-table': TABLES['query_clicks_raw'],
             'output-table': TABLES['query_clicks'],
@@ -103,7 +105,10 @@ def norm_query(clicks: QueryClicks) -> QueryClustering:
     op = MjolnirOperator(
         task_id='norm_query_clustering',
         table=TABLES['query_clustering'],
-        partition_spec=[('algorithm', 'norm_query')],
+        partition_spec=[
+            ('date', '{{ ds_nodash }}'),
+            ('algorithm', 'norm_query'),
+        ],
         spark_args={'driver_memory': '8g'},
         transformer_args=dict(KAFKA_CLI_ARGS, **{
             'clicks-table': clicks._table,
@@ -121,7 +126,10 @@ def dbn(clicks: QueryClicks, clusters: QueryClustering) -> LabeledQueryPage:
         task_id='dbn-' + clusters.partition_key('algorithm'),
         transformer='dbn',
         table=TABLES['labeled_query_page'],
-        partition_spec=[('algorithm', 'dbn')],
+        partition_spec=[
+            ('date', '{{ ds_nodash }}'),
+            ('algorithm', 'dbn')
+        ],
         spark_args=dict(conf={
             'spark.executor.cores': 4,
             'spark.executor.memory': '6g',
@@ -151,7 +159,10 @@ def collect_vectors(
             clusters.partition_key('algorithm'), feature_set),
         transformer='feature_vectors',
         table=TABLES['feature_vectors'],
-        partition_spec=[('feature_set', feature_set)],
+        partition_spec=[
+            ('date', '{{ ds_nodash }}'),
+            ('feature_set', feature_set)
+        ],
         marker='_METADATA.JSON',
         transformer_args=dict(KAFKA_CLI_ARGS, **{
             'clicks-table': clicks._table,
@@ -188,7 +199,10 @@ def prune_vectors(
             feature_set),
         transformer='feature_selection',
         table=TABLES['feature_vectors'],
-        partition_spec=[('feature_set', feature_set)],
+        partition_spec=[
+            ('date', '{{ ds_nodash }}'),
+            ('feature_set', feature_set),
+        ],
         marker='_METADATA.JSON',
         spark_args=dict(
             driver_memory='6g',
@@ -224,6 +238,7 @@ def make_folds(wiki: str, vectors: FeatureVectors, labels: LabeledQueryPage) -> 
         transformer='make_folds',
         table=TABLES['training_files'],
         partition_spec=[
+            ('date', '{{ ds_nodash }}'),
             ('wikiid', wiki),
             ('labeling_algorithm', labels.partition_key('algorithm')),
             ('feature_set', vectors.partition_key('feature_set')),
