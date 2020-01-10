@@ -37,7 +37,7 @@
     "--date",
     "20200108",
     "--output-path",
-    "hdfs://pytest/path/to/output",
+    "hdfs://pytest/path/to/mjolnir/feature_vectors/date=20200108/feature_set=20180215-query_explorer-pruned_mrmr",
     "--feature-set",
     "20180215-query_explorer",
     "--feature-vectors-table",

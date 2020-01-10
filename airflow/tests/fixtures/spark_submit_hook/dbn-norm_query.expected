@@ -35,7 +35,7 @@
     "--date",
     "20200108",
     "--output-path",
-    "hdfs://pytest/path/to/output",
+    "hdfs://pytest/path/to/mjolnir/labeled_query_page/date=20200108/algorithm=dbn",
     "--clicks-table",
     "mjolnir.query_clicks_ltr",
     "--clustering-algo",

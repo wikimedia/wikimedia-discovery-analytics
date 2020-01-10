@@ -33,7 +33,7 @@
     "--date",
     "20200108",
     "--output-path",
-    "hdfs://pytest/path/to/output",
+    "hdfs://pytest/path/to/mjolnir/feature_vectors/date=20200108/feature_set=20180215-query_explorer",
     "--brokers",
     "kafka-jumbo1001.eqiad.wmnet:9092,kafka-jumbo1002.eqiad.wmnet:9092,kafka-jumbo1003.eqiad.wmnet:9092",
     "--clicks-table",

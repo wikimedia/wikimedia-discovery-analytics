@@ -3,6 +3,7 @@ import os
 from typing import NewType, Union
 
 from airflow import DAG
+from airflow.hooks.hive_hooks import HiveMetastoreHook
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.mjolnir_plugin import MjolnirOperator
 from airflow.operators.skein_plugin import SkeinOperator
@@ -181,13 +182,6 @@ def collect_vectors(
     return FeatureVectors(op)
 
 
-def _output_path(op: MjolnirOperator) -> str:
-    """Templated output path of op"""
-    stmt = "task_instance.xcom_pull(task_ids='{}', key='output-path')".format(
-        op.task_id)
-    return '{{ ' + stmt + ' }}'
-
-
 def prune_vectors(
     vectors: FeatureVectors,
     labels: LabeledQueryPage,
@@ -244,7 +238,7 @@ def make_folds(wiki: str, vectors: FeatureVectors, labels: LabeledQueryPage) -> 
             ('feature_set', vectors.partition_key('feature_set')),
         ],
         marker='_METADATA.JSON',
-        auto_size_metadata_dir=_output_path(vectors),
+        auto_size_metadata_dir=vectors._output_path,
         transformer_args={
             'feature-vectors-table': vectors._table,
             'feature-set': vectors.partition_key('feature_set'),
@@ -267,7 +261,7 @@ def hyperparam(training_files: TrainingFiles) -> ModelParameters:
         transformer='hyperparam',
         table=TABLES['model_parameters'],
         partition_spec=training_files._partition_spec,
-        auto_size_metadata_dir=_output_path(training_files),
+        auto_size_metadata_dir=training_files._output_path,
         spark_args=dict(
             driver_memory='3g',
             conf={
@@ -276,7 +270,7 @@ def hyperparam(training_files: TrainingFiles) -> ModelParameters:
                 'spark.executor.cores': 6,
             }),
         transformer_args={
-            'training-files-path': _output_path(training_files),
+            'training-files-path': training_files._output_path,
             'output-table': TABLES['model_parameters'],
 
             # hyperparameter search configuration
@@ -301,7 +295,7 @@ def train(
         table=TABLES['trained_models'],
         partition_spec=training_files._partition_spec,
         marker='_METADATA.JSON',
-        auto_size_metadata_dir=_output_path(training_files),
+        auto_size_metadata_dir=training_files._output_path,
         spark_args=dict(
             driver_memory='2g',
             conf={
@@ -310,7 +304,7 @@ def train(
             }),
         transformer_args={
             'model-parameters-table': model_parameters._table,
-            'training-files-path': _output_path(training_files),
+            'training-files-path': training_files._output_path,
             'remote-feature-set': remote_feature_set,
         })
     training_files >> op
@@ -368,7 +362,7 @@ def upload(trained_model: TrainedModel) -> SkeinOperator:
         swift_delete_after=timedelta(days=7),
         swift_upload_py=os.path.join(
             deploys['refinery'], 'oozie/util/swift/upload/swift_upload.py'),
-        source_directory=_output_path(trained_model),
+        source_directory=trained_model._output_path,
         swift_container='search_mjolnir_model',
         swift_object_prefix='{{ ds_nodash }}',
         swift_auth_file=deploys['swift_auth_env'],
@@ -376,11 +370,33 @@ def upload(trained_model: TrainedModel) -> SkeinOperator:
     return trained_model >> op
 
 
+class HiveTablePath:
+    def __init__(self, metastore_conn_id='metastore_default'):
+        self.metastore_conn_id = metastore_conn_id
+        self.hook = None
+
+    def __call__(self, qualified_table):
+        if qualified_table.startswith('hdfs://'):
+            return qualified_table
+        if self.hook is None:
+            self.hook = HiveMetastoreHook(self.metastore_conn_id)
+        if '.' not in qualified_table:
+            raise ValueError('table must be fully qualified [{}]'.format(
+                qualified_table))
+        database_name, table_name = qualified_table.split('.', 2)
+        with self.hook.metastore as client:
+            table = client.get_table(database_name, table_name)
+        return table.sd.location
+
+
 with DAG(
     'mjolnir',
     default_args=default_args,
     schedule_interval=timedelta(days=7),
     catchup=False,
+    user_defined_filters={
+        'hive_table_path': HiveTablePath(),
+    }
 ) as dag:
     clicks = query_clicks_ltr()
     clusters = norm_query(clicks)

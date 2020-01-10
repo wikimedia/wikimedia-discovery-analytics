@@ -41,7 +41,7 @@
     "--date",
     "20200108",
     "--output-path",
-    "hdfs://pytest/path/to/output",
+    "hdfs://pytest/path/to/mjolnir/model_parameters/date=20200108/wikiid=fiwiki/labeling_algorithm=dbn/feature_set=20180215-query_explorer-pruned_mrmr",
     "--final-num-trees",
     "500",
     "--initial-num-trees",
@@ -53,5 +53,5 @@
     "--output-table",
     "mjolnir.model_parameters",
     "--training-files-path",
-    "hdfs://path/to/training_files"
+    "hdfs://analytics-hadoop/wmf/data/discovery/mjolnir/training_files/date=20200108/wikiid=fiwiki/labeling_algorithm=dbn/feature_set=20180215-query_explorer-pruned_mrmr"
 ]

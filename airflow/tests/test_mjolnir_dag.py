@@ -1,4 +1,5 @@
 import json
+import os
 
 from airflow.models.dagbag import DagBag
 from airflow.models.taskinstance import TaskInstance
@@ -24,8 +25,6 @@ def test_skein_spec_against_fixtures(fixture_factory, task):
 @pytest.mark.parametrize('task', dag_tasks('mjolnir', MjolnirOperator))
 def test_spark_submit_cli_args_against_fixtures(mocker, fixture_factory, task):
     mocker.patch.object(task, '_marker_exists').return_value = False
-    mocker.patch.object(task, '_output_path').return_value = \
-        'hdfs://pytest/path/to/output'
 
     # TODO: Don't duplicate WIKIS list
     WIKIS = [
@@ -45,19 +44,15 @@ def test_spark_submit_cli_args_against_fixtures(mocker, fixture_factory, task):
         }
     })
 
-    # Replace XCom, when used by TaskInstance, with a trivial return value.
-    # Abuses the fact that we only use xcom for output path of training files.
-    mocker.patch('airflow.models.taskinstance.TaskInstance.xcom_pull').return_value = \
-        'hdfs://path/to/training_files'
-
     # Mock out metastore with some pre-defined paths
-    def get_table_side_effect(database, table):
+    def get_table_side_effect(database_name, table_name):
         table = mocker.MagicMock()
-        table.sd.location = 'hdfs://pytest/path/to/' + database + '/' + table
+        table.sd.location = os.path.join(
+            'hdfs://pytest/path/to', database_name, table_name)
         return table
-    mocker.patch.object(HiveMetastoreHook, 'get_connection')
-    mocked_get_metastore_client = mocker.patch.object(HiveMetastoreHook, 'get_metastore_client')
-    mocked_get_metastore_client().__enter__().get_table.side_effect = get_table_side_effect
+    # mocker.patch.object(HiveMetastoreHook, 'get_connection')
+    mocked_metastore = mocker.patch.object(HiveMetastoreHook, 'get_metastore_client')
+    mocked_metastore().__enter__().get_table.side_effect = get_table_side_effect
 
     # Mock out the hook so we can collect args.
     mocked_make_spark_hook = mocker.patch.object(task, '_make_spark_hook')

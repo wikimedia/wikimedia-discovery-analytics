@@ -39,11 +39,11 @@
     "--date",
     "20200108",
     "--output-path",
-    "hdfs://pytest/path/to/output",
+    "hdfs://analytics-hadoop/wmf/data/discovery/mjolnir/trained_models/date=20200108/wikiid=fawiki/labeling_algorithm=dbn/feature_set=20180215-query_explorer-pruned_mrmr",
     "--model-parameters-table",
     "mjolnir.model_parameters",
     "--remote-feature-set",
     "20180215-query_explorer",
     "--training-files-path",
-    "hdfs://path/to/training_files"
+    "hdfs://analytics-hadoop/wmf/data/discovery/mjolnir/training_files/date=20200108/wikiid=fawiki/labeling_algorithm=dbn/feature_set=20180215-query_explorer-pruned_mrmr"
 ]

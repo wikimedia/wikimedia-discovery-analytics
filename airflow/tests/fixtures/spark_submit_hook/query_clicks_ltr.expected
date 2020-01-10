@@ -33,7 +33,7 @@
     "--date",
     "20200108",
     "--output-path",
-    "hdfs://pytest/path/to/output",
+    "hdfs://pytest/path/to/mjolnir/query_clicks_ltr/date=20200108",
     "--input-table",
     "discovery.query_clicks_daily",
     "--max-q-by-day",

@@ -35,7 +35,7 @@
     "--date",
     "20200108",
     "--output-path",
-    "hdfs://pytest/path/to/output",
+    "hdfs://analytics-hadoop/wmf/data/discovery/mjolnir/training_files/date=20200108/wikiid=frwiki/labeling_algorithm=dbn/feature_set=20180215-query_explorer-pruned_mrmr",
     "--feature-set",
     "20180215-query_explorer-pruned_mrmr",
     "--feature-vectors-table",

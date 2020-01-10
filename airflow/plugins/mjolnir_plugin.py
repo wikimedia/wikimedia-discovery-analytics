@@ -4,12 +4,10 @@ import os
 from typing import cast, Any, Dict, List, Mapping, Optional, Tuple, TypeVar, Union
 
 from airflow.contrib.hooks.spark_submit_hook import SparkSubmitHook
-from airflow.hooks.hive_hooks import HiveMetastoreHook
 from airflow.models.baseoperator import BaseOperator
 from airflow.plugins_manager import AirflowPlugin
 from airflow.utils.decorators import apply_defaults
 from airflow.utils.log.logging_mixin import LoggingMixin
-from hmsclient.hmsclient import HMSClient
 
 
 _T = TypeVar('_T')
@@ -39,27 +37,6 @@ AUTO_DETECT_CONFIG = {
         'train': 20
     }
 }
-
-
-def _table_path(metastore_conn: HMSClient, qualified_table: str) -> str:
-    """Lookup table location in hive metastore"""
-    if qualified_table.startswith('hdfs://'):
-        return qualified_table
-    if '.' not in qualified_table:
-        raise ValueError('table must be fully qualified [{}]'.format(qualified_table))
-    database_name, table_name = qualified_table.split('.', 2)
-    with metastore_conn as client:
-        table = client.get_table(database_name, table_name)
-    return table.sd.location
-
-
-def _partition_path(
-    table_path: str,
-    partition_spec: List[Tuple[str, str]]
-) -> str:
-    """Determine path a partition should be stored at"""
-    partition_name = ('{}={}'.format(k, v) for k, v in partition_spec)
-    return os.path.join(table_path, *partition_name)
 
 
 def _merge_spark_args(default: Mapping, override: Mapping) -> Dict:
@@ -181,6 +158,19 @@ def _sort_items_recursive(maybe_dict):
         return maybe_dict
 
 
+def hive_partition_path(table: str, partition_spec: List[Tuple[str, str]]) -> str:
+    if table.startswith('hdfs://'):
+        table_expr = table
+    else:
+        # We don't want to lookup paths from hive when instantiating the DAG,
+        # so we delay those until tasks are executed. This requires a special
+        # template filter, hive_table_path, that can only be provided by
+        # the DAG and not plugins.
+        table_expr = '{{ "' + table + '" | hive_table_path }}'
+    part_expr = ('{}={}'.format(k, v) for k, v in partition_spec)
+    return os.path.join(table_expr, *part_expr)
+
+
 class MjolnirOperator(BaseOperator, LoggingMixin):
     """Run spark/mjolnir scripts
 
@@ -189,7 +179,7 @@ class MjolnirOperator(BaseOperator, LoggingMixin):
     """
     template_fields = (
         '_table', '_partition_spec', '_transformer_args',
-        '_auto_size_metadata_dir')
+        '_output_path', '_auto_size_metadata_dir')
 
     @apply_defaults
     def __init__(
@@ -197,6 +187,7 @@ class MjolnirOperator(BaseOperator, LoggingMixin):
         table: str,
         partition_spec: List[Tuple[str, str]],
         deploys: Mapping,
+        output_path: Optional[str] = None,
         marker: str = '_SUCCESS',
         transformer: Optional[str] = None,
         transformer_args: Mapping[str, Any] = {},
@@ -215,27 +206,25 @@ class MjolnirOperator(BaseOperator, LoggingMixin):
         self._spark_args = dict(spark_args)
         self._table = table
         self._partition_spec = list(partition_spec)
+        if output_path is None:
+            self._output_path = hive_partition_path(table, self._partition_spec)
+        else:
+            self._output_path = output_path
         self._marker = marker
         self._metastore_conn_id = metastore_conn_id
         self._auto_size_metadata_dir = auto_size_metadata_dir
         self._python_version = python_version
 
-    def _output_path(self):
-        hive = HiveMetastoreHook(self._metastore_conn_id)
-        return _partition_path(
-            _table_path(hive.metastore, self._table),
-            self._partition_spec)
-
     def partition_key(self, key: str):
         """Report partitioning information about this operations output"""
         return dict(self._partition_spec)[key]
 
-    def _marker_exists(self, output_path):
+    def _marker_exists(self):
         """Check if the 'operation complete' marker file exists"""
         # Late-import allows for cross-plugin dependency. Alternatively
         # we should register a connection with airflow and instantiate.
         from airflow.hooks.hdfs_cli_plugin import HdfsCliHook
-        marker_path = os.path.join(output_path, self._marker)
+        marker_path = os.path.join(self._output_path, self._marker)
         self.log.info('Checking marker at {}'.format(marker_path))
         return HdfsCliHook.exists(marker_path)
 
@@ -296,19 +285,15 @@ class MjolnirOperator(BaseOperator, LoggingMixin):
     _make_spark_hook = SparkSubmitHook
 
     def execute(self, context: Mapping):
-        output_path = self._output_path()
-        self.log.info('Using output path of {}'.format(output_path))
-        if self._marker_exists(output_path):
+        self.log.info('Using output path of {}'.format(self._output_path))
+        if self._marker_exists():
             # To re-run the outputs must be deleted.
             self.log.info('Output marker exists, skipping task.')
         else:
-            self._execute(context, output_path)
-        # Report outputs so other tasks can depend on this without us
-        # needing to query hive while building the DAG.
-        context['task_instance'].xcom_push(key='output-path', value=output_path)
+            self._execute(context)
 
-    def _execute(self, context: Mapping, output_path: str):
-        application_args = self._application_args(context, output_path)
+    def _execute(self, context: Mapping):
+        application_args = self._application_args(context, self._output_path)
         spark_args = self._default_spark_args()
         if self._spark_args:
             spark_args = _merge_spark_args(spark_args, self._spark_args)

@@ -33,7 +33,7 @@
             "memory": 1024,
             "vcores": 1
         },
-        "script": "python3 swift_upload.py --swift-overwrite true --swift-delete-after 604800 --swift-auto-version true --swift-object-prefix '{{ ds_nodash }}' --event-per-object false --event-stream swift.search_mjolnir_model.upload-complete --event-service-url http://eventgate-analytics.svc.eqiad.wmnet:31192/v1/events swift_auth.env search_mjolnir_model '{{ task_instance.xcom_pull(task_ids='\"'\"'train-nowiki-dbn-20180215-query_explorer-pruned_mrmr'\"'\"', key='\"'\"'output-path'\"'\"') }}'"
+        "script": "python3 swift_upload.py --swift-overwrite true --swift-delete-after 604800 --swift-auto-version true --swift-object-prefix '{{ ds_nodash }}' --event-per-object false --event-stream swift.search_mjolnir_model.upload-complete --event-service-url http://eventgate-analytics.svc.eqiad.wmnet:31192/v1/events swift_auth.env search_mjolnir_model 'hdfs://analytics-hadoop/wmf/data/discovery/mjolnir/trained_models/date={{ ds_nodash }}/wikiid=nowiki/labeling_algorithm=dbn/feature_set=20180215-query_explorer-pruned_mrmr'"
     },
     "max_attempts": 1,
     "name": "upload-nowiki-dbn-20180215-query_explorer-pruned_mrmr",
