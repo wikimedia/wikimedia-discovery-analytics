@@ -359,7 +359,7 @@ with DAG(
     raw_vectors = collect_vectors(clicks, clusters, FEATURE_SET)
     vectors = prune_vectors(raw_vectors, labels, '{}-pruned_mrmr'.format(FEATURE_SET))
 
-    training_complete = DummyOperator(task_id='training-complete')
+    training_complete = DummyOperator(task_id='complete')
     for wiki in WIKIS:
         training_files = make_folds(wiki, vectors, labels)
         model_parameters = hyperparam(training_files)
