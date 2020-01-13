@@ -7,19 +7,11 @@ from airflow.contrib.hooks.spark_submit_hook import SparkSubmitHook
 from airflow.hooks.hive_hooks import HiveMetastoreHook
 from airflow.hooks.hdfs_cli_plugin import HdfsCliHook
 from airflow.operators.mjolnir_plugin import MjolnirOperator
-from airflow.operators.skein_plugin import SkeinOperator
 import pytest
 
 
 def dag_tasks(dag_id, kind):
     return [task for task in DagBag().get_dag(dag_id).tasks if isinstance(task, kind)]
-
-
-@pytest.mark.parametrize('task', dag_tasks('mjolnir', SkeinOperator))
-def test_skein_spec_against_fixtures(fixture_factory, task):
-    spec = task._build_spec()
-    comparer = fixture_factory('skein_operator', task.task_id)
-    comparer(spec.to_dict())
 
 
 @pytest.mark.parametrize('task', dag_tasks('mjolnir', MjolnirOperator))

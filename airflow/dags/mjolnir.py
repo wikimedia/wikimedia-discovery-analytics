@@ -1,12 +1,11 @@
 from datetime import datetime, timedelta
-import os
-from typing import NewType, Union
+from typing import NewType
 
 from airflow import DAG
 from airflow.hooks.hive_hooks import HiveMetastoreHook
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.mjolnir_plugin import MjolnirOperator
-from airflow.operators.skein_plugin import SkeinOperator
+from airflow.operators.swift_upload_plugin import SwiftUploadOperator
 
 
 # Set of wikis to train
@@ -38,12 +37,11 @@ TABLES = {
     'trained_models': BASE_DATA_DIR + '/trained_models',
 }
 
-# Paths to deployed resources
+# Paths to deployed resources for MjolnirOperator
 deploys = {
     'mjolnir_venv': NAME_NODE + '/user/ebernhardson/mjolnir_venv.zip',
     'refinery': NAME_NODE + '/wmf/refinery/current',
     'discovery-analytics': NAME_NODE + '/user/ebernhardson/discovery-analytics/current',
-    'swift_auth_env': NAME_NODE + '/user/analytics/swift_auth_analytics_admin.env',
 }
 
 # Shared CLI args for scripts that talk with kafka
@@ -312,60 +310,17 @@ def train(
     return TrainedModel(op)
 
 
-def swift_upload(
-    task_id: str,
-    swift_upload_py: str,
-    swift_auth_file: str,
-    swift_container: str,
-    source_directory: str,
-    swift_object_prefix: str,
-    event_stream: Union[bool, str] = True,
-    swift_overwrite: bool = False,
-    swift_delete_after: timedelta = timedelta(days=30),
-    swift_auto_version: bool = False,
-    event_per_object: bool = False,
-    event_service_url: str = 'http://eventgate-analytics.svc.eqiad.wmnet:31192/v1/events',
-):
-    # Rather than deal with hdfs and getting things into place ourselves,
-    # spin up a spark driver and let it act like a python runner with
-    # yarn and hdfs integration.
-    if event_stream is True:
-        event_stream = 'swift.{}.upload-complete'.format(swift_container)
-    elif event_stream is False:
-        event_stream = 'false'
-
-    return SkeinOperator(
-        task_id=task_id,
-        files={'swift_auth.env': swift_auth_file},
-        application=swift_upload_py,
-        application_args=[
-            '--swift-overwrite', str(swift_overwrite).lower(),
-            '--swift-delete-after', str(int(swift_delete_after.total_seconds())),
-            '--swift-auto-version', str(swift_auto_version).lower(),
-            '--swift-object-prefix', swift_object_prefix,
-            '--event-per-object', str(event_per_object).lower(),
-            '--event-stream', event_stream,
-            '--event-service-url', event_service_url,
-            'swift_auth.env',
-            swift_container,
-            source_directory
-        ])
-
-
-def upload(trained_model: TrainedModel) -> SkeinOperator:
+def upload(trained_model: TrainedModel) -> SwiftUploadOperator:
     wiki = trained_model.partition_key('wikiid')
-    op = swift_upload(
+    op = SwiftUploadOperator(
         task_id='upload-{}-{}-{}'.format(
             wiki, trained_model.partition_key('labeling_algorithm'),
             trained_model.partition_key('feature_set')),
         swift_overwrite=True,
         swift_delete_after=timedelta(days=7),
-        swift_upload_py=os.path.join(
-            deploys['refinery'], 'oozie/util/swift/upload/swift_upload.py'),
         source_directory=trained_model._output_path,
         swift_container='search_mjolnir_model',
         swift_object_prefix='{{ ds_nodash }}',
-        swift_auth_file=deploys['swift_auth_env'],
         swift_auto_version=True)
     return trained_model >> op
 
