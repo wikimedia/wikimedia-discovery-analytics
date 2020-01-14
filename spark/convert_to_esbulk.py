@@ -32,6 +32,13 @@ CONFIG = [
             Field(field='score', alias='popularity_score', handler='within 20%')
         ]
     ),
+    Table(
+        table='discovery.ores_drafttopic',
+        join_on='wikiid',
+        fields=[
+            Field(field='drafttopic', alias='ores_drafttopics', handler='equals')
+        ]
+    ),
 ]
 
 

@@ -9,6 +9,7 @@ import pytest
 all_dag_ids = [
     'mjolnir',
     'popularity_score_weekly',
+    'ores_drafttopic_weekly',
     'transfer_to_es_weekly',
 ]
 
@@ -17,6 +18,7 @@ def all_tasks():
     bag = DagBag()
     for dag_id in all_dag_ids:
         dag = bag.get_dag(dag_id)
+        assert dag is not None, dag_id
         for task in dag.tasks:
             yield task
 
@@ -68,7 +70,7 @@ def test_spark_submit_sets_python_version(task):
 
 
 @pytest.mark.parametrize('dag_ids', [
-    ['popularity_score_weekly', 'transfer_to_es_weekly']
+    ['popularity_score_weekly', 'transfer_to_es_weekly', 'ores_drafttopic_weekly'],
 ])
 def test_compatible_schedules(dag_ids):
     dagbag = DagBag()

@@ -55,6 +55,16 @@ with DAG(
         external_dag_id='popularity_score_weekly',
         external_task_id='complete')
 
+    ores_drafttopic = ExternalTaskSensor(
+        task_id='wait_for_ores_drafttopic',
+        # Same sensor reasoning and config as above
+        timeout=60 * 60 * 24,  # 24 hours
+        retries=4,
+        email_on_retry=True,
+        # external task selection
+        external_dag_id='ores_drafttopic_weekly',
+        external_task_id='complete')
+
     # Format inputs as elasticsearch bulk updates
     convert_to_esbulk = SparkSubmitOperator(
         task_id='convert_to_esbulk',
@@ -68,7 +78,7 @@ with DAG(
             '--output', PATH_OUT,
             '--date', '{{ ds }}',
         ])
-    popularity_score >> convert_to_esbulk
+    [popularity_score, ores_drafttopic] >> convert_to_esbulk
 
     # Ship to production
     swift_upload = SwiftUploadOperator(
