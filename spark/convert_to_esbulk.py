@@ -2,46 +2,96 @@
 # to elasticsearch bulk import formatted files on swift.
 from __future__ import print_function
 try:
-    from pyspark.sql import SparkSession, functions as F
+    from pyspark.sql import SparkSession
 except ImportError:
     import findspark
     findspark.init()
-    from pyspark.sql import SparkSession, functions as F
+    from pyspark.sql import SparkSession
+from pyspark.sql import DataFrame, Row, functions as F
+from pyspark import RDD
 from argparse import ArgumentParser
+from datetime import datetime
 import json
 import math
 import random
+import sys
+from typing import cast, Dict, Mapping, NamedTuple, Sequence, Tuple
 
 
-def documentData(document, field):
-    """Transform document into elasticsearch bulk import lines"""
-    header = {
-        'update': {
-            '_index': '{}_content'.format(document.wikiid),
-            '_type': 'page',
-            '_id': document.page_id,
-        }
-    }
+Field = NamedTuple('Field', [('field', str), ('alias', str), ('handler', str)])
+Table = NamedTuple('Table', [
+    ('table', str), ('join_on', str), ('fields', Sequence[Field])])
 
-    update = {
-        'script': {
-            'source': 'super_detect_noop',
-            'lang': 'super_detect_noop',
-            'params': {
-                'handlers': {
-                    field: 'within 20%'
-                },
-                'source': {
-                    field: document.score
-                }
-            }
-        }
-    }
-
-    return '{}\n{}'.format(json.dumps(header), json.dumps(update))
+# Each entry defines a table to load from hive and the fields to source
+# from this table.
+CONFIG = [
+    Table(
+        table='discovery.popularity_score',
+        join_on='project',
+        fields=[
+            Field(field='score', alias='popularity_score', handler='within 20%')
+        ]
+    ),
+]
 
 
-def unique_value_per_partition(df, limit_per_partition, col_name):
+def prepare_table(
+    df: DataFrame, df_wikis: DataFrame, table: Table
+) -> DataFrame:
+    """Convert input dataframe into expected shape
+
+    Adjusts the table, per configuration, to contain the wikiid, page_id, and
+    fields selected for upload. Input data must be a row-per-page and can identify
+    the wiki either by db name (ex: eswiki) or project (ex: es.wikipedia).
+    """
+    if table.join_on == 'project':
+        df = df.join(
+            df_wikis.hint('broadcast'),
+            on=F.concat(F.col('project'), F.lit('.org')) == F.col('domain_name'))
+    elif table.join_on != 'wikiid':
+        raise ValueError('join_on must be in (project, wikiid): {}'.format(table.join_on))
+
+    cols = [F.col(field.field).alias(field.alias) for field in table.fields]
+
+    return df.select('wikiid', 'page_id', *cols)
+
+
+def prepare(
+    spark: SparkSession, date: datetime, config: Sequence[Table]
+) -> Tuple[DataFrame, Mapping[str, str]]:
+    """Collect varied inputs into single dataframe"""
+    df_wikis = (
+        spark.read.table('canonical_data.wikis')
+        .select(F.col('database_code').alias('wikiid'), 'domain_name')
+    )
+
+    current_partition = (F.col('year') == date.year) \
+        & (F.col('month') == date.month) & (F.col('day') == date.day)
+
+    df = None
+    field_handlers = cast(Dict[str, str], {})
+
+    for table in config:
+        new_handlers = {field.alias: field.handler for field in table.fields}
+        if any(name in field_handlers for name in new_handlers.keys()):
+            raise ValueError('Duplicate field handlers configured')
+        field_handlers.update(new_handlers)
+
+        df_current = prepare_table(
+            spark.read.table(table.table).where(current_partition),
+            df_wikis, table)
+
+        if df is None:
+            df = df_current
+        else:
+            df = df.join(df_current, how='outer', on=['wikiid', 'page_id'])
+    assert df is not None
+    return df, field_handlers
+
+
+def unique_value_per_partition(
+        df: DataFrame, limit_per_partition: int, col_name: str
+) -> RDD:
     """Force each partition to contain only one value for `col_name`
 
     Handles skew by looping over the dataset twice, first to count and a second
@@ -63,6 +113,9 @@ def unique_value_per_partition(df, limit_per_partition, col_name):
     # As end is exclusive this is also the count of final partitions
     numPartitions = end
 
+    def partitioner(value: str) -> int:
+        return random.randint(*partition_ranges[value])
+
     # We could re-create a dataframe by passing this through
     # spark.createDataFrame(result, df.schema), but it's completely unnecessary
     # as the next step transforms into a string and pyspark doesn't have the
@@ -70,43 +123,79 @@ def unique_value_per_partition(df, limit_per_partition, col_name):
     return (
         df.rdd
         .map(lambda row: (row[col_name], row))
-        .partitionBy(numPartitions, lambda value: random.randint(*partition_ranges[value]))
+        .partitionBy(numPartitions, partitioner)
         .map(lambda pair: pair[1])
     )
 
 
-def main(spark, source, field, output, limit_per_file):
-    df_wikis = (
-        spark.read.table('canonical_data.wikis')
-        .select(F.col('database_code').alias('wikiid'), 'domain_name')
-    )
+def _document_data(
+    document: Row, handlers: Mapping[str, str]
+) -> Tuple[Mapping, Mapping]:
+    """Transform document into elasticsearch bulk import request structures"""
+    header = {
+        'update': {
+            '_index': '{}_content'.format(document.wikiid),
+            '_type': 'page',
+            '_id': document.page_id,
+        }
+    }
 
-    df = (
-        spark.read.parquet(source)
-        # Join df_wikis to transform project (en.wikibooks) into wikiid needed
-        # to derive elasticsearch index name.
-        .join(df_wikis.hint('broadcast'),
-              # project is just domain name with '.org' stripped
-              on=F.concat(F.col('project'), F.lit('.org')) == F.col('domain_name'))
-        .select('wikiid', 'page_id', 'score')
-    )
+    update = {
+        'script': {
+            'source': 'super_detect_noop',
+            'lang': 'super_detect_noop',
+            'params': {
+                'handlers': {
+                    field: handler
+                    for field, handler in handlers.items()
+                    if document[field] is not None
+                },
+                'source': {
+                    field: document[field]
+                    for field in handlers.keys()
+                    if document[field] is not None
+                }
+            }
+        }
+    }
 
+    return header, update
+
+
+def document_data(document: Row, handlers: Mapping[str, str]) -> str:
+    """Transform document into elasticsearch bulk import lines"""
+    header, update = _document_data(document, handlers)
+    return '{}\n{}'.format(json.dumps(header), json.dumps(update))
+
+
+def main(
+    spark: SparkSession,
+    output: str,
+    limit_per_file: int,
+    date: datetime,
+    config: Sequence[Table] = CONFIG
+) -> int:
+    df, field_handlers = prepare(spark, date, config)
     (
         # Note that this returns an RDD, not a DataFrame
         unique_value_per_partition(df, limit_per_file, 'wikiid')
-        .map(lambda row: documentData(row, field)) \
+        .map(lambda row: document_data(row, field_handlers)) \
         .saveAsTextFile(output, compressionCodecClass='org.apache.hadoop.io.compress.GzipCodec')
     )
+    return 0
 
 
 if __name__ == "__main__":
+    def date(val):
+        return datetime.strptime(val, '%Y-%m-%d')
+
     parser = ArgumentParser()
-    parser.add_argument('-s', '--source', dest='source', metavar='SOURCE', help='source for the data')
-    parser.add_argument('-f', '--field-name', dest='field', help='Name of elasticsearch field to populate')
     parser.add_argument('-o', '--output', dest='output', metavar='OUTPUT', help='Output to store results')
-    parser.add_argument('-l', '--limit-per-file', dest='limit_per_file', metavar='N',
+    parser.add_argument('-l', '--limit-per-file', dest='limit_per_file', metavar='N', type=int,
                         default=200000, help='Maximum number of records per output file')
+    parser.add_argument('-d', '--date', dest='date', metavar='DATE', type=date,
+                        help='Date of input partitions in YYYY-MM-DD format')
     args = parser.parse_args()
 
-    spark = SparkSession.builder.appName('Export {} to elasticsearch bulk format'.format(args.field)).getOrCreate()
-    main(spark, **dict(vars(args)))
+    spark = SparkSession.builder.getOrCreate()
+    sys.exit(main(spark, **dict(vars(args))))

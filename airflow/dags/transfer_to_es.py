@@ -13,16 +13,8 @@ DAGS_DIR = os.path.dirname(os.path.realpath(__file__))
 REPO_BASE = os.path.dirname(os.path.dirname(DAGS_DIR))
 APPLICATION = os.path.join(REPO_BASE, 'spark/convert_to_esbulk.py')
 
-PATH_IN = os.path.join(
-    NAME_NODE,
-    'wmf/data/discovery/popularity_score',
-    'agg_days=7',
-    'year={{ execution_date.year }}',
-    'month={{ execution_date.month }}',
-    'day={{ execution_date.day }}')
-
 PATH_OUT = os.path.join(
-    NAME_NODE, 'wmf/data/discovery/popularity_score_esbulk/{{ ds_nodash }}')
+    NAME_NODE, 'wmf/data/discovery/transfer_to_es/date={{ ds_nodash }}')
 
 # Default kwargs for all Operators
 default_args = {
@@ -73,9 +65,8 @@ with DAG(
         },
         application=APPLICATION,
         application_args=[
-            '--source', PATH_IN,
             '--output', PATH_OUT,
-            '--field-name', 'popularity_score',
+            '--date', '{{ ds }}',
         ])
     popularity_score >> convert_to_esbulk
 
