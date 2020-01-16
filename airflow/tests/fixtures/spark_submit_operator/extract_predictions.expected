@@ -23,5 +23,9 @@
     "--thresholds-path",
     "thresholds.json",
     "--prediction",
-    "articletopic"
+    "articletopic",
+    "--wikibase-item-table",
+    "discovery.wikibase_item",
+    "--propagate-from",
+    "enwiki"
 ]

@@ -11,10 +11,10 @@ from argparse import ArgumentParser
 from datetime import datetime
 import json
 import sys
-from typing import cast, Callable, Mapping, Sequence
+from typing import cast, Callable, Mapping, Optional, Sequence, Set
 
 from pyspark.sql import (
-    SparkSession, Column, DataFrame, Window,
+    SparkSession, Column, DataFrame, Row, Window,
     functions as F, types as T)
 
 
@@ -41,6 +41,13 @@ def hourly_partition_range(start_dt: datetime, end_dt: datetime) -> Column:
     start_cond = row_date >= start_dt.timestamp()
     end_cond = row_date < end_dt.timestamp()
     return start_cond & end_cond
+
+
+def daily_partition(dt: datetime) -> Column:
+    """Boolean condition for single daily partition"""
+    return (F.col('year') == dt.year) \
+        & (F.col('month') == dt.month) \
+        & (F.col('day') == dt.day)
 
 
 def make_stringify_prediction(
@@ -86,6 +93,101 @@ def top_row_per_group(
     )
 
 
+def propagate_by_wbitem(
+    df_predictions: DataFrame,
+    df_wikibase: DataFrame,
+    prediction_col: str,
+    # Set of wikis that predictions come from. Scores will not propagate to them
+    source_wikis: Set[str],
+    # Wiki to propagate prediction from. If no prediction is available from this
+    # wiki then no scores are propagated.
+    preferred_wiki: str
+) -> DataFrame:
+    """Propagate predictions from source wiki to all wikis
+
+    The basic algorithm here is to collect together the set of all predictions
+    for a single wikibase item, along with the set of all pages for a single
+    wikibase item, and then emit predictions about all of the pages based on
+    the predictions about the item itself. There should never be more than
+    perhaps 1k items on either side, so the row size should be capped at a
+    reasonable level.
+    """
+    def resolve_propagation(
+        predictions: Sequence[Row],
+        pages: Optional[Sequence[Row]]
+    ):
+        # All predictions must be emitted as-is.
+        out = [(p.wikiid, p.page_id, p[prediction_col]) for p in predictions]
+
+        # If pages is None then this wikid/page_id pair was not found
+        # in the dataset used for propagation. Emit only the source rows.
+        if pages is None or not pages:
+            return out
+
+        # Make a quick sanity check that we expected predictions from these wikis
+        assert all(p.wikiid in source_wikis for p in predictions)
+
+        # Pages that are linked and not on a wiki the predictions will have
+        # the preferred prediction selected for them.
+        for p in predictions:
+            if p.wikiid == preferred_wiki:
+                preferred = p[prediction_col]
+                break
+        else:
+            # No preferred prediction exists
+            preferred = None
+
+        if preferred is not None:
+            for page in pages:
+                if page.wikiid in source_wikis:
+                    # We do not propagate scores to wikis that generate their own predictions,
+                    # those are only provided by the model directly.
+                    continue
+                out.append((page.wikiid, page.page_id, preferred))
+
+        return out
+
+    # Ensure we have the set of columns we think we do
+    df_wikibase = df_wikibase.select('wikiid', 'page_id', 'wikibase_item')
+    df_predictions = df_predictions.select('wikiid', 'page_id', prediction_col)
+
+    df_pages_by_link = (
+        df_wikibase
+        .groupBy('wikibase_item')
+        .agg(F.collect_list(F.struct('wikiid', 'page_id')).alias('pages'))
+    )
+
+    df_predictions_by_link = (
+        df_predictions
+        .join(df_wikibase, how='left', on=['wikiid', 'page_id'])
+        # Not every prediction will have a wikibase_item, but we don't want
+        # to pull them into a single giant row. Assign fake wikibase_item strings
+        # that are unique per prediction to avoid skew.
+        .withColumn('wikibase_item', F.coalesce(
+            F.col('wikibase_item'),
+            F.concat_ws('-', F.lit('notfound'), F.col('wikiid'), F.col('page_id').cast(T.StringType()))))
+        .groupBy('wikibase_item')
+        .agg(F.collect_list(F.struct(
+            'wikiid', 'page_id', prediction_col
+        )).alias('predictions'))
+    )
+
+    propagate_udf = F.udf(
+        resolve_propagation,
+        T.ArrayType(T.StructType([
+            T.StructField('wikiid', T.StringType()),
+            T.StructField('page_id', T.IntegerType()),
+            T.StructField(prediction_col, T.ArrayType(T.StringType()))
+        ])))
+
+    return (
+        df_predictions_by_link
+        .join(df_pages_by_link, how='left', on=['wikibase_item'])
+        .select(F.explode(propagate_udf('predictions', 'pages')).alias('p'))
+        .select('p.*')
+    )
+
+
 def extract_prediction(
     df_in: DataFrame,
     prediction: str,
@@ -126,13 +228,40 @@ def main(raw_args: Sequence[str]) -> int:
         return datetime.strptime(val, '%Y-%m-%d')
 
     parser = ArgumentParser()
-    parser.add_argument('--input-table', required=True)
-    parser.add_argument('--output-table', required=True)
-    parser.add_argument('--start-date', type=date, required=True)
-    parser.add_argument('--end-date', type=date, required=True)
-    parser.add_argument('--thresholds-path', type=str, required=True)
-    parser.add_argument('--prediction', required=True)
-    parser.add_argument('--alias', default=None, required=False)
+    parser.add_argument(
+        '--input-table', required=True,
+        help='Table containing mediawiki/revision/score events')
+    parser.add_argument(
+        '--output-table', required=True,
+        help='Table to write prepared predictions to')
+    parser.add_argument(
+        '--start-date', type=date, required=True,
+        help='Inclusive date to start reading input from')
+    parser.add_argument(
+        '--end-date', type=date, required=True,
+        help='Exclusive date to stop reading input from')
+    parser.add_argument(
+        '--thresholds-path', type=str, required=True,
+        help='Path to json file containing per-wiki/topic thresholds to apply')
+    parser.add_argument(
+        '--prediction', required=True,
+        help='Name of model to extract predictions of')
+    parser.add_argument(
+        '--alias', default=None, required=False,
+        help='Name of prediction column in output table. Model name will be used if not provided.')
+    parser.add_argument(
+        '--wikibase-item-table', required=True,
+        help='Table containing export of wikibase_item page props from mw replicas. '
+             'The partition matching start-date will be read.')
+    parser.add_argument(
+        '--propagate-from', required=True,
+        help='Wiki database name to propagate predictions from.')
+    # We "know" that the data is relatively small so make a single output
+    # partition, with the option to override for larger one-off tasks.
+    parser.add_argument(
+        '--num-output-partitions', default=1,
+        help='Number of output partitions to create. Estimate at 100MB per partition.')
+
     args = parser.parse_args(raw_args)
 
     # Path is expected to contain a two level dict. top level must be
@@ -141,6 +270,9 @@ def main(raw_args: Sequence[str]) -> int:
     # wikis / labels recieve DEFAULT_THRESHOLD
     with open(args.thresholds_path, 'rt') as f:
         thresholds = json.load(f)
+
+    if args.propagate_from not in thresholds:
+        raise KeyError('No thresholds provided for propagation wiki, no propagation can occur.')
 
     spark = SparkSession.builder.getOrCreate()
 
@@ -160,9 +292,25 @@ def main(raw_args: Sequence[str]) -> int:
         prediction_col = args.alias
         df_predictions = df_predictions.withColumnRenamed(args.prediction, args.alias)
 
-    # We "know" that the data is relatively small so make a single output
-    # partition and give it a name we can reference from sql.
-    df_predictions.repartition(1).createTempView('tmp_revision_score_out')
+    # Propagate predictions from wikis we have models to all the other
+    # wikis by wikibase_item.
+    df_wikibase_item = (
+        spark.read.table(args.wikibase_item_table)
+        .where(daily_partition(args.start_date))
+    )
+
+    df_propagated = propagate_by_wbitem(
+        df_predictions,
+        df_wikibase_item,
+        args.prediction,
+        source_wikis=set(thresholds.keys()),
+        preferred_wiki=args.propagate_from)
+
+    # Repartition as desired, spark typically has hundreds of partitions but the
+    # final outputs may only be a few hundred mb.
+    df_propagated \
+        .repartition(args.num_output_partitions) \
+        .createTempView('tmp_revision_score_out')
 
     # Take care that selected columns must be of the same types and in the same
     # order as the table. The names used here are not used to align columns with
