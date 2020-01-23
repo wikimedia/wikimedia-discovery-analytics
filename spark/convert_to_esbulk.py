@@ -33,10 +33,10 @@ CONFIG = [
         ]
     ),
     Table(
-        table='discovery.ores_drafttopic',
+        table='discovery.ores_articletopic',
         join_on='wikiid',
         fields=[
-            Field(field='drafttopic', alias='ores_drafttopics', handler='equals')
+            Field(field='articletopic', alias='ores_articletopics', handler='equals')
         ]
     ),
 ]

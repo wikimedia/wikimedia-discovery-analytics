@@ -102,7 +102,7 @@ def extract_prediction(
     # Writing out empty arrays fails with parquet output, looks
     # similar to Spark-25271 (resolved in spark 3). For now drop
     # the empty arrays. This has the downside that we have no
-    # way to clear previously indexed drafttopics, we can't send
+    # way to clear previously indexed predictions, we can't send
     # an empty array and have the previous set replaced.
     return df_converted.where(F.size(F.col(prediction)) > 0)
 
@@ -118,6 +118,7 @@ def main(raw_args: Sequence[str]) -> int:
     parser.add_argument('--end-date', type=date, required=True)
     parser.add_argument('--threshold', type=float, required=True)
     parser.add_argument('--prediction', required=True)
+    parser.add_argument('--alias', default=None, required=False)
     args = parser.parse_args(raw_args)
 
     spark = SparkSession.builder.getOrCreate()
@@ -130,6 +131,10 @@ def main(raw_args: Sequence[str]) -> int:
 
     # Find appropriate data, convert into expected formats
     df_predictions = extract_prediction(df_in, args.prediction, args.threshold)
+
+    # Support transition from drafttopic -> articletopic
+    if args.alias is not None:
+        df_predictions = df_predictions.withColumnRenamed(args.prediction, args.alias)
 
     # We "know" that the data is relatively small so make a single output
     # partition and give it a name we can reference from sql.

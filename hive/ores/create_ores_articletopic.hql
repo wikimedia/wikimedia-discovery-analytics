@@ -1,7 +1,7 @@
-CREATE TABLE `discovery.ores_drafttopic` (
+CREATE TABLE `discovery.ores_articletopic` (
   `wikiid` string COMMENT 'MediaWiki database name',
   `page_id` int COMMENT 'MediaWiki page id',
-  `drafttopic` array<string> COMMENT 'topics formatted as name|int_score'
+  `articletopic` array<string> COMMENT 'ores articletopic predictions formatted as name|int_score for elasticsearch ingestion'
 )
 PARTITIONED BY (
   `year` int COMMENT 'Unpadded year topic collection starts at',
@@ -9,5 +9,5 @@ PARTITIONED BY (
   `day` int COMMENT 'Unpadded day topic collection starts at'
 )
 STORED AS PARQUET
-LOCATION 'hdfs://analytics-hadoop/wmf/data/discovery/ores/drafttopic'
+LOCATION 'hdfs://analytics-hadoop/wmf/data/discovery/ores/articletopic'
 ;

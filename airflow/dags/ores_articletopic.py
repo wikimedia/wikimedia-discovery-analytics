@@ -8,7 +8,7 @@ from airflow.sensors.hive_partition_range_sensor_plugin import HivePartitionRang
 
 
 INPUT_TABLE = 'event.mediawiki_revision_score'
-OUTPUT_TABLE = 'discovery.ores_drafttopic'
+OUTPUT_TABLE = 'discovery.ores_articletopic'
 
 # Only export topics with probability >= threshold
 PROBABILITY_THRESHOLD = 0.5
@@ -31,7 +31,7 @@ default_args = {
 
 
 with DAG(
-    'ores_drafttopic_weekly',
+    'ores_articletopic_weekly',
     default_args=default_args,
     # Once a week at midnight on Sunday morning
     schedule_interval='0 0 * * 0',
@@ -62,8 +62,8 @@ with DAG(
         ])
 
     # Generate the data
-    extract_drafttopic = SparkSubmitOperator(
-        task_id='extract_drafttopic',
+    extract_articletopic = SparkSubmitOperator(
+        task_id='extract_articletopic',
         conf={
             'spark.pyspark.python': 'python3',
             # Delegate retrys to airflow
@@ -76,10 +76,12 @@ with DAG(
             '--start-date', '{{ ds }}',
             '--end-date', '{{ macros.ds_add(ds, 7) }}',
             '--threshold', str(PROBABILITY_THRESHOLD),
+            # Change prediction to articletopic once predictions are generated for new name
             '--prediction', 'drafttopic',
+            '--alias', 'articletopic'
         ],
     )
-    wait_for_data >> extract_drafttopic
+    wait_for_data >> extract_articletopic
 
     complete = DummyOperator(task_id='complete')
-    extract_drafttopic >> complete
+    extract_articletopic >> complete
