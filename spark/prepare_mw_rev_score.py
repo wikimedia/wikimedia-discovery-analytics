@@ -133,7 +133,10 @@ def main(raw_args: Sequence[str]) -> int:
     df_predictions = extract_prediction(df_in, args.prediction, args.threshold)
 
     # Support transition from drafttopic -> articletopic
-    if args.alias is not None:
+    if args.alias is None:
+        prediction_col = args.prediction
+    else:
+        prediction_col = args.alias
         df_predictions = df_predictions.withColumnRenamed(args.prediction, args.alias)
 
     # We "know" that the data is relatively small so make a single output
@@ -153,7 +156,7 @@ def main(raw_args: Sequence[str]) -> int:
         year=args.start_date.year,
         month=args.start_date.month,
         day=args.start_date.day,
-        prediction=args.prediction)
+        prediction=prediction_col)
 
     spark.sql(insert_stmt)
     return 0
