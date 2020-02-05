@@ -126,17 +126,20 @@ class SkeinOperator(BaseOperator):
         self._files = files
         self._hook = None
 
+    def _make_hook(self):
+        return SkeinHook(
+            conn_id=self._conn_id,
+            name=self.task_id,
+            application_args=self._application_args,
+            queue=self._queue,
+            memory=self._memory,
+            vcores=self._vcores,
+            venv=self._venv,
+            files=self._files)
+
     def execute(self, context):
         if self._hook is None:
-            self._hook = SkeinHook(
-                conn_id=self._conn_id,
-                name=self.task_id,
-                application_args=self._application_args,
-                queue=self._queue,
-                memory=self._memory,
-                vcores=self.vcores,
-                venv=self.venv,
-                files=self.files)
+            self._hook = self._make_hook()
         self._hook.submit(self._application)
 
     def on_kill(self):
