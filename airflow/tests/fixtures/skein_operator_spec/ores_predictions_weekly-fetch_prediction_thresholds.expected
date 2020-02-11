@@ -1,0 +1,40 @@
+{
+    "acls": {
+        "enable": false,
+        "modify_groups": [],
+        "modify_users": [],
+        "ui_users": [],
+        "view_groups": [],
+        "view_users": []
+    },
+    "file_systems": [],
+    "master": {
+        "env": {
+            "HTTPS_PROXY": "http://webproxy.eqiad.wmnet:8080"
+        },
+        "files": {
+            "fetch_ores_thresholds.py": {
+                "size": 0,
+                "source": "file:///path/to/wikimedia/discovery/analytics/repo/spark/fetch_ores_thresholds.py",
+                "timestamp": 0,
+                "type": "FILE",
+                "visibility": "APPLICATION"
+            }
+        },
+        "log_level": "INFO",
+        "resources": {
+            "fpgas": 0,
+            "gpus": 0,
+            "memory": 1024,
+            "vcores": 1
+        },
+        "script": "set -o errexit\npython3 fetch_ores_thresholds.py --model articletopic --output-path thresholds.json\nhdfs dfs -put thresholds.json hdfs://analytics-hadoop/wmf/data/discovery/ores/thresholds/articletopic/20380117.json"
+    },
+    "max_attempts": 1,
+    "name": "fetch_prediction_thresholds",
+    "node_label": "",
+    "queue": "default",
+    "services": {},
+    "tags": [],
+    "user": ""
+}

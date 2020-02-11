@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.contrib.operators.spark_submit_operator import SparkSubmitOperator
 from airflow.operators.dummy_operator import DummyOperator
+from airflow.operators.skein_plugin import SkeinOperator
 from airflow.sensors.hive_partition_range_sensor_plugin import HivePartitionRangeSensor
 
 
@@ -11,8 +12,8 @@ OUTPUT_TABLE = 'discovery.ores_articletopic'
 
 MODEL = 'articletopic'
 
-# Only export topics with probability >= threshold
-PROBABILITY_THRESHOLD = 0.5
+THRESHOLDS_PATH = 'hdfs://analytics-hadoop/wmf/data/discovery/ores/thresholds/' \
+    + MODEL + '/{{ ds_nodash }}.json'
 
 # Path to root of this repository (wikimedia/discovery/analytics) on
 # the airflow servers
@@ -63,6 +64,23 @@ with DAG(
             ]
         ])
 
+    # Fetch per-topic thresholds from ORES to use when collecting predictions
+    fetch_prediction_thresholds = SkeinOperator(
+        task_id='fetch_prediction_thresholds',
+        application=REPO_BASE + '/spark/fetch_ores_thresholds.py',
+        application_args=[
+            '--model', MODEL,
+            '--output-path', 'thresholds.json',
+        ],
+        output_files={
+            'thresholds.json': THRESHOLDS_PATH,
+        },
+        # ORES is not available from the analytics network, we need to
+        # proxy to the outside world.
+        env={
+            'HTTPS_PROXY': 'http://webproxy.eqiad.wmnet:8080',
+        })
+
     # Extract the data from mediawiki event logs and put into
     # a format suitable for shipping to elasticsearch.
     extract_predictions = SparkSubmitOperator(
@@ -72,17 +90,18 @@ with DAG(
             # Delegate retrys to airflow
             'spark.yarn.maxAppAttempts': '1',
         },
+        files=THRESHOLDS_PATH + '#thresholds.json',
         application=REPO_BASE + '/spark/prepare_mw_rev_score.py',
         application_args=[
             '--input-table', INPUT_TABLE,
             '--output-table', OUTPUT_TABLE,
             '--start-date', '{{ ds }}',
             '--end-date', '{{ macros.ds_add(ds, 7) }}',
-            '--threshold', str(PROBABILITY_THRESHOLD),
+            '--thresholds-path', 'thresholds.json',
             '--prediction', MODEL
         ],
     )
-    wait_for_data >> extract_predictions
+    [fetch_prediction_thresholds, wait_for_data] >> extract_predictions
 
     complete = DummyOperator(task_id='complete')
     extract_predictions >> complete

@@ -9,8 +9,9 @@ shipped to elasticsearch.
 """
 from argparse import ArgumentParser
 from datetime import datetime
+import json
 import sys
-from typing import Mapping, Sequence
+from typing import cast, Callable, Mapping, Sequence
 
 from pyspark.sql import (
     SparkSession, Column, DataFrame, Window,
@@ -19,9 +20,13 @@ from pyspark.sql import (
 
 # Probabilities need to be expressed as an integer to integrate into the
 # search engine. Scale probabilities by this value before casting to int.
-# The must match the max_tf value configured for the term_freq analyzer
+# This must match the max_tf value configured for the term_freq analyzer
 # in the elasticsearch field data is indexed into.
 SCALE_FACTOR = 1000
+
+# If no threshold is available the prediction must have at least
+# this value to be emitted
+DEFAULT_THRESHOLD = 0.9
 
 
 def hourly_partition_range(start_dt: datetime, end_dt: datetime) -> Column:
@@ -38,23 +43,31 @@ def hourly_partition_range(start_dt: datetime, end_dt: datetime) -> Column:
     return start_cond & end_cond
 
 
-def stringify_prediction(
-    probabilities: Mapping[str, float], threshold: float
-) -> Sequence[str]:
-    """Format predictions for elasticsearch ingestion.
+def make_stringify_prediction(
+    thresholds: Mapping[str, Mapping[str, float]]
+) -> Callable[[str, Mapping[str, float]], Sequence[str]]:
+    """Make function to format predictions for elasticsearch ingestion.
 
     To index the probabilities into the search engine we convert the
     probabilities into an integer score and format as `<token>|<score>`. The
     token is the exact searchable value, and the score is interpreted as the
     token term frequency.
+
+    The set of topics emitted is conditioned on a mapping from the topic
+    to a predefined threshold. The prediction must meet the minimum
+    per-wiki/topic threshold or it will not be emitted.
     """
-    if any('|' in topic for topic in probabilities.keys()):
-        raise Exception('Topic names must not contain |')
-    return [
-        '{}|{}'.format(topic, int(SCALE_FACTOR * prob))
-        for topic, prob in probabilities.items()
-        if prob >= threshold
-    ]
+    def fn(wiki: str, probabilities: Mapping[str, float]) -> Sequence[str]:
+        if any('|' in topic for topic in probabilities.keys()):
+            raise Exception('Topic names must not contain |')
+        empty = cast(Mapping[str, float], {})
+        return [
+            '{}|{}'.format(topic, int(SCALE_FACTOR * prob))
+            for topic, prob in probabilities.items()
+            if prob >= thresholds.get(wiki, empty).get(topic, DEFAULT_THRESHOLD)
+        ]
+
+    return fn
 
 
 def top_row_per_group(
@@ -76,7 +89,7 @@ def top_row_per_group(
 def extract_prediction(
     df_in: DataFrame,
     prediction: str,
-    threshold: float
+    thresholds: Mapping[str, Mapping[str, float]],
 ) -> DataFrame:
     df_in = df_in.where(F.col('scores')[prediction].isNotNull())
 
@@ -89,14 +102,15 @@ def extract_prediction(
 
     # Reshape for shipping to elasticesarch
     stringify_prediction_udf = F.udf(
-        stringify_prediction, T.ArrayType(T.StringType()))
+        make_stringify_prediction(thresholds),
+        T.ArrayType(T.StringType()))
 
     df_converted = df_filtered.select(
         F.col('database').alias('wikiid'),
         F.col('page_id'),
         stringify_prediction_udf(
-            F.col('scores')[prediction].probability,
-            F.lit(threshold)
+            F.col('database'),
+            F.col('scores')[prediction].probability
         ).alias(prediction))
 
     # Writing out empty arrays fails with parquet output, looks
@@ -116,10 +130,17 @@ def main(raw_args: Sequence[str]) -> int:
     parser.add_argument('--output-table', required=True)
     parser.add_argument('--start-date', type=date, required=True)
     parser.add_argument('--end-date', type=date, required=True)
-    parser.add_argument('--threshold', type=float, required=True)
+    parser.add_argument('--thresholds-path', type=str, required=True)
     parser.add_argument('--prediction', required=True)
     parser.add_argument('--alias', default=None, required=False)
     args = parser.parse_args(raw_args)
+
+    # Path is expected to contain a two level dict. top level must be
+    # keyed by mediawiki database name, second level must be a mapping
+    # from predicted label to minimum acceptable threshold. Unlisted
+    # wikis / labels recieve DEFAULT_THRESHOLD
+    with open(args.thresholds_path, 'rt') as f:
+        thresholds = json.load(f)
 
     spark = SparkSession.builder.getOrCreate()
 
@@ -130,7 +151,7 @@ def main(raw_args: Sequence[str]) -> int:
     )
 
     # Find appropriate data, convert into expected formats
-    df_predictions = extract_prediction(df_in, args.prediction, args.threshold)
+    df_predictions = extract_prediction(df_in, args.prediction, thresholds)
 
     # Support transition from drafttopic -> articletopic
     if args.alias is None:

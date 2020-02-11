@@ -45,3 +45,17 @@ def spark():
 @pytest.fixture(scope="session")
 def spark_context(spark):
     return spark.sparkContext
+
+
+@pytest.fixture
+def fixture_dir():
+    return os.path.join(os.path.dirname(__file__), 'fixtures')
+
+
+@pytest.fixture
+def get_fixture(fixture_dir):
+    def fn(group, name):
+        with open(os.path.join(fixture_dir, group, name), 'rt') as f:
+            return f.read()
+
+    return fn

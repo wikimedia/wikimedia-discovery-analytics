@@ -24,6 +24,7 @@ class SkeinHook(BaseHook):
         venv: Optional[str] = None,
         files: Optional[Mapping[str, str]] = None,
         output_files: Optional[Mapping[str, str]] = None,
+        env: Optional[Mapping[str, str]] = None,
     ):
         self._conn_id = conn_id
         self._name = name
@@ -34,6 +35,7 @@ class SkeinHook(BaseHook):
         self._venv = venv
         self._files = files
         self._output_files = output_files
+        self._env = env
 
     def _build_files(self, application: str) -> Mapping[str, str]:
         files = {
@@ -101,6 +103,7 @@ class SkeinHook(BaseHook):
                 ),
                 files=self._build_files(application),
                 script=self._build_script(application),
+                env=self._env,
             )
         )
 
@@ -136,6 +139,7 @@ class SkeinOperator(BaseOperator):
         venv: Optional[str] = None,
         files: Optional[Mapping[str, str]] = None,
         output_files: Optional[Mapping[str, str]] = None,
+        env: Optional[Mapping[str, str]] = None,
         *args, **kwargs
     ):
         super().__init__(*args, **kwargs)
@@ -148,6 +152,7 @@ class SkeinOperator(BaseOperator):
         self._venv = venv
         self._files = files
         self._output_files = output_files
+        self._env = env
         self._hook = None
 
     def _make_hook(self):
@@ -160,7 +165,8 @@ class SkeinOperator(BaseOperator):
             vcores=self._vcores,
             venv=self._venv,
             files=self._files,
-            output_files=self._output_files)
+            output_files=self._output_files,
+            env=self._env)
 
     def execute(self, context):
         if self._hook is None:
