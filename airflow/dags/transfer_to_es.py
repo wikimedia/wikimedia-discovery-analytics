@@ -56,13 +56,13 @@ with DAG(
         external_task_id='complete')
 
     ores_articletopic = ExternalTaskSensor(
-        task_id='wait_for_ores_articletopic',
+        task_id='wait_for_ores_predictions',
         # Same sensor reasoning and config as above
         timeout=60 * 60 * 24,  # 24 hours
         retries=4,
         email_on_retry=True,
         # external task selection
-        external_dag_id='ores_articletopic_weekly',
+        external_dag_id='ores_predictions_weekly',
         external_task_id='complete')
 
     # Format inputs as elasticsearch bulk updates

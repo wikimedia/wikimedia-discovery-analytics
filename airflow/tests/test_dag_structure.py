@@ -9,7 +9,7 @@ import pytest
 all_dag_ids = [
     'mjolnir',
     'popularity_score_weekly',
-    'ores_articletopic_weekly',
+    'ores_predictions_weekly',
     'transfer_to_es_weekly',
 ]
 
@@ -70,7 +70,7 @@ def test_spark_submit_sets_python_version(task):
 
 
 @pytest.mark.parametrize('dag_ids', [
-    ['popularity_score_weekly', 'transfer_to_es_weekly', 'ores_articletopic_weekly'],
+    ['popularity_score_weekly', 'transfer_to_es_weekly', 'ores_predictions_weekly'],
 ])
 def test_compatible_schedules(dag_ids):
     dagbag = DagBag()
