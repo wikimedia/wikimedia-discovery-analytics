@@ -9,7 +9,7 @@ from airflow.utils.decorators import apply_defaults
 class SwiftUploadOperator(BaseOperator):
     template_fields = (
         '_swift_container', '_source_directory', '_swift_object_prefix',
-        '_swift_upload_py', '_swift_auth_file', '_event_service_url')
+        '_application', '_swift_auth_file', '_event_service_url')
 
     @apply_defaults
     def __init__(
@@ -33,7 +33,7 @@ class SwiftUploadOperator(BaseOperator):
         *args, **kwargs
     ):
         super().__init__(*args, **kwargs)
-        self._swift_upload_py = swift_upload_py
+        self._application = swift_upload_py
         self._swift_auth_file = swift_auth_file
         self._swift_container = swift_container
         self._source_directory = source_directory
@@ -76,7 +76,7 @@ class SwiftUploadOperator(BaseOperator):
     def execute(self, context):
         if self._hook is None:
             self._hook = self._make_hook()
-        self._hook.submit(self._swift_upload_py)
+        self._hook.submit(self._application)
 
 
 class SwiftUploadPlugin(AirflowPlugin):
