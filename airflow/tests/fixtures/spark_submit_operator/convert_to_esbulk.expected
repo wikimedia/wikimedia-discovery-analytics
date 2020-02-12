@@ -1,0 +1,18 @@
+[
+    "spark-submit",
+    "--master",
+    "yarn",
+    "--conf",
+    "spark.pyspark.python=python3",
+    "--conf",
+    "spark.yarn.maxAppAttempts=1",
+    "--name",
+    "airflow-spark",
+    "--queue",
+    "root.default",
+    "/path/to/wikimedia/discovery/analytics/repo/spark/convert_to_esbulk.py",
+    "--output",
+    "hdfs://analytics-hadoop/wmf/data/discovery/transfer_to_es/date=20380117",
+    "--date",
+    "2038-01-17"
+]

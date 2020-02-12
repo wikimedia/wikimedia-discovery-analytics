@@ -1,5 +1,10 @@
+from collections import OrderedDict
+from datetime import datetime
+
+from airflow.contrib.hooks.spark_submit_hook import SparkSubmitHook
 from airflow.contrib.operators.spark_submit_operator import SparkSubmitOperator
 from airflow.models.dagbag import DagBag
+from airflow.models.taskinstance import TaskInstance
 from airflow.sensors.external_task_sensor import ExternalTaskSensor
 import pytest
 
@@ -69,6 +74,27 @@ def test_spark_submit_sets_python_version(task):
     assert 'spark.pyspark.python' in task._conf
 
 
+@pytest.mark.parametrize('task', tasks(SparkSubmitOperator))
+def test_spark_submit_cli_args_against_fixture(task, fixture_factory, mocker):
+    ti = TaskInstance(task, datetime(year=2038, month=1, day=17))
+    ti.render_templates()
+
+    # The conf dict comes out in random order...sort for stable cli command output
+    # Must come after rendering templates, as they may replace or re-order the dict.
+    if task._conf is not None:
+        task._conf = _sort_items_recursive(task._conf)
+
+    # Mock out submit so the hook is created but not run on execute
+    mocker.patch.object(SparkSubmitHook, 'submit')
+    task.execute(None)
+
+    command = task._hook._build_spark_submit_command(task._application)
+    assert all(isinstance(x, str) for x in command), str(command)
+
+    comparer = fixture_factory('spark_submit_operator', task.task_id)
+    comparer(command)
+
+
 @pytest.mark.parametrize('dag_ids', [
     ['popularity_score_weekly', 'transfer_to_es_weekly', 'ores_predictions_weekly'],
 ])
@@ -83,3 +109,12 @@ def test_compatible_schedules(dag_ids):
     assert isinstance(head.schedule_interval, str)
     for dag in dags[1:]:
         assert head.schedule_interval == dag.schedule_interval
+
+
+def _sort_items_recursive(maybe_dict):
+    """Recursively sort dictionaries so iteration gives deterministic outputs"""
+    if hasattr(maybe_dict, 'items'):
+        items = ((k, _sort_items_recursive(v)) for k, v in maybe_dict.items())
+        return OrderedDict(sorted(items, key=lambda x: x[0]))
+    else:
+        return maybe_dict

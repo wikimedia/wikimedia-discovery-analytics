@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-import os
 
 from airflow import DAG
 from airflow.contrib.operators.spark_submit_operator import SparkSubmitOperator
@@ -15,8 +14,9 @@ MODEL = 'articletopic'
 # Only export topics with probability >= threshold
 PROBABILITY_THRESHOLD = 0.5
 
-DAGS_DIR = os.path.dirname(os.path.realpath(__file__))
-REPO_BASE = os.path.dirname(os.path.dirname(DAGS_DIR))
+# Path to root of this repository (wikimedia/discovery/analytics) on
+# the airflow servers
+REPO_BASE = '{{ var.value.wikimedia_discovery_analytics_path }}'
 
 # Default kwargs for all Operators
 default_args = {
@@ -72,7 +72,7 @@ with DAG(
             # Delegate retrys to airflow
             'spark.yarn.maxAppAttempts': '1',
         },
-        application=os.path.join(REPO_BASE, 'spark/prepare_mw_rev_score.py'),
+        application=REPO_BASE + '/spark/prepare_mw_rev_score.py',
         application_args=[
             '--input-table', INPUT_TABLE,
             '--output-table', OUTPUT_TABLE,

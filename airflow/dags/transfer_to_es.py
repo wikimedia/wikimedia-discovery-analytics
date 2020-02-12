@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-import os
 
 from airflow import DAG
 from airflow.contrib.operators.spark_submit_operator import SparkSubmitOperator
@@ -8,13 +7,8 @@ from airflow.operators.swift_upload_plugin import SwiftUploadOperator
 from airflow.sensors.external_task_sensor import ExternalTaskSensor
 
 
-NAME_NODE = 'hdfs://analytics-hadoop'
-DAGS_DIR = os.path.dirname(os.path.realpath(__file__))
-REPO_BASE = os.path.dirname(os.path.dirname(DAGS_DIR))
-APPLICATION = os.path.join(REPO_BASE, 'spark/convert_to_esbulk.py')
-
-PATH_OUT = os.path.join(
-    NAME_NODE, 'wmf/data/discovery/transfer_to_es/date={{ ds_nodash }}')
+APPLICATION = '{{ var.value.wikimedia_discovery_analytics_path }}/spark/convert_to_esbulk.py'
+PATH_OUT = 'hdfs://analytics-hadoop/wmf/data/discovery/transfer_to_es/date={{ ds_nodash }}'
 
 # Default kwargs for all Operators
 default_args = {
