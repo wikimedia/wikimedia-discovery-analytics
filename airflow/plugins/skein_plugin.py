@@ -23,6 +23,7 @@ class SkeinHook(BaseHook):
         vcores: int = 1,
         venv: Optional[str] = None,
         files: Optional[Mapping[str, str]] = None,
+        output_files: Optional[Mapping[str, str]] = None,
     ):
         self._conn_id = conn_id
         self._name = name
@@ -32,6 +33,7 @@ class SkeinHook(BaseHook):
         self._vcores = vcores
         self._venv = venv
         self._files = files
+        self._output_files = output_files
 
     def _build_files(self, application: str) -> Mapping[str, str]:
         files = {
@@ -54,7 +56,16 @@ class SkeinHook(BaseHook):
                 return basename[:-len(ext)]
         raise Exception('Unrecognized virtualenv extension: {}'.format(basename))
 
-    def _build_script(self, application: str) -> str:
+    def _build_copy_outputs_script(self) -> Optional[str]:
+        """Build a bash script that will copy requested outputs to hdfs"""
+        if not self._output_files:
+            return None
+        script = []
+        for local, remote in self._output_files.items():
+            script.append('hdfs dfs -put {} {}'.format(shlex.quote(local), shlex.quote(remote)))
+        return '\n'.join(script)
+
+    def _build_primary_script(self, application: str) -> str:
         """Build a bash script that will run our application on the executor"""
         if self._venv:
             python = os.path.join(self._venv_local_path(), 'bin/python')
@@ -67,6 +78,17 @@ class SkeinHook(BaseHook):
         arg_str = ' '.join(shlex.quote(arg) for arg in args)
 
         return python + ' ' + arg_str
+
+    def _build_script(self, application: str) -> str:
+        return '\n'.join(script for script in [
+            # Use errexit to prevent running copy when the primary script
+            # fails. If we need anything more complex it should probably be
+            # wrapped into a script that gets shipped and executed instead of
+            # generated here.
+            'set -o errexit',
+            self._build_primary_script(application),
+            self._build_copy_outputs_script()
+        ] if script is not None)
 
     def _build_spec(self, application: str):
         return skein.ApplicationSpec(
@@ -100,7 +122,7 @@ class SkeinHook(BaseHook):
 
 
 class SkeinOperator(BaseOperator):
-    template_fields = ('_application_args',)
+    template_fields = ('_application', '_application_args', '_output_files')
 
     @apply_defaults
     def __init__(
@@ -113,6 +135,7 @@ class SkeinOperator(BaseOperator):
         vcores: int = 1,
         venv: Optional[str] = None,
         files: Optional[Mapping[str, str]] = None,
+        output_files: Optional[Mapping[str, str]] = None,
         *args, **kwargs
     ):
         super().__init__(*args, **kwargs)
@@ -124,6 +147,7 @@ class SkeinOperator(BaseOperator):
         self._vcores = vcores
         self._venv = venv
         self._files = files
+        self._output_files = output_files
         self._hook = None
 
     def _make_hook(self):
@@ -135,7 +159,8 @@ class SkeinOperator(BaseOperator):
             memory=self._memory,
             vcores=self._vcores,
             venv=self._venv,
-            files=self._files)
+            files=self._files,
+            output_files=self._output_files)
 
     def execute(self, context):
         if self._hook is None:
