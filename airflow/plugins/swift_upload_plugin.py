@@ -28,7 +28,7 @@ class SwiftUploadOperator(BaseOperator):
         swift_delete_after: timedelta = timedelta(days=30),
         swift_auto_version: bool = False,
         event_per_object: bool = False,
-        event_service_url: str = 'http://eventgate-analytics.svc.eqiad.wmnet:31192/v1/events',
+        event_service_url: str = 'https://eventgate-analytics.svc.eqiad.wmnet:4592/v1/events',
         name: Optional[str] = None,
         *args, **kwargs
     ):
