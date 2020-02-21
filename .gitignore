@@ -9,3 +9,4 @@
 /airflow/unittests.cfg
 /airflow/logs
 __pycache__
+venv

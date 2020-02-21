@@ -25,27 +25,28 @@ PIP="${VENV}/bin/pip"
 # https://bugs.debian.org/cgi-bin/bugreport.cgi?att=1;bug=776026;filename=wheel_reproducible.patch;msg=5
 export SOURCE_DATE_EPOCH=315576060
 
-echo "Looking for tasks in ${BASE}/oozie/*"
-for TASK_DIR in ${BASE}/oozie/*; do
-    TASK_NAME="$(basename "$TASK_DIR")"
-    REQUIREMENTS="${TASK_DIR}/requirements.txt"
-    REQUIREMENTS_FROZEN="${TASK_DIR}/requirements-frozen.txt"
+echo "Looking for environments in ${BASE}/environments/*"
+for ENV_DIR in ${BASE}/environments/*; do
+    ENV_NAME="$(basename "$ENV_DIR")"
+    REQUIREMENTS="${ENV_DIR}/requirements.txt"
+    REQUIREMENTS_FROZEN="${ENV_DIR}/requirements-frozen.txt"
     if [ ! -f "${REQUIREMENTS}" ]; then
-        echo "No python packaging needed for $TASK_NAME"
+        echo "No python packaging needed for $ENV_NAME"
     else
-        echo "Building python packaging for $TASK_NAME"
+        echo "Building python packaging for $ENV_NAME"
         rm -rf "${BUILD}"
         mkdir -p "${VENV}"
-        virtualenv --python "${PYTHON_PATH:-python3}" "${VENV}"
+        virtualenv --python "${PYTHON_PATH:-python3.7}" "${VENV}"
+        # Assert that $PYTHON_PATH referred to python3.7, it is the only
+        # version supported by debian buster which is run on an-airflow
+        test -x ${VENV}/bin/python3.7
 
+        # Install the frozen requirements first to avoid unnecessary upgrades.
+        # To remove a package it must be deleted from both requirements files.
+        $PIP install -r "${REQUIREMENTS_FROZEN}"
         $PIP install -r "${REQUIREMENTS}"
         $PIP freeze --local | grep -v pkg-resources > "${REQUIREMENTS_FROZEN}"
-        $PIP install pip wheel
-        # Debian jessie based hosts require updated pip and wheel packages or they will
-        # refuse to install some packages (numpy, scipy, maybe others)
-        $PIP wheel --find-links "${WHEEL_DIR}" \
-                --wheel-dir "${WHEEL_DIR}" \
-                pip wheel
+        $PIP install wheel
         $PIP wheel --find-links "${WHEEL_DIR}" \
                 --wheel-dir "${WHEEL_DIR}" \
                 --requirement "${REQUIREMENTS_FROZEN}"

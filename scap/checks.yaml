@@ -1,7 +1,7 @@
 checks:
-    build_deployment_virtualenvs:
-        type: command
-        stage: promote
+    virtualenv_airflow:
+        type: script
+        stage: fetch
         timeout: 300
-        group: analytics
-        command: /srv/deployment/wikimedia/discovery/analytics/scap/checks/build_deployment_virtualenvs.sh
+        group: airflow
+        command: build_deployment_virtualenvs.sh
