@@ -194,7 +194,7 @@ class MjolnirOperator(BaseOperator, LoggingMixin):
         spark_args: Mapping[str, Any] = {},
         metastore_conn_id: str = 'metastore_default',
         auto_size_metadata_dir: Optional[str] = None,
-        python_version: str = 'python3.5',
+        python_version: str = 'python3.7',
         *args, **kwargs
     ):
         super().__init__(*args, **kwargs)
@@ -317,14 +317,12 @@ class MjolnirOperator(BaseOperator, LoggingMixin):
         # spark-env.sh shipped to wmf analytics will incorrectly detect the
         # system python version and adjust PYTHONPATH, even though we are using
         # deploy-mode=cluster which never uses the system python on the airflow
-        # instance. Work around by telling it what python version to expect.
+        # instance. Work around by telling spark-env.sh, through PYSPARK_PYTHON,
+        # the version we will be using. Spark will override this env var with the
+        # spark.pyspark.python configuration supplied with the cli args.
         env = os.environ.copy()
-        if 'PYSPARK_PYTHON_VERSION' not in env:
-            env['PYSPARK_PYTHON_VERSION'] = self._python_version
-        # Temp hack until gerrit patches 562589 and 562651 are merged/deployed
-        # to support PYSPARK_PYTHON_VERSION and repair hive metastore connections.
-        if 'SPARK_CONF_DIR' not in env:
-            env['SPARK_CONF_DIR'] = '/home/ebernhardson/spark-conf'
+        if 'PYSPARK_PYTHON' not in env:
+            env['PYSPARK_PYTHON'] = self._python_version
 
         # Dummy script that imports and runs mjolnir.__main__.main
         application_path = os.path.join(

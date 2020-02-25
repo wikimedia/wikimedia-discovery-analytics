@@ -1,9 +1,8 @@
 [
+    "PYSPARK_PYTHON=python3.7",
     "spark-submit",
     "--master",
     "yarn",
-    "--conf",
-    "spark.pyspark.python=python3",
     "--conf",
     "spark.yarn.maxAppAttempts=1",
     "--name",

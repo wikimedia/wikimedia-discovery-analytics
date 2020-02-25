@@ -1,8 +1,9 @@
 from collections import OrderedDict
 from datetime import datetime
 
-from airflow.contrib.hooks.spark_submit_hook import SparkSubmitHook
-from airflow.contrib.operators.spark_submit_operator import SparkSubmitOperator
+from airflow.contrib.operators.spark_submit_operator \
+    import SparkSubmitOperator as WrongSparkSubmitOperator
+from airflow.operators.spark_submit_plugin import SparkSubmitOperator
 from airflow.models.dagbag import DagBag
 from airflow.models.taskinstance import TaskInstance
 from airflow.sensors.external_task_sensor import ExternalTaskSensor
@@ -32,6 +33,11 @@ def tasks(kind):
     for task in all_tasks():
         if isinstance(task, kind):
             yield task
+
+
+@pytest.mark.parametrize('task', tasks(WrongSparkSubmitOperator))
+def test_use_spark_submit_from_our_plugin(task):
+    assert 0, "Task {} is using the wrong SparkSubmitOperator implementation".format(task.task_id)
 
 
 @pytest.mark.parametrize('dag_id', all_dag_ids)
@@ -71,7 +77,55 @@ def test_spark_submit_sets_python_version(task):
     # which will seem to work (it will run the provided application)
     # but cli arguments will be passed to ipython instead of our
     # script.
-    assert 'spark.pyspark.python' in task._conf
+    has_conf = 'spark.pyspark.python' in task._conf
+    try:
+        has_env = 'PYSPARK_PYTHON' in task._spark_submit_env_vars
+    except TypeError:
+        has_env = False
+
+    if not has_conf and not has_env:
+        assert 0, "SparkSubmitOperator must have python executable explicitly provided"
+
+    elif has_conf and not has_env:
+        # If you only specify the python version through spark.pyspark.python,
+        # and not also through PYSPARK_PYTHON, the wmf spark-env.sh script will
+        # not know what version of python dependencies to load.
+        assert 0, "SparkSubmitOperator cannot specify custom python only through spark conf"
+
+    elif has_env and not has_conf:
+        # If we specify python through the environment variables it will be
+        # correctly detected by spark-env.sh, but we can only refer to python
+        # executables that are valid on the airflow instance, even though the
+        # spark app will not be run there. Basically we can only refer to
+        # system python versions this way. We only allow specific python
+        # versions because the `python3` executable may be 3.5 on the machine
+        # deployed to, but 3.7 on the airflow host.
+        # Note that only python3.7 is available on an-airflow1001 (w/ debian buster)
+        assert task._spark_submit_env_vars['PYSPARK_PYTHON'] == 'python3.7'
+
+    elif has_env and has_conf:
+        # To run python with our own custom environments we need to
+        # hack around the wmf adjusted spark-env.sh script. This is specific to
+        # using spark deploy-mode=cluster, but that's how spark is configured
+        # in wmf airflow.
+        # The PYSPARK_PYTHON env var must be set to a python executable that
+        # works on the airflow instance, it cannot refer to the real
+        # environment. It is invoked by spark-env.sh on the instance running
+        # spark-submit to determine which version of pyspark dependencies to
+        # include in PYTHONPATH. The spark.pyspark.python configuration
+        # variable must point to the real executable on the driver/executors,
+        # this will override the PYSPARK_PYTHON environment variable.
+        assert task._spark_submit_env_vars['PYSPARK_PYTHON'] == 'python3.7'
+        assert task._conf['spark.pyspark.python'].endswith("/python3.7")
+    else:
+        # two booleans, 4 conditions, this must be unreachable.
+        assert 0, "Unreachable"
+
+    # As long as PYSPARK_PYTHON env var is set spark-env.sh will not try and
+    # set PYSPARK_DRIVER_PYTHON, We should not set it as it will only confuse
+    # things. spark.pyspark.driver.python can still be configured to change the
+    # executable used on the driver.
+    assert 'PYSPARK_DRIVER_PYTHON' not in task._spark_submit_env_vars
 
 
 @pytest.mark.parametrize('task', tasks(SparkSubmitOperator))
@@ -84,11 +138,12 @@ def test_spark_submit_cli_args_against_fixture(task, fixture_factory, mocker):
     if task._conf is not None:
         task._conf = _sort_items_recursive(task._conf)
 
-    # Mock out submit so the hook is created but not run on execute
-    mocker.patch.object(SparkSubmitHook, 'submit')
-    task.execute(None)
-
-    command = task._hook._build_spark_submit_command(task._application)
+    command = task._make_hook()._build_spark_submit_command(task._application)
+    # Prefix the recorded fixture with the extra environment to record changes
+    # there as well.
+    if task._spark_submit_env_vars:
+        env_str = ['{}={}'.format(k, v) for k, v in task._spark_submit_env_vars.items()]
+        command = env_str + command
     assert all(isinstance(x, str) for x in command), str(command)
 
     comparer = fixture_factory('spark_submit_operator', task.task_id)

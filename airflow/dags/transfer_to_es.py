@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
 from airflow import DAG
-from airflow.contrib.operators.spark_submit_operator import SparkSubmitOperator
+from airflow.operators.spark_submit_plugin import SparkSubmitOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.swift_upload_plugin import SwiftUploadOperator
 from airflow.sensors.external_task_sensor import ExternalTaskSensor
@@ -63,9 +63,11 @@ with DAG(
     convert_to_esbulk = SparkSubmitOperator(
         task_id='convert_to_esbulk',
         conf={
-            'spark.pyspark.python': 'python3',
             # Delegate retrys to airflow
             'spark.yarn.maxAppAttempts': '1',
+        },
+        spark_submit_env_vars={
+            'PYSPARK_PYTHON': 'python3.7',
         },
         application=APPLICATION,
         application_args=[

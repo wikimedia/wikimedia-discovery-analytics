@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
 from airflow import DAG
-from airflow.contrib.operators.spark_submit_operator import SparkSubmitOperator
+from airflow.operators.spark_submit_plugin import SparkSubmitOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.skein_plugin import SkeinOperator
 from airflow.sensors.hive_partition_range_sensor_plugin import HivePartitionRangeSensor
@@ -86,9 +86,11 @@ with DAG(
     extract_predictions = SparkSubmitOperator(
         task_id='extract_predictions',
         conf={
-            'spark.pyspark.python': 'python3',
             # Delegate retrys to airflow
             'spark.yarn.maxAppAttempts': '1',
+        },
+        spark_submit_env_vars={
+            'PYSPARK_PYTHON': 'python3.7',
         },
         files=THRESHOLDS_PATH + '#thresholds.json',
         application=REPO_BASE + '/spark/prepare_mw_rev_score.py',
