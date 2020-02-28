@@ -1,11 +1,16 @@
 """
 Prepare predictions from revision score events for elasticsearch ingestion
 
-Input table is expected to contain rows conforming to the
-mediawiki/revision/score jsonschema from mediawiki/event-schemas repository.
-Table is expected to be partitioned hourly with year/month/day/hour partition
-keys. Output table is structured to be passed on to convert_to_esbulk.py and
-shipped to elasticsearch.
+Accepts two different ways of reading predictions:
+* Table of events conforming to the mediawiki/revision/score jsonschema from
+mediawiki/event-schemas repository. Table is expected to be partitioned hourly
+with year/month/day/hour partition keys.
+* Table of rows matching ores_bulk_ingest.py output, for bulk updating of scores.
+
+Ingested predictions are filtered using per-wiki/topic thresholds to the set of
+predictions that are thought to accurately represent the page and then format
+the predictions into strings for elasticsearch ingestion.  Output table is
+structured to be passed on to convert_to_esbulk.py.
 """
 from argparse import ArgumentParser
 from datetime import datetime
@@ -189,48 +194,100 @@ def propagate_by_wbitem(
 
 
 def extract_prediction(
-    df_in: DataFrame,
+    df: DataFrame,
     prediction: str,
     thresholds: Mapping[str, Mapping[str, float]],
 ) -> DataFrame:
-    df_in = df_in.where(F.col('scores')[prediction].isNotNull())
-
-    # A given page may have multiple predictions in the time
-    # span. Keep only the most recent prediction per page
-    df_filtered = top_row_per_group(
-        df_in,
-        [F.col('database'), F.col('page_id')],
-        [F.col('rev_timestamp').desc()])
-
+    """Extract and format predictions from mediawiki/revision/score schema"""
     # Reshape for shipping to elasticesarch
     stringify_prediction_udf = F.udf(
         make_stringify_prediction(thresholds),
         T.ArrayType(T.StringType()))
 
-    df_converted = df_filtered.select(
+    return (
+        df.select(
+            F.col('wikiid'),
+            F.col('page_id'),
+            stringify_prediction_udf(
+                F.col('wikiid'),
+                F.col('probability')
+            ).alias(prediction))
+        # Writing out empty arrays fails with parquet output, looks
+        # similar to Spark-25271 (resolved in spark 3). For now drop
+        # the empty arrays. This has the downside that we have no
+        # way to clear previously indexed predictions, we can't send
+        # an empty array and have the previous set replaced.
+        .where(F.size(F.col(prediction)) > 0)
+    )
+
+
+def load_mediawiki_revision_score(
+    df: DataFrame, prediction: str,
+    start_date: datetime, end_date: datetime,
+) -> DataFrame:
+    """Load probabilities from mediawiki/revision/score events"""
+    df_filtered = (
+        df
+        # Limit the input dataset to the time range requested
+        .where(hourly_partition_range(start_date, end_date))
+        # Only take predictions that involve the model we care about
+        .where(F.col('scores')[prediction].isNotNull())
+    )
+
+    # A given page may have multiple predictions in the time
+    # span. Keep only the most recent prediction per page
+    df_transformed = top_row_per_group(
+        df_filtered,
+        [F.col('database'), F.col('page_id')],
+        [F.col('rev_timestamp').desc()])
+
+    # Re-shape to our simplified shared format
+    return df_transformed.select(
         F.col('database').alias('wikiid'),
         F.col('page_id'),
-        stringify_prediction_udf(
-            F.col('database'),
-            F.col('scores')[prediction].probability
-        ).alias(prediction))
+        F.col('scores')[prediction].probability.alias('probability'))
 
-    # Writing out empty arrays fails with parquet output, looks
-    # similar to Spark-25271 (resolved in spark 3). For now drop
-    # the empty arrays. This has the downside that we have no
-    # way to clear previously indexed predictions, we can't send
-    # an empty array and have the previous set replaced.
-    return df_converted.where(F.size(F.col(prediction)) > 0)
+
+def load_ores_scores_export(
+    df: DataFrame, prediction: str,
+    start_date: datetime, end_date: datetime
+) -> DataFrame:
+    """Load probabilities from bulk export
+
+    Note that while the export works on a per-wiki basis we do
+    not do any per-wiki filtering. All desired wikis should be
+    exported and a single invocation of this script should prepare
+    the export for shipping to elasticsearch.
+    """
+    # This is of course odd, but it seemed easier than defining
+    # some partition specification abstraction.
+    if start_date != end_date:
+        raise Exception("Bulk import cannot accept time range")
+    return (
+        df
+        # Limit the input dataset to the time range requested
+        .where(daily_partition(start_date))
+        # Verify we have the expected fields
+        .select('wikiid', 'page_id', 'probability')
+    )
 
 
 def main(raw_args: Sequence[str]) -> int:
     def date(val: str) -> datetime:
         return datetime.strptime(val, '%Y-%m-%d')
 
+    input_kinds = {
+        'mediawiki_revision_score': load_mediawiki_revision_score,
+        'ores_scores_export': load_ores_scores_export,
+    }
+
     parser = ArgumentParser()
     parser.add_argument(
         '--input-table', required=True,
-        help='Table containing mediawiki/revision/score events')
+        help='Table containing prediction inputs')
+    parser.add_argument(
+        '--input-kind', required=True, choices=list(input_kinds.keys()),
+        help='The format of the input to read')
     parser.add_argument(
         '--output-table', required=True,
         help='Table to write prepared predictions to')
@@ -259,7 +316,7 @@ def main(raw_args: Sequence[str]) -> int:
     # We "know" that the data is relatively small so make a single output
     # partition, with the option to override for larger one-off tasks.
     parser.add_argument(
-        '--num-output-partitions', default=1,
+        '--num-output-partitions', default=1, type=int,
         help='Number of output partitions to create. Estimate at 100MB per partition.')
 
     args = parser.parse_args(raw_args)
@@ -272,20 +329,19 @@ def main(raw_args: Sequence[str]) -> int:
         thresholds = json.load(f)
 
     if args.propagate_from not in thresholds:
-        raise KeyError('No thresholds provided for propagation wiki, no propagation can occur.')
+        raise Exception('No thresholds provided for propagation wiki, no propagation can occur.')
 
     spark = SparkSession.builder.getOrCreate()
 
-    df_in = (
-        spark.read.table(args.input_table)
-        # Limit the input dataset to the time range requested
-        .where(hourly_partition_range(args.start_date, args.end_date))
-    )
+    df_in = input_kinds[args.input_kind](
+        spark.read.table(args.input_table),
+        args.prediction, args.start_date, args.end_date)
 
     # Find appropriate data, convert into expected formats
     df_predictions = extract_prediction(df_in, args.prediction, thresholds)
 
-    # Support transition from drafttopic -> articletopic
+    # The model name may not exactly match the field we index into, provide
+    # support rename the exported field.
     if args.alias is None:
         prediction_col = args.prediction
     else:
@@ -302,12 +358,13 @@ def main(raw_args: Sequence[str]) -> int:
     df_propagated = propagate_by_wbitem(
         df_predictions,
         df_wikibase_item,
-        args.prediction,
+        prediction_col,
         source_wikis=set(thresholds.keys()),
         preferred_wiki=args.propagate_from)
 
-    # Repartition as desired, spark typically has hundreds of partitions but the
-    # final outputs may only be a few hundred mb.
+    # Repartition as desired, spark typically has hundreds of partitions but
+    # the final outputs may be anywhere from hundreds of MB to dozens of GB
+    # depending on the input dataset.
     df_propagated \
         .repartition(args.num_output_partitions) \
         .createTempView('tmp_revision_score_out')
@@ -315,6 +372,9 @@ def main(raw_args: Sequence[str]) -> int:
     # Take care that selected columns must be of the same types and in the same
     # order as the table. The names used here are not used to align columns with
     # the table, it is strictly order-based.
+    # TODO: Some sort of helper library code for writing to tables, defining
+    # partition specs from strings (cli args) possibly? Would be nice to not
+    # deal with exact partitioning here.
     insert_stmt = """
         INSERT OVERWRITE TABLE {table}
         PARTITION(year={year}, month={month}, day={day})
