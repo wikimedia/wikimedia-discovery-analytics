@@ -195,6 +195,7 @@ with DAG(
         application=REPO_BASE + '/spark/prepare_mw_rev_score.py',
         application_args=[
             '--input-table', INPUT_TABLE,
+            '--input-kind', 'mediawiki_revision_score',
             '--output-table', OUTPUT_TABLE,
             '--start-date', '{{ ds }}',
             '--end-date', '{{ macros.ds_add(ds, 7) }}',

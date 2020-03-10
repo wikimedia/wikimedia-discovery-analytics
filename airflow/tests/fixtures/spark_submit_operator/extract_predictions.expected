@@ -14,6 +14,8 @@
     "/path/to/wikimedia/discovery/analytics/repo/spark/prepare_mw_rev_score.py",
     "--input-table",
     "event.mediawiki_revision_score",
+    "--input-kind",
+    "mediawiki_revision_score",
     "--output-table",
     "discovery.ores_articletopic",
     "--start-date",
