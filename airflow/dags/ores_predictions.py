@@ -43,6 +43,9 @@ THRESHOLDS_PATH = 'hdfs://analytics-hadoop/wmf/data/discovery/ores/thresholds/' 
 # the airflow servers
 REPO_BASE = '{{ var.value.wikimedia_discovery_analytics_path }}'
 
+# Path to root of this repository in HDFS
+REPO_HDFS_BASE = 'hdfs://analytics-hadoop/wmf/discovery/current'
+
 # Default kwargs for all Operators
 default_args = {
     'owner': 'discovery-analytics',
@@ -78,8 +81,10 @@ def mw_sql_to_hive(
 
     return SparkSubmitOperator(
         task_id=task_id,
-        # Custom environment provides dnspython dependency
-        archives=REPO_BASE + '/environments/mw_sql_to_hive/venv.zip#venv',
+        # Custom environment provides dnspython dependency. The environment must come
+        # from hdfs, because it has to be built on an older version of debian than runs
+        # on the airflow instance.
+        archives=REPO_HDFS_BASE + '/environments/mw_sql_to_hive/venv.zip#venv',
         # jdbc connector for talking to analytics replicas
         packages='mysql:mysql-connector-java:8.0.19',
         spark_submit_env_vars={
