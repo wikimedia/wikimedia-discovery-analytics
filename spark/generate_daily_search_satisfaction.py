@@ -12,7 +12,7 @@ except ImportError:
 from pyspark.sql import DataFrame, functions as F, types as T
 
 # Backport from spark 2.4.0
-DataFrame.transform = lambda self, fn: fn(self)
+DataFrame.transform = lambda self, fn: fn(self)  # type: ignore
 
 
 def backfill_sample_multiplier(df):

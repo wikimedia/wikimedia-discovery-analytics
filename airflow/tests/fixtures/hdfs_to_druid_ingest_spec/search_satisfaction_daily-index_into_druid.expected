@@ -1,0 +1,78 @@
+{
+    "spec": {
+        "dataSchema": {
+            "dataSource": "test_search_satisfaction_daily",
+            "granularitySpec": {
+                "intervals": [
+                    "2038-01-17/2038-01-18"
+                ],
+                "queryGranularity": "hour",
+                "rollup": true,
+                "segmentGranularity": "day",
+                "type": "uniform"
+            },
+            "metricsSpec": [
+                {
+                    "fieldName": "search_count",
+                    "name": "search_count",
+                    "type": "floatSum"
+                },
+                {
+                    "fieldName": "search_count_norm",
+                    "name": "search_count_norm",
+                    "type": "floatSum"
+                }
+            ],
+            "parser": {
+                "parseSpec": {
+                    "dimensionsSpec": {
+                        "dimensions": [
+                            "wiki",
+                            "bucket",
+                            "is_autorewrite_dym",
+                            "is_dym",
+                            "dym_shown",
+                            "dym_clicked",
+                            "hits_returned",
+                            "hit_interact",
+                            "continent",
+                            "country_code",
+                            "country",
+                            "ua_browser_family",
+                            "ua_os_family"
+                        ]
+                    },
+                    "format": "json",
+                    "timestampSpec": {
+                        "column": "dt",
+                        "format": "auto"
+                    }
+                },
+                "type": "string"
+            }
+        },
+        "ioConfig": {
+            "appendToExisting": false,
+            "inputSpec": {
+                "paths": "hdfs://analytics-hadoop/tmp/search_satisfaction_daily_2038-01-17/",
+                "type": "static"
+            },
+            "type": "hadoop"
+        },
+        "tuningConfig": {
+            "ignoreInvalidRows": false,
+            "jobProperties": {
+                "mapreduce.job.queuename": "default",
+                "mapreduce.output.fileoutputformat.compress": "org.apache.hadoop.io.compress.GzipCodec",
+                "mapreduce.reduce.memory.mb": "8192"
+            },
+            "overwriteFiles": true,
+            "partitionsSpec": {
+                "numShards": 1,
+                "type": "hashed"
+            },
+            "type": "hadoop"
+        }
+    },
+    "type": "index_hadoop"
+}

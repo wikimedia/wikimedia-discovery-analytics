@@ -14,7 +14,7 @@ from pyspark.sql import DataFrame, functions as F
 
 
 # Backport from spark 2.4.0
-DataFrame.transform = lambda df, fn: fn(df)
+DataFrame.transform = lambda df, fn: fn(df)  # type: ignore
 
 
 def arg_parser():

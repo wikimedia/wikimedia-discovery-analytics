@@ -1,7 +1,9 @@
+from glob import glob
 import json
 import os
 
 from airflow.models.dagbag import DagBag
+from airflow.models.variable import Variable
 
 import pytest
 
@@ -12,13 +14,36 @@ all_dag_ids = [
     'mjolnir',
     'ores_predictions_weekly',
     'popularity_score_weekly',
+    'search_satisfaction_daily',
     'transfer_to_es_weekly',
 ]
 
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def fixture_dir():
     return os.path.join(os.path.dirname(__file__), 'fixtures')
+
+
+@pytest.fixture(scope='session', autouse=True)
+def configure_airflow_variables(fixture_dir):
+    """Global airflow variable configuration for tests.
+
+    This configuration is written to the airflow database, and as
+    such is shared between all tests. Individual tests should never
+    use Variable.set, as the state crosses test boundaries. See
+    mock_airflow_variables.
+    """
+    for path in glob(os.path.join(fixture_dir, 'variables', '*')):
+        with open(path, 'r') as f:
+            content = f.read().strip()
+        name, ext = os.path.splitext(os.path.basename(path))
+        if ext == '.json':
+            # As long as we are here, verify all json is valid json.
+            try:
+                json.loads(content)
+            except ValueError:
+                raise ValueError("Fixture does not contain valid json: " + path)
+        Variable.set(name, content)
 
 
 def on_disk_fixture(path):
@@ -36,7 +61,7 @@ def on_disk_fixture(path):
     return compare
 
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def fixture_factory(fixture_dir):
     def factory(group, fixture_id):
         path = os.path.join(fixture_dir, group, fixture_id + '.expected')
@@ -60,3 +85,23 @@ def tasks(kind):
 def dag_tasks(dag_id, kind):
     dag = DagBag().get_dag(dag_id)
     return [task for task in dag.tasks if isinstance(task, kind)]
+
+
+@pytest.fixture
+def mock_airflow_variables(mocker):
+    def mock_variables(mapping):
+        Variable_get = Variable.get
+
+        def mock_Variable_get(key, *args, **kwargs):
+            try:
+                value = mapping[key]
+            except KeyError:
+                return Variable_get(key, *args, **kwargs)
+            else:
+                mock_var = mocker.MagicMock()
+                mock_var.key = key
+                mock_var.get_val.return_value = value
+                mock_var.__str__.return_value = value
+                return mock_var
+        mocker.patch.object(Variable, 'get').side_effect = mock_Variable_get
+    return mock_variables

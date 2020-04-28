@@ -28,6 +28,7 @@ from airflow.operators.dummy_operator import DummyOperator
 from wmf_airflow.hive_partition_range_sensor import HivePartitionRangeSensor
 from wmf_airflow.skein import SkeinOperator
 from wmf_airflow.spark_submit import SparkSubmitOperator
+from wmf_airflow.template import REPO_BASE
 
 
 INPUT_TABLE = 'event.mediawiki_revision_score'
@@ -39,10 +40,6 @@ MODEL = 'articletopic'
 
 THRESHOLDS_PATH = 'hdfs://analytics-hadoop/wmf/data/discovery/ores/thresholds/' \
     + MODEL + '/{{ ds_nodash }}.json'
-
-# Path to root of this repository (wikimedia/discovery/analytics) on
-# the airflow servers
-REPO_BASE = '{{ var.value.wikimedia_discovery_analytics_path }}'
 
 # Path to root of this repository in HDFS
 REPO_HDFS_BASE = 'hdfs://analytics-hadoop/wmf/discovery/current'

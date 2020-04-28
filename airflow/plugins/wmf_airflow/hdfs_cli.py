@@ -26,6 +26,17 @@ class HdfsCliHook(BaseHook):
         return HdfsCliHook._test('-f', path)
 
     @staticmethod
+    def rm(path: str, recurse=False, force=False) -> bool:
+        cmd = ['hdfs', 'dfs', '-rm']
+        if recurse:
+            cmd.append('-r')
+        if force:
+            cmd.append('-f')
+        cmd.append(path)
+        status_code = subprocess.call(cmd)
+        return status_code == 0
+
+    @staticmethod
     def text(path: str, encoding: str = 'utf8') -> str:
         try:
             raw_bytes = subprocess.check_output([
