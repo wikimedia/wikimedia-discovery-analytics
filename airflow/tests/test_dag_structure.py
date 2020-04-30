@@ -9,30 +9,7 @@ from airflow.models.taskinstance import TaskInstance
 from airflow.sensors.external_task_sensor import ExternalTaskSensor
 import pytest
 
-# Failing to import a dag doesn't fail pytest, so enumerate
-# the expected dags so tests fail if they don't import. This
-# also helps to ignore airflow's default test dag.
-all_dag_ids = [
-    'mjolnir',
-    'popularity_score_weekly',
-    'ores_predictions_weekly',
-    'transfer_to_es_weekly',
-]
-
-
-def all_tasks():
-    bag = DagBag()
-    for dag_id in all_dag_ids:
-        dag = bag.get_dag(dag_id)
-        assert dag is not None, dag_id
-        for task in dag.tasks:
-            yield task
-
-
-def tasks(kind):
-    for task in all_tasks():
-        if isinstance(task, kind):
-            yield task
+from conftest import all_dag_ids, all_tasks, tasks
 
 
 @pytest.mark.parametrize('task', tasks(WrongSparkSubmitOperator))

@@ -1,7 +1,6 @@
 import json
 import os
 
-from airflow.models.dagbag import DagBag
 from airflow.models.taskinstance import TaskInstance
 from airflow.contrib.hooks.spark_submit_hook import SparkSubmitHook
 from airflow.hooks.hive_hooks import HiveMetastoreHook
@@ -9,9 +8,7 @@ from airflow.hooks.hdfs_cli_plugin import HdfsCliHook
 from airflow.operators.mjolnir_plugin import MjolnirOperator
 import pytest
 
-
-def dag_tasks(dag_id, kind):
-    return [task for task in DagBag().get_dag(dag_id).tasks if isinstance(task, kind)]
+from conftest import dag_tasks
 
 
 @pytest.mark.parametrize('task', dag_tasks('mjolnir', MjolnirOperator))

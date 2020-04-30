@@ -1,7 +1,18 @@
 import json
 import os
 
+from airflow.models.dagbag import DagBag
 import pytest
+
+# Failing to import a dag doesn't fail pytest, so enumerate
+# the expected dags so tests fail if they don't import. This
+# also helps to ignore airflow's default test dag.
+all_dag_ids = [
+    'mjolnir',
+    'ores_predictions_weekly',
+    'popularity_score_weekly',
+    'transfer_to_es_weekly',
+]
 
 
 @pytest.fixture
@@ -30,3 +41,21 @@ def fixture_factory(fixture_dir):
         path = os.path.join(fixture_dir, group, fixture_id + '.expected')
         return on_disk_fixture(path)
     return factory
+
+
+def all_tasks():
+    bag = DagBag()
+    for dag_id in all_dag_ids:
+        dag = bag.get_dag(dag_id)
+        assert dag is not None, dag_id
+        for task in dag.tasks:
+            yield task
+
+
+def tasks(kind):
+    return [task for task in all_tasks() if isinstance(task, kind)]
+
+
+def dag_tasks(dag_id, kind):
+    dag = DagBag().get_dag(dag_id)
+    return [task for task in dag.tasks if isinstance(task, kind)]

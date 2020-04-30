@@ -1,21 +1,11 @@
 from datetime import datetime
 
-from airflow.models.dagbag import DagBag
 from airflow.models.taskinstance import TaskInstance
 from airflow.operators.skein_plugin import SkeinOperator
 from airflow.operators.swift_upload_plugin import SwiftUploadOperator
 import pytest
 
-
-def tasks(kind):
-    # We create a new bag each invocation because these tasks
-    # are not immutable and can be changed by tests.
-    bag = DagBag()
-    for dag_id in bag.dag_ids:
-        dag = bag.get_dag(dag_id)
-        for task in dag.tasks:
-            if isinstance(task, kind):
-                yield task
+from conftest import tasks
 
 
 def test_operator_can_create_hook():
