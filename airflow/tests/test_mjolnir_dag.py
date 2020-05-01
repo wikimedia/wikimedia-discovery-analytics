@@ -63,5 +63,6 @@ def test_spark_submit_cli_args_against_fixtures(mocker, fixture_factory, task):
     assert all(isinstance(x, str) for x in command), str(command)
 
     # Check against on-disk fixtures, or write to disk if rebuilds are enabled
-    comparer = fixture_factory('spark_submit_hook', task.task_id)
+    fixture = '{}_{}'.format(task.dag_id, task.task_id)
+    comparer = fixture_factory('spark_submit_hook', fixture)
     comparer(command)

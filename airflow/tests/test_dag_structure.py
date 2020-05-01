@@ -123,7 +123,8 @@ def test_spark_submit_cli_args_against_fixture(task, fixture_factory, mocker):
         command = env_str + command
     assert all(isinstance(x, str) for x in command), str(command)
 
-    comparer = fixture_factory('spark_submit_operator', task.task_id)
+    fixture = '{}_{}'.format(task.dag_id, task.task_id)
+    comparer = fixture_factory('spark_submit_operator', fixture)
     comparer(command)
 
 
