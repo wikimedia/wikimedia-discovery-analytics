@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 from collections import defaultdict
+import json
 import sys
 
 try:
@@ -57,6 +58,34 @@ class MinVal:
             self.value = x
 
 
+def _parse_extra(extraParams):
+    if extraParams is None:
+        return {}
+    try:
+        decoded = json.loads(extraParams)
+    except (TypeError, json.decoder.JSONDecodeError):
+        # Log somehow? We Expect these to always be complete.
+        return {}
+    # json.loads returns None for the 'null' string. Not sure why but we've
+    # seen this in real data...
+    return {} if decoded is None else decoded
+
+
+def dict_path(data, *path, default=None):
+    """Retrieve a value from nested dictionaries by key path
+
+    Similar to data.get(a, {}).get(b, {}).get(c, default) but with
+    improved handling of error conditions when, for example, an
+    element in the middle of the path is available but not a dict.
+    """
+    for piece in path:
+        try:
+            data = data[piece]
+        except (KeyError, TypeError):
+            return default
+    return data
+
+
 def as_dym_events(events):
     """Aggregate fulltext session into per-search satisfaction events
 
@@ -91,6 +120,10 @@ def as_dym_events(events):
     hits_returned = dict()
     # dict from search token to minimum dt
     min_dt = defaultdict(MinVal)
+    # map from search token to the main results provider
+    results_from = {}
+    # map from search token to the query suggestion provider
+    suggestion_from = {}
     # set of searches where we should have found a source search for a suggestion but
     # could not (debug info).
     sugg_not_found = set()
@@ -117,8 +150,17 @@ def as_dym_events(events):
                 dym_clicked.add(suggested[event['query']])
             except KeyError:
                 sugg_not_found.add(event['searchToken'])
+
         if is_serp:
             hits_returned[event['searchToken']] = 0 if event['hitsReturned'] is None else event['hitsReturned']
+            # The source of query results and the suggestion (for example, which algorithm provided
+            # the suggestion).
+            extra = _parse_extra(event['extraParams'])
+            results_from[event['searchToken']] = dict_path(
+                extra, 'fallback', 'mainResults', 'name', default='n/a')
+            suggestion_from[event['searchToken']] = dict_path(
+                extra, 'fallback', 'querySuggestion', 'name', default='n/a')
+
         if is_hit_interact:
             hit_interact.add(event['searchToken'])
 
@@ -132,21 +174,29 @@ def as_dym_events(events):
             search in dym_clicked,
             hits_returned.get(search),
             search in hit_interact,
+            results_from.get(search, 'n/a'),
+            suggestion_from.get(search, 'n/a')
         ))
     return dym_events
 
 
+# spark type for tuples emitted from as_dym_events
+DYM_EVENT_TYPE = T.StructType([
+    T.StructField('dt', T.StringType(), False),
+    T.StructField('is_autorewrite_dym', T.BooleanType(), False),
+    T.StructField('is_dym', T.BooleanType(), False),
+    T.StructField('dym_shown', T.BooleanType(), False),
+    T.StructField('dym_clicked', T.BooleanType(), False),
+    T.StructField('hits_returned', T.IntegerType(), True),
+    T.StructField('hit_interact', T.BooleanType(), False),
+    T.StructField('results_provider', T.StringType(), False),
+    T.StructField('sugg_provider', T.StringType(), False),
+])
+
+
 def transform_sessions(df):
     """Convert search satisfaction events into per-search dym events"""
-    udf = F.udf(as_dym_events, T.ArrayType(T.StructType([
-        T.StructField('dt', T.StringType(), False),
-        T.StructField('is_autorewrite_dym', T.BooleanType(), False),
-        T.StructField('is_dym', T.BooleanType(), False),
-        T.StructField('dym_shown', T.BooleanType(), False),
-        T.StructField('dym_clicked', T.BooleanType(), False),
-        T.StructField('hits_returned', T.IntegerType(), True),
-        T.StructField('hit_interact', T.BooleanType(), False)
-    ])))
+    udf = F.udf(as_dym_events, T.ArrayType(DYM_EVENT_TYPE))
 
     # per-session metadata to collect
     geo_cols = [
@@ -164,10 +214,10 @@ def transform_sessions(df):
         F.first(F.col('sample_multiplier')).alias('sample_multiplier'),
         # source data for as_dym_events udf
         F.collect_list(F.struct(
-            'dt', 'suggestion',
-            'event.action', 'event.didYouMeanVisible', 'event.hitsReturned',
-            'event.inputLocation', 'event.query', 'event.searchSessionId',
-            'event.searchToken', 'event.uniqueId')).alias('events')
+            'dt', 'suggestion', 'event.action', 'event.didYouMeanVisible',
+            'event.extraParams', 'event.hitsReturned', 'event.inputLocation',
+            'event.query', 'event.searchSessionId', 'event.searchToken',
+            'event.uniqueId')).alias('events')
     ]
 
     return (
@@ -280,6 +330,7 @@ def main(
         .where(F.col('event.action') != 'checkin')
         .join(df_cirrus_sugg, how='left',
               on=F.col('searchToken') == F.col('event.searchToken'))
+        # Drop the duplicate searchToken field, we still have event.searchToken
         .drop('searchToken')
         .transform(transform_sessions)
     )

@@ -12,6 +12,9 @@ CREATE EXTERNAL TABLE `discovery.search_satisfaction_daily`(
   `hits_returned` int COMMENT 'The total number of hits available for the search query',
   `hit_interact` boolean COMMENT 'True when a search result was clicked',
 
+  `results_provider` string COMMENT 'Named provider of search result list',
+  `sugg_provider` string COMMENT 'Named provider of search suggestion',
+
   `continent` string COMMENT '',
   `country_code` string COMMENT '',
   `country` string COMMENT '',
@@ -35,4 +38,5 @@ PARTITIONED BY (
   `day` int COMMENT 'Unpadded day aggregated over')
 STORED AS PARQUET
 LOCATION
-  'hdfs://analytics-hadoop/wmf/data/discovery/search_satisfaction/daily'
+  'hdfs://analytics-hadoop/wmf/data/discovery/search_satisfaction/daily_v02'
+;

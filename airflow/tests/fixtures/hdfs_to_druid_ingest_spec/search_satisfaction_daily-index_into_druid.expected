@@ -35,6 +35,8 @@
                             "dym_clicked",
                             "hits_returned",
                             "hit_interact",
+                            "results_provider",
+                            "sugg_provider",
                             "continent",
                             "country_code",
                             "country",
