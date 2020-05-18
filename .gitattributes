@@ -1,1 +1,2 @@
 *.whl filter=fat -text
+*.jar filter=fat -text

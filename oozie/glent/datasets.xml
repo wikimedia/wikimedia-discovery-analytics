@@ -27,14 +27,7 @@ Use this dataset in your coordinator.xml files by setting:
         <done-flag>_SUCCESS</done-flag>
     </dataset>
 
-    <dataset name="glent_m1prep"
-            frequency="${coord:days(7)}"
-            initial-instance="2019-05-25T00:00Z"
-            timezone="Universal">
-        <uri-template>${glent_data_directory}/m1prep/date=${YEAR}${MONTH}${DAY}</uri-template>
-        <done-flag>_SUCCESS</done-flag>
-    </dataset>
-
+    <!-- Job is run in the airflow instance instead of oozie -->
     <dataset name="glent_m1run"
             frequency="${coord:days(7)}"
             initial-instance="2019-06-01T00:00Z"

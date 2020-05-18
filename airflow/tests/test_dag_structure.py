@@ -50,6 +50,9 @@ def test_task_email_is_whitelisted(task):
 
 @pytest.mark.parametrize('task', tasks(SparkSubmitOperator))
 def test_spark_submit_sets_python_version(task):
+    # Don't check python versions on java tasks.
+    if task._application.endswith('.jar'):
+        return
     # Due to how spark is packaged for wmf cluster if the python
     # is not explicitly set it can default to the ipython shell
     # which will seem to work (it will run the provided application)

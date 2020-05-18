@@ -11,6 +11,7 @@ import pytest
 # the expected dags so tests fail if they don't import. This
 # also helps to ignore airflow's default test dag.
 all_dag_ids = [
+    'glent_similar_queries_weekly',
     'mjolnir',
     'ores_predictions_weekly',
     'popularity_score_weekly',
