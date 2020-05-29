@@ -18,6 +18,7 @@ all_dag_ids = [
     'drop_old_data_daily',
     'fulltext_head_queries_daily',
     'glent_weekly',
+    'import_wikidata_ttl',
     'mjolnir',
     'ores_predictions_weekly',
     'popularity_score_weekly',

@@ -1,6 +1,8 @@
 import subprocess
 
+from airflow.operators.sensors import BaseSensorOperator
 from airflow.hooks.base_hook import BaseHook
+from airflow.utils.decorators import apply_defaults
 
 
 class HdfsCliHook(BaseHook):
@@ -44,3 +46,16 @@ class HdfsCliHook(BaseHook):
         except subprocess.CalledProcessError:
             raise FileNotFoundError(path)
         return raw_bytes.decode(encoding)
+
+
+class HdfsCliSensor(BaseSensorOperator):
+    @apply_defaults
+    def __init__(self,
+                 filepath: str,
+                 *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.filepath = filepath
+
+    def poke(self, context):
+        self.log.info('Checking marker at {}'.format(self.filepath))
+        return HdfsCliHook.exists(self.filepath)
