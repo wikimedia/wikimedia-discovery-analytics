@@ -1,10 +1,11 @@
 from datetime import datetime, timedelta
 
 from airflow import DAG
-from airflow.operators.spark_submit_plugin import SparkSubmitOperator
 from airflow.operators.dummy_operator import DummyOperator
-from airflow.operators.swift_upload_plugin import SwiftUploadOperator
 from airflow.sensors.external_task_sensor import ExternalTaskSensor
+
+from wmf_airflow.spark_submit import SparkSubmitOperator
+from wmf_airflow.swift_upload import SwiftUploadOperator
 
 
 APPLICATION = '{{ var.value.wikimedia_discovery_analytics_path }}/spark/convert_to_esbulk.py'

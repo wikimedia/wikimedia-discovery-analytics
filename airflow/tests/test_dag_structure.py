@@ -3,11 +3,12 @@ from datetime import datetime
 
 from airflow.contrib.operators.spark_submit_operator \
     import SparkSubmitOperator as WrongSparkSubmitOperator
-from airflow.operators.spark_submit_plugin import SparkSubmitOperator
 from airflow.models.dagbag import DagBag
 from airflow.models.taskinstance import TaskInstance
 from airflow.sensors.external_task_sensor import ExternalTaskSensor
+
 import pytest
+from wmf_airflow.spark_submit import SparkSubmitOperator
 
 from conftest import all_dag_ids, all_tasks, tasks
 

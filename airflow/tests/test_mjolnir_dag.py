@@ -4,9 +4,11 @@ import os
 from airflow.models.taskinstance import TaskInstance
 from airflow.contrib.hooks.spark_submit_hook import SparkSubmitHook
 from airflow.hooks.hive_hooks import HiveMetastoreHook
-from airflow.hooks.hdfs_cli_plugin import HdfsCliHook
-from airflow.operators.mjolnir_plugin import MjolnirOperator
+
 import pytest
+from wmf_airflow.hdfs_cli import HdfsCliHook
+import wmf_airflow.mjolnir
+from wmf_airflow.mjolnir import MjolnirOperator
 
 from conftest import dag_tasks
 
@@ -44,7 +46,7 @@ def test_spark_submit_cli_args_against_fixtures(mocker, fixture_factory, task):
     mocked_metastore().__enter__().get_table.side_effect = get_table_side_effect
 
     # Mock out the hook so we can collect args.
-    mocked_make_spark_hook = mocker.patch.object(task, '_make_spark_hook')
+    mocked_spark_submit_hook = mocker.patch.object(wmf_airflow.mjolnir, 'SparkSubmitHook')
 
     # Run the task to populate the mock with hook args
     task.dag.clear()
@@ -52,9 +54,9 @@ def test_spark_submit_cli_args_against_fixtures(mocker, fixture_factory, task):
     ti.run(ignore_all_deps=True)
 
     # Fetch call args from the mocks
-    assert len(mocked_make_spark_hook.call_args_list) == 1
-    hook_args, hook_kwargs = mocked_make_spark_hook.call_args
-    submit_args, submit_kwargs = mocked_make_spark_hook().submit.call_args
+    assert len(mocked_spark_submit_hook.call_args_list) == 1
+    hook_args, hook_kwargs = mocked_spark_submit_hook.call_args
+    submit_args, submit_kwargs = mocked_spark_submit_hook().submit.call_args
 
     # Create the real hook and ask for the spark cli args
     hook = SparkSubmitHook(*hook_args, **hook_kwargs)

@@ -1,6 +1,5 @@
 import subprocess
 
-from airflow.plugins_manager import AirflowPlugin
 from airflow.hooks.base_hook import BaseHook
 
 
@@ -34,9 +33,3 @@ class HdfsCliHook(BaseHook):
         except subprocess.CalledProcessError:
             raise FileNotFoundError(path)
         return raw_bytes.decode(encoding)
-
-
-# Defining the plugin class
-class HdfsPlugin(AirflowPlugin):
-    name = "hdfs_cli_plugin"
-    hooks = [HdfsCliHook]

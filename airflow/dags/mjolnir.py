@@ -4,8 +4,9 @@ from typing import NewType
 from airflow import DAG
 from airflow.hooks.hive_hooks import HiveMetastoreHook
 from airflow.operators.dummy_operator import DummyOperator
-from airflow.operators.mjolnir_plugin import MjolnirOperator
-from airflow.operators.swift_upload_plugin import SwiftUploadOperator
+
+from wmf_airflow.mjolnir import MjolnirOperator
+from wmf_airflow.swift_upload import SwiftUploadOperator
 
 
 # Set of wikis to train

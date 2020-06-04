@@ -5,9 +5,9 @@ import time
 from typing import Mapping, Optional
 
 from airflow.hooks.base_hook import BaseHook
-from airflow.plugins_manager import AirflowPlugin
 from airflow.models.baseoperator import BaseOperator
 from airflow.utils.decorators import apply_defaults
+
 import skein
 from skein.model import FinalStatus
 
@@ -176,10 +176,3 @@ class SkeinOperator(BaseOperator):
     def on_kill(self):
         if self._hook:
             self._hook.on_kill()
-
-
-# Defining the plugin class
-class SkeinPlugin(AirflowPlugin):
-    name = "skein_plugin"
-    hooks = [SkeinHook]
-    operators = [SkeinOperator]

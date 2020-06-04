@@ -2,6 +2,7 @@ import json
 import os
 
 from airflow.models.dagbag import DagBag
+
 import pytest
 
 # Failing to import a dag doesn't fail pytest, so enumerate

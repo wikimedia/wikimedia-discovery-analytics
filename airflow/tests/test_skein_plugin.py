@@ -1,9 +1,10 @@
 from datetime import datetime
 
 from airflow.models.taskinstance import TaskInstance
-from airflow.operators.skein_plugin import SkeinOperator
-from airflow.operators.swift_upload_plugin import SwiftUploadOperator
 import pytest
+
+from wmf_airflow.skein import SkeinOperator
+from wmf_airflow.swift_upload import SwiftUploadOperator
 
 from conftest import tasks
 

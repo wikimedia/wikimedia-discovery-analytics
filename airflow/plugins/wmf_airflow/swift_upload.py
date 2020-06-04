@@ -1,9 +1,9 @@
 from datetime import timedelta
 from typing import Optional, Union
 
-from airflow.plugins_manager import AirflowPlugin
 from airflow.models.baseoperator import BaseOperator
 from airflow.utils.decorators import apply_defaults
+from wmf_airflow.skein import SkeinHook
 
 
 class SwiftUploadOperator(BaseOperator):
@@ -54,7 +54,6 @@ class SwiftUploadOperator(BaseOperator):
         self._hook = None
 
     def _make_hook(self):
-        from airflow.hooks.skein_plugin import SkeinHook
         return SkeinHook(
             name=self.task_id if self._name is None else self._name,
             files={
@@ -77,8 +76,3 @@ class SwiftUploadOperator(BaseOperator):
         if self._hook is None:
             self._hook = self._make_hook()
         self._hook.submit(self._application)
-
-
-class SwiftUploadPlugin(AirflowPlugin):
-    name = 'swift_upload_plugin'
-    operators = [SwiftUploadOperator]

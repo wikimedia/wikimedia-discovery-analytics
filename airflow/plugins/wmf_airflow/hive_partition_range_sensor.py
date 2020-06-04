@@ -2,7 +2,6 @@ from collections import defaultdict
 import datetime
 from typing import cast, Callable, Mapping, Sequence, Tuple
 
-from airflow.plugins_manager import AirflowPlugin
 from airflow.utils.decorators import apply_defaults
 from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 
@@ -77,9 +76,3 @@ class HivePartitionRangeSensor(NamedHivePartitionSensor):
             self.partition_names = self.partition_names_for_range(
                 start_dt, end_dt)
         return super().poke(context)
-
-
-# Defining the plugin class
-class HivePartitionRangePlugin(AirflowPlugin):
-    name = "hive_partition_range_sensor_plugin"
-    sensors = [HivePartitionRangeSensor]

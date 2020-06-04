@@ -1,8 +1,8 @@
 from datetime import timedelta
 from unittest.mock import MagicMock
 
-from airflow.sensors.hive_partition_range_sensor_plugin import HivePartitionRangeSensor
 import pendulum
+from wmf_airflow.hive_partition_range_sensor import HivePartitionRangeSensor
 
 
 def test_hourly():

@@ -23,10 +23,11 @@ from datetime import datetime, timedelta
 import os
 
 from airflow import DAG
-from airflow.operators.spark_submit_plugin import SparkSubmitOperator
 from airflow.operators.dummy_operator import DummyOperator
-from airflow.operators.skein_plugin import SkeinOperator
-from airflow.sensors.hive_partition_range_sensor_plugin import HivePartitionRangeSensor
+
+from wmf_airflow.hive_partition_range_sensor import HivePartitionRangeSensor
+from wmf_airflow.skein import SkeinOperator
+from wmf_airflow.spark_submit import SparkSubmitOperator
 
 
 INPUT_TABLE = 'event.mediawiki_revision_score'

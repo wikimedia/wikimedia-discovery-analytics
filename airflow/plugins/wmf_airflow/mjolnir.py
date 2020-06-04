@@ -5,10 +5,10 @@ from typing import cast, Any, Dict, List, Mapping, Optional, Tuple, TypeVar, Uni
 
 from airflow.contrib.hooks.spark_submit_hook import SparkSubmitHook
 from airflow.models.baseoperator import BaseOperator
-from airflow.plugins_manager import AirflowPlugin
 from airflow.utils.decorators import apply_defaults
 from airflow.utils.log.logging_mixin import LoggingMixin
 
+from wmf_airflow.hdfs_cli import HdfsCliHook
 
 _T = TypeVar('_T')
 
@@ -88,9 +88,6 @@ class AutoSizeSpark(LoggingMixin):
         raise Exception('Unrecognized memory spec: {}'.format(memory))
 
     def _read_metadata(self):
-        # Late-import allows of cross-plugin dependencies. Alternatively
-        # we should register and use self.get_connection()
-        from airflow.hooks.hdfs_cli_plugin import HdfsCliHook
         text_raw = HdfsCliHook.text(os.path.join(
             self._metadata_dir, '_METADATA.JSON'))
         return json.loads(text_raw)
@@ -221,9 +218,6 @@ class MjolnirOperator(BaseOperator, LoggingMixin):
 
     def _marker_exists(self):
         """Check if the 'operation complete' marker file exists"""
-        # Late-import allows for cross-plugin dependency. Alternatively
-        # we should register a connection with airflow and instantiate.
-        from airflow.hooks.hdfs_cli_plugin import HdfsCliHook
         marker_path = os.path.join(self._output_path, self._marker)
         self.log.info('Checking marker at {}'.format(marker_path))
         return HdfsCliHook.exists(marker_path)
@@ -280,10 +274,6 @@ class MjolnirOperator(BaseOperator, LoggingMixin):
 
         return args
 
-    # Let test cases replace this, due to how airflow imports
-    # things they can't simply mock objects in our module.
-    _make_spark_hook = SparkSubmitHook
-
     def execute(self, context: Mapping):
         self.log.info('Using output path of {}'.format(self._output_path))
         if self._marker_exists():
@@ -308,7 +298,7 @@ class MjolnirOperator(BaseOperator, LoggingMixin):
         # are always output in a consistent order.
         spark_args = _sort_items_recursive(spark_args)
 
-        self._hook = self._make_spark_hook(
+        self._hook = SparkSubmitHook(
             name='mjolnir-{}-{}-spark'.format(
                 self.task_id, context['ds_nodash']),
             application_args=application_args,
@@ -331,8 +321,3 @@ class MjolnirOperator(BaseOperator, LoggingMixin):
 
     def on_kill(self):
         self._hook.on_kill()
-
-
-class MjolnirPlugin(AirflowPlugin):
-    name = 'mjolnir_plugin'
-    operators = [MjolnirOperator]

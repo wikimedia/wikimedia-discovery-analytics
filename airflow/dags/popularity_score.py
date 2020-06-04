@@ -3,7 +3,8 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.hive_operator import HiveOperator
-from airflow.sensors.hive_partition_range_sensor_plugin import HivePartitionRangeSensor
+
+from wmf_airflow.hive_partition_range_sensor import HivePartitionRangeSensor
 
 
 HQL = """

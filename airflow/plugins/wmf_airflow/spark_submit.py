@@ -2,7 +2,6 @@ import os
 
 from airflow.contrib.hooks.spark_submit_hook import SparkSubmitHook
 from airflow.models.baseoperator import BaseOperator
-from airflow.plugins_manager import AirflowPlugin
 from airflow.utils.decorators import apply_defaults
 
 
@@ -123,8 +122,3 @@ class SparkSubmitOperator(BaseOperator):
 
     def on_kill(self):
         self._hook.on_kill()
-
-
-class SparkSubmitPlugin(AirflowPlugin):
-    name = 'spark_submit_plugin'
-    operators = [SparkSubmitOperator]
