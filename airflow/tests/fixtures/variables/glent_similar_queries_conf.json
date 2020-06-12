@@ -1,7 +1,0 @@
-{
-    "table_canonical_wikis": "canonical_data.wikis",
-    "table_cirrus_event": "event.mediawiki_cirrussearch_request",
-    "table_m1_prep": "glent.m1prep",
-    "table_suggestions": "glent.suggestions",
-    "base_temp_dir": "hdfs://analytics-hadoop/tmp/"
-}

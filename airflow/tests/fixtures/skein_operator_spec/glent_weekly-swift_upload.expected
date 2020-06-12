@@ -1,0 +1,45 @@
+{
+    "acls": {
+        "enable": false,
+        "modify_groups": [],
+        "modify_users": [],
+        "ui_users": [],
+        "view_groups": [],
+        "view_users": []
+    },
+    "file_systems": [],
+    "master": {
+        "env": {},
+        "files": {
+            "swift_auth.env": {
+                "size": 0,
+                "source": "hdfs://analytics-hadoop/user/analytics/swift_auth_analytics_admin.env",
+                "timestamp": 0,
+                "type": "FILE",
+                "visibility": "APPLICATION"
+            },
+            "swift_upload.py": {
+                "size": 0,
+                "source": "hdfs://analytics-hadoop/wmf/refinery/current/oozie/util/swift/upload/swift_upload.py",
+                "timestamp": 0,
+                "type": "FILE",
+                "visibility": "APPLICATION"
+            }
+        },
+        "log_level": "INFO",
+        "resources": {
+            "fpgas": 0,
+            "gpus": 0,
+            "memory": 1024,
+            "vcores": 1
+        },
+        "script": "set -o errexit\npython3 swift_upload.py --swift-overwrite true --swift-delete-after 604800 --swift-auto-version false --swift-object-prefix 20380124 --event-per-object false --event-stream swift.search_glent.upload-complete --event-service-url https://eventgate-analytics.svc.eqiad.wmnet:4592/v1/events swift_auth.env search_glent hdfs://analytics-hadoop/tmp/glent_weekly_2038-01-17/esbulk"
+    },
+    "max_attempts": 1,
+    "name": "swift_upload",
+    "node_label": "",
+    "queue": "default",
+    "services": {},
+    "tags": [],
+    "user": ""
+}

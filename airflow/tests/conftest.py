@@ -1,17 +1,20 @@
+from datetime import datetime
 from glob import glob
 import json
 import os
 
+from airflow.models.dag import DAG
 from airflow.models.dagbag import DagBag
 from airflow.models.variable import Variable
 
+import jinja2
 import pytest
 
 # Failing to import a dag doesn't fail pytest, so enumerate
 # the expected dags so tests fail if they don't import. This
 # also helps to ignore airflow's default test dag.
 all_dag_ids = [
-    'glent_similar_queries_weekly',
+    'glent_weekly',
     'mjolnir',
     'ores_predictions_weekly',
     'popularity_score_weekly',
@@ -106,3 +109,13 @@ def mock_airflow_variables(mocker):
                 return mock_var
         mocker.patch.object(Variable, 'get').side_effect = mock_Variable_get
     return mock_variables
+
+
+@pytest.fixture
+def dag():
+    """Simple dag object pre-populated to allow testing operators"""
+    return DAG(
+        dag_id='pytest',
+        template_undefined=jinja2.StrictUndefined,
+        default_args={'start_date': datetime.now()}
+    )

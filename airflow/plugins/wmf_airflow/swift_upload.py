@@ -9,7 +9,8 @@ from wmf_airflow.skein import SkeinHook
 class SwiftUploadOperator(BaseOperator):
     template_fields = (
         '_swift_container', '_source_directory', '_swift_object_prefix',
-        '_application', '_swift_auth_file', '_event_service_url')
+        '_application', '_swift_auth_file', '_event_service_url',
+        '_swift_delete_after', '_event_stream')
 
     @apply_defaults
     def __init__(
@@ -25,7 +26,7 @@ class SwiftUploadOperator(BaseOperator):
             'swift_auth_analytics_admin.env'),
         event_stream: Union[bool, str] = True,
         swift_overwrite: bool = False,
-        swift_delete_after: timedelta = timedelta(days=30),
+        swift_delete_after: Union[str, timedelta] = timedelta(days=30),
         swift_auto_version: bool = False,
         event_per_object: bool = False,
         event_service_url: str = 'https://eventgate-analytics.svc.eqiad.wmnet:4592/v1/events',
@@ -53,6 +54,17 @@ class SwiftUploadOperator(BaseOperator):
         self._name = name
         self._hook = None
 
+    @property
+    def _swift_delete_after_sec(self) -> int:
+        try:
+            return int(self._swift_delete_after.total_seconds())  # type: ignore
+        except AttributeError:
+            # Templating can only return strings, interperet as seconds.
+            # macros.timedelta(...).total_seconds() can be used with more
+            # human values. We cast to float instead of int as macros
+            # may emit them, and int doesn't accept float strings.
+            return int(float(self._swift_delete_after))  # type: ignore
+
     def _make_hook(self):
         return SkeinHook(
             name=self.task_id if self._name is None else self._name,
@@ -61,7 +73,7 @@ class SwiftUploadOperator(BaseOperator):
             },
             application_args=[
                 '--swift-overwrite', str(self._swift_overwrite).lower(),
-                '--swift-delete-after', str(int(self._swift_delete_after.total_seconds())),
+                '--swift-delete-after', str(self._swift_delete_after_sec),
                 '--swift-auto-version', str(self._swift_auto_version).lower(),
                 '--swift-object-prefix', self._swift_object_prefix,
                 '--event-per-object', str(self._event_per_object).lower(),
