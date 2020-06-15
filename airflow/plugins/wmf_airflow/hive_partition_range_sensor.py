@@ -25,6 +25,8 @@ class HivePartitionRangeSensor(NamedHivePartitionSensor):
      require. Each spec will be repeated for each expected partition with the
      values of the year, month, day, hour and date keys replaced.
     """
+    template_fields = ('_table',)
+
     FORMATTERS = cast(Mapping[str, Formatter], defaultdict(
         lambda: lambda v, dt: v,
         year=lambda v, dt: dt.year,

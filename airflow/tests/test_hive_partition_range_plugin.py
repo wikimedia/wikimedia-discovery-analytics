@@ -1,5 +1,7 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 from unittest.mock import MagicMock
+
+from airflow.models.taskinstance import TaskInstance
 
 import pendulum
 from wmf_airflow.hive_partition_range_sensor import HivePartitionRangeSensor
@@ -62,4 +64,32 @@ def test_date_format_is_padded():
     })
     assert sensor.partition_names == [
         'table/date=202001{:02d}'.format(day) for day in range(2, 9)
+    ]
+
+
+def test_templating(dag, mock_airflow_variables):
+    mock_airflow_variables({
+        'some_table': 'pytestdb.pytesttable',
+    })
+    hook = MagicMock()
+    hook.check_for_named_partition.return_value = False
+    sensor = HivePartitionRangeSensor(
+        dag=dag,
+        task_id='pytest',
+        table='{{ var.value.some_table }}',
+        period=timedelta(days=7),
+        partition_frequency='days',
+        partition_specs=[
+            [('date', None)],
+        ],
+        hook=hook)
+
+    ti = TaskInstance(sensor, datetime(year=2038, month=1, day=17))
+    ti.render_templates()
+
+    sensor.poke({
+        'execution_date': pendulum.datetime(year=2020, month=1, day=2),
+    })
+    assert sensor.partition_names == [
+        'pytestdb.pytesttable/date=202001{:02d}'.format(day) for day in range(2, 9)
     ]
