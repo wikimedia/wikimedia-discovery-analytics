@@ -56,7 +56,7 @@ CUR_PARTITION = '{{ macros.ds_format(macros.ds_add(ds, 7), "%Y-%m-%d", "%Y%m%d")
 default_args = {
     'owner': 'discovery-analytics',
     'depends_on_past': False,
-    'start_date': datetime(2020, 5, 2),
+    'start_date': datetime(2020, 4, 25),
     'email': ['discovery-alerts@lists.wikimedia.org'],
     'email_on_failure': True,
     'email_on_retry': False,
