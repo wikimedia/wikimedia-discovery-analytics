@@ -125,20 +125,21 @@ with DAG(
         depends_on_past=True,
         application_args=[
             'm0prep',
+            # WithCirrusLog
             '--wmf-log-name', TABLE_CIRRUS_EVENT,
             '--log-ts-from', PREV_INSTANCE,
             '--log-ts-to', CUR_INSTANCE,
             '--max-n-queries-per-ident', dag_conf('max_n_queries_per_ident'),
             '--map-wikiid-to-lang-name', TABLE_CANONICAL_WIKIS,
+            # WithGlentPartition
             '--input-table', TABLE_M0_PREP,
             '--input-partition', PREV_PARTITION,
-            '--earliest-legal-ts', LEGAL_CUTOFF,
-
-            '--max-leven-dist-sugg', dag_conf('max_leven_dist_sugg'),
-            '--max-norm-leven-dist', dag_conf('max_norm_leven_dist'),
+            # WithSuggestionFilter
+            '--max-edit-dist-sugg', dag_conf('max_edit_dist_sugg'),
+            '--max-norm-edit-dist', dag_conf('max_norm_edit_dist'),
             '--min-hits-diff', dag_conf('min_hits_diff'),
             '--min-hits-perc-diff', dag_conf('min_hits_perc_diff'),
-
+            # WithPrepOutput
             '--output-table', TABLE_M0_PREP,
             '--output-partition', CUR_PARTITION,
             '--max-output-partitions', '5'
@@ -258,8 +259,8 @@ with DAG(
             '--input-partition', CUR_PARTITION,
             '--candidates-directory', TEMP_CANDIDATES_DIR,
 
-            '--max-leven-dist-sugg', dag_conf('max_leven_dist_sugg'),
-            '--max-norm-leven-dist', dag_conf('max_norm_leven_dist'),
+            '--max-edit-dist-sugg', dag_conf('max_edit_dist_sugg'),
+            '--max-norm-edit-dist', dag_conf('max_norm_edit_dist'),
             '--min-hits-diff', dag_conf('min_hits_diff'),
             '--min-hits-perc-diff', dag_conf('min_hits_perc_diff'),
 
