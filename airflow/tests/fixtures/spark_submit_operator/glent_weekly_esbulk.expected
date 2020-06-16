@@ -3,7 +3,7 @@
     "--master",
     "yarn",
     "--conf",
-    "spark.dynamicAllocation.maxExecutors=200",
+    "spark.dynamicAllocation.maxExecutors=70",
     "--conf",
     "spark.sql.executor.memoryOverhead=640M",
     "--conf",

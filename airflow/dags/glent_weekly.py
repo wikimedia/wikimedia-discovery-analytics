@@ -76,7 +76,7 @@ def glent_op(
         conf=dict({
             'spark.yarn.maxAppAttempts': 1,
             'spark.sql.shuffle.partitions': 200,
-            'spark.dynamicAllocation.maxExecutors': 200,
+            'spark.dynamicAllocation.maxExecutors': 70,
             'spark.sql.executor.memoryOverhead': '640M',
             'spark.sql.shuffle.service.enabled': 'true',
         }, **conf),
@@ -214,6 +214,9 @@ with DAG(
     # long running job.
     generate_query_similarity_candidates = glent_op(
         task_id='generate_query_similarity_candidates',
+        # This is a very heavy job, put it in the sequential queue that
+        # prevents multiple heavy jobs from running concurrently.
+        pool='sequential',
         conf={
             # Increase required from defaults for returning
             # the FSTs to the driver
@@ -240,6 +243,9 @@ with DAG(
 
     resolve_query_similarity_suggestions = glent_op(
         task_id='resolve_query_similary_suggestions',
+        # This is a very heavy job, put it in the sequential queue that
+        # prevents multiple heavy jobs from running concurrently.
+        pool='sequential',
         conf={
             'spark.sql.shuffle.partitions': 2500,
             'spark.dynamicAllocation.maxExecutors': 150,
