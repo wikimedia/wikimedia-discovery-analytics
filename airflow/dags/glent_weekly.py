@@ -46,7 +46,7 @@ TEMP_ESBULK_DIR = TEMP_DIR + '/esbulk'
 # timestamps used to select ranges in glent
 PREV_INSTANCE = '{{ ds }}T00:00:00Z'
 CUR_INSTANCE = '{{ macros.ds_add(ds, 7) }}T00:00:00Z'
-LEGAL_CUTOFF = '{{ macros.ds_add(ds, 77) }}T00:00:00Z'
+LEGAL_CUTOFF = '{{ macros.ds_add(ds, -77) }}T00:00:00Z'
 
 # partition names
 PREV_PARTITION = '{{ ds_nodash }}'
