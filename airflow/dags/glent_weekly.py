@@ -185,6 +185,7 @@ with DAG(
 
             '--input-table', TABLE_SUGGESTIONS,
             '--input-partition', PREV_PARTITION,
+            '--earliest-legal-ts', LEGAL_CUTOFF,
 
             '--output-table', TABLE_SUGGESTIONS,
             '--output-partition', CUR_PARTITION,

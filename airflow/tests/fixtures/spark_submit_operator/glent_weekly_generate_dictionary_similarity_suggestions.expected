@@ -38,6 +38,8 @@
     "glent.suggestions",
     "--input-partition",
     "20380117",
+    "--earliest-legal-ts",
+    "2037-11-01T00:00:00Z",
     "--output-table",
     "glent.suggestions",
     "--output-partition",
