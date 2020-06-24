@@ -107,6 +107,7 @@ with DAG(
             # Defer retrys to airflow
             'spark.yarn.maxAppAttempts': '1',
             'spark.sql.shuffle.partitions': '20',
+            'spark.dynamicAllocation.maxExecutors': '50',
         },
         spark_submit_env_vars={
             'PYSPARK_PYTHON': 'python3.7',

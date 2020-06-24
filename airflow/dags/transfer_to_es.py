@@ -72,6 +72,7 @@ with DAG(
         conf={
             # Delegate retrys to airflow
             'spark.yarn.maxAppAttempts': '1',
+            'spark.dynamicAllocation.maxExecutors': '25',
         },
         spark_submit_env_vars={
             'PYSPARK_PYTHON': 'python3.7',

@@ -1,8 +1,10 @@
+import re
 from collections import OrderedDict
 from datetime import datetime
 
 from airflow.contrib.operators.spark_submit_operator \
     import SparkSubmitOperator as WrongSparkSubmitOperator
+from airflow.models import Pool
 from airflow.models.dagbag import DagBag
 from airflow.models.taskinstance import TaskInstance
 from airflow.operators.bash_operator import BashOperator
@@ -163,6 +165,26 @@ def test_bash_commandline_against_fixture(task, fixture_factory, mocker):
     comparer(command)
 
 
+@pytest.mark.parametrize('task', tasks(SparkSubmitOperator))
+def test_spark_submit_sizing(task, mocker):
+    assert 'spark.dynamicAllocation.maxExecutors' in task._conf, \
+        "spark.dynamicAllocation.maxExecutors should be set"
+    max_exec = int(task._conf['spark.dynamicAllocation.maxExecutors'])
+    exec_mem = parse_mem(task._executor_memory if task._executor_memory is not None else '1G')
+    max_mem = max_exec * exec_mem
+    if max_mem > 420:
+        assert task.pool != Pool.DEFAULT_POOL_NAME, \
+            "Large job (mem > 420g) should not be using the default pool"
+
+    if max_mem > 800:
+        assert task.pool == 'sequential', \
+            "Large job (mem > 800g) should be using the sequential pool"
+
+    exec_cores = int(task._executor_cores if task._executor_cores is not None else '1')
+    assert exec_cores <= exec_mem, \
+        "executor_memory looks suspiciously low (less than 1G per executor)"
+
+
 @pytest.mark.parametrize('dag_ids', [
     ['popularity_score_weekly', 'transfer_to_es_weekly', 'ores_predictions_weekly'],
 ])
@@ -186,3 +208,13 @@ def _sort_items_recursive(maybe_dict):
         return OrderedDict(sorted(items, key=lambda x: x[0]))
     else:
         return maybe_dict
+
+
+def parse_mem(mem_spec: str) -> int:
+    """
+    Parses mem specification, fails if it can find any
+    Returns an int representing the mem in gigabytes
+    """
+    exec_mem = re.findall(r'(\d+)[Gg]', mem_spec)
+    assert exec_mem, 'Mem specification is not correct'
+    return int(exec_mem[0])

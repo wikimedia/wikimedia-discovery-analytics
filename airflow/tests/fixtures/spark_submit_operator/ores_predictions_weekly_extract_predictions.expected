@@ -4,6 +4,8 @@
     "--master",
     "yarn",
     "--conf",
+    "spark.dynamicAllocation.maxExecutors=20",
+    "--conf",
     "spark.yarn.maxAppAttempts=1",
     "--files",
     "hdfs://analytics-hadoop/wmf/data/discovery/ores/thresholds/articletopic/20380117.json#thresholds.json",

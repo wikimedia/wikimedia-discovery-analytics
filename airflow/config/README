@@ -1,6 +1,6 @@
 Each file here must be a json dict containing variables to import to the
-production instance. A file may define one or more variables.  Convention is
-for each independant unit (whatever that is) to have it's own .json file
+production instance. A file may define one or more variables. Convention is
+for each independent unit (whatever that is) to have it's own .json file
 defining the set of related variables.
 
 Variables defined here will be imported to the production instance when scap

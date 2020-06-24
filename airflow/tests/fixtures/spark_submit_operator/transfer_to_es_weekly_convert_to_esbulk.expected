@@ -4,6 +4,8 @@
     "--master",
     "yarn",
     "--conf",
+    "spark.dynamicAllocation.maxExecutors=25",
+    "--conf",
     "spark.yarn.maxAppAttempts=1",
     "--name",
     "airflow-spark",

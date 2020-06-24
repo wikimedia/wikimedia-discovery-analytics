@@ -4,6 +4,8 @@
     "--master",
     "yarn",
     "--conf",
+    "spark.dynamicAllocation.maxExecutors=50",
+    "--conf",
     "spark.sql.shuffle.partitions=20",
     "--conf",
     "spark.yarn.maxAppAttempts=1",
