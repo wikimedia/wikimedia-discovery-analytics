@@ -1,0 +1,21 @@
+[
+    "PYSPARK_PYTHON=python3.7",
+    "spark-submit",
+    "--master",
+    "yarn",
+    "--conf",
+    "spark.dynamicAllocation.maxExecutors=10",
+    "--conf",
+    "spark.executorEnv.https_proxy=http://webproxy.eqiad.wmnet:8080",
+    "--conf",
+    "spark.yarn.maxAppAttempts=1",
+    "--name",
+    "airflow-spark",
+    "--queue",
+    "root.default",
+    "/path/to/wikimedia/discovery/analytics/repo/spark/fetch_cirrussearch_namespace_map.py",
+    "--canonical-wikis-table",
+    "canonical_data.wikis",
+    "--output-table",
+    "discovery.cirrus_namespace_index_map"
+]

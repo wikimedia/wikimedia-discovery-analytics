@@ -17,6 +17,7 @@ INSERT OVERWRITE TABLE discovery.popularity_score
     SELECT
         hourly.project,
         hourly.page_id,
+        hourly.namespace_id as page_namespace,
         SUM(hourly.view_count) / agg.view_count AS score
     FROM
         wmf.pageview_hourly hourly
@@ -44,6 +45,7 @@ INSERT OVERWRITE TABLE discovery.popularity_score
     GROUP BY
         hourly.project,
         hourly.page_id,
+        hourly.namespace_id,
         agg.view_count
 """
 

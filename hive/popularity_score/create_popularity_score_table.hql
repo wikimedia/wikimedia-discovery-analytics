@@ -1,6 +1,7 @@
-CREATE EXTERNAL TABLE `popularity_score`(
+CREATE EXTERNAL TABLE `discovery.popularity_score` (
   `project` string COMMENT 'Project name from requests hostname',
   `page_id` int COMMENT 'MediaWiki page_id within the project that the score is for',
+  `page_namespace` int COMMENT 'MediaWiki namespace page_id belongs to',
   `score` double COMMENT 'Popularity score between 0 and 1')
 PARTITIONED BY (
   `agg_days` int COMMENT 'Unpadded number of days aggregated over',
@@ -9,4 +10,5 @@ PARTITIONED BY (
   `day` int COMMENT 'Unpadded day score aggregation ends at')
 STORED AS PARQUET
 LOCATION
-  'hdfs://analytics-hadoop/wmf/data/wmf/discovery/popularity_score'
+  'hdfs://analytics-hadoop/wmf/data/wmf/discovery/popularity_score_v2'
+;

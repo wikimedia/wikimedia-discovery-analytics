@@ -67,20 +67,22 @@ class ErrorThreshold:
 def fetch_scores(
     mediawiki_host: str, mediawiki_dbname: str,
     ores_host: str, user_agent: str,
+    namespaces: Sequence[int],
     error_threshold=ErrorThreshold(1 / 1000),
-) -> Iterator[Tuple[int, Mapping[str, float]]]:
+) -> Iterator[Tuple[int, int, Mapping[str, float]]]:
     """Fetch scores for all main namespace pages of wiki."""
     logging.info('Querying mediawiki api at {}'.format(mediawiki_host))
     api = mwapi.Session(mediawiki_host, user_agent=user_agent)
     logging.info('Querying ores api at {}'.format(ores_host))
     ores = oresapi.Session(ores_host, user_agent=user_agent)
 
-    page_batches = api.get(
+    # While this API is called 'allpages', it's actually all pages in a single
+    # namespace. Since we need more than one namespace, run once for each.
+    all_ns_page_batches = [api.get(
         formatversion=2,
         action='query',
-        # While this is called 'allpages', it's actually all pages
-        # in a single namespace, which by default is NS_MAIN.
         generator='allpages',
+        gapnamespace=namespace,
         # Cirrus only indexes full pages, redirects are a property
         # of the page they link to. Ergo, we don't need them
         gapfilterredir='nonredirects',
@@ -88,21 +90,22 @@ def fetch_scores(
         prop='revisions',
         rvprop='ids',
         continuation=True,
-    )
+    ) for namespace in set(namespaces)]
+    page_batches = itertools.chain(*all_ns_page_batches)
     pages = (
         page
         for batch in page_batches
         for page in batch['query']['pages'])
-    page_w_latest_rev = ((page['pageid'], page['revisions'][0]['revid']) for page in pages)
+    page_w_latest_rev = ((page['pageid'], page['ns'], page['revisions'][0]['revid']) for page in pages)
     page_w_latest_rev_batches = make_batch(page_w_latest_rev, ORES_API_BATCH_SIZE)
 
     for batch in page_w_latest_rev_batches:
-        page_ids, rev_ids = zip(*batch)
+        page_ids, page_namespaces, rev_ids = zip(*batch)
         logging.info('Scoring revision batch')
         scores = ores.score(mediawiki_dbname, [MODEL], rev_ids)
-        for page_id, data in zip(page_ids, scores):
+        for page_id, page_namespace, data in zip(page_ids, page_namespaces, scores):
             try:
-                yield (page_id, data[MODEL]['score']['probability'])
+                yield (page_id, page_namespace, data[MODEL]['score']['probability'])
                 error_threshold.incr(error=False)
             except KeyError:
                 if 'error' not in data[MODEL]:
@@ -127,6 +130,9 @@ def main():
     parser.add_argument(
         '--date', type=date, required=True,
         help='Date to use for output table partition specification')
+    parser.add_argument(
+        '--namespace', nargs='+', type=int, default=[0],
+        help='Set of namespaces to export. By default only NS_MAIN is exported')
 
     args = parser.parse_args()
 
@@ -149,22 +155,21 @@ def main():
     rdd = (
         spark.sparkContext.parallelize([True], numSlices=1)
         .flatMap(lambda x: fetch_scores(
-            mediawiki_host, args.mediawiki_dbname, args.ores_host, args.user_agent))
+            mediawiki_host, args.mediawiki_dbname, args.ores_host, args.user_agent, args.namespaces))
     )
 
-    df = (
-        spark.createDataFrame(rdd, T.StructType([
-            T.StructField('page_id', T.IntegerType()),
-            T.StructField('probability', T.MapType(T.StringType(), T.FloatType()))
-        ]))
-    )
+    df = spark.createDataFrame(rdd, T.StructType([
+        T.StructField('page_id', T.IntegerType()),
+        T.StructField('page_namespace', T.IntegerType()),
+        T.StructField('probability', T.MapType(T.StringType(), T.FloatType()))
+    ]))
 
     df.createTempView('tmp_revision_score_out')
 
     insert_stmt = """
         INSERT OVERWRITE TABLE {table}
         PARTITION(wikiid="{wiki}", model="{model}", year={year}, month={month}, day={day})
-        SELECT page_id, probability
+        SELECT page_id, page_namespace, probability
         FROM tmp_revision_score_out
     """.format(
         table=args.output_table,
