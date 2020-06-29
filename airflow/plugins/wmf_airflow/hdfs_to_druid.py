@@ -132,10 +132,10 @@ class HdfsToDruidOperator(BaseOperator):
     def execute(self, context):
         self._check_user_datasource()
         if self._hook is None:
-            hook = DruidHook(
+            self._hook = DruidHook(
                 druid_ingest_conn_id=self.druid_ingest_conn_id,
                 max_ingestion_time=self.max_ingestion_time)
-        hook.submit_indexing_job(self.index_spec)
+        self._hook.submit_indexing_job(self.index_spec)
 
 
 class HdfsToDruidPlugin(AirflowPlugin):
