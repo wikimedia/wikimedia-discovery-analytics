@@ -1,0 +1,7 @@
+{
+    "base_output_path": "hdfs://analytics-hadoop/wmf/data/discovery/transfer_to_es",
+    "https_proxy": "http://webproxy.eqiad.wmnet:8080",
+    "table_canonical_wikis": "canonical_data.wikis",
+    "table_namespace_map": "discovery.cirrus_namespace_index_map",
+    "swift_container": "search_popularity_score"
+}

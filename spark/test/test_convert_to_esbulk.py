@@ -1,6 +1,15 @@
 import convert_to_esbulk
+import datetime
 from pyspark.sql import Row, functions as F, types as T
 import pytest
+
+
+# Used where namespace is expected for clarity
+NS_MAIN = 0
+NS_TALK = 1
+
+# Ensure everything uses the same date for partition filtering
+DATE = datetime.date(2020, 2, 3)
 
 
 @pytest.fixture
@@ -15,8 +24,50 @@ def df_wikis(spark):
     ]))
 
 
+@pytest.fixture
+def df_namespace_map(spark):
+    rdd = spark.sparkContext.parallelize([
+        ('testwiki', NS_MAIN, 'testwiki_content'),
+        ('testwiki', NS_TALK, 'testwiki_general'),
+        ('zhwiki', NS_MAIN, 'zhwiki_content'),
+        ('zhwiki', NS_TALK, 'zhwiki_general'),
+    ])
+    return spark.createDataFrame(rdd, T.StructType([
+        T.StructField('wikiid', T.StringType()),
+        T.StructField('namespace_id', T.StringType()),
+        T.StructField('elastic_index', T.StringType())
+    ]))
+
+
+@pytest.fixture
+def table_to_convert(spark):
+    rdd = spark.sparkContext.parallelize([
+        ['test.wikipedia', 42, NS_MAIN, 'indexed content', DATE.year, DATE.month, DATE.day]
+    ])
+    df = spark.createDataFrame(rdd, T.StructType([
+        T.StructField('project', T.StringType()),
+        T.StructField('page_id', T.IntegerType()),
+        T.StructField('page_namespace', T.IntegerType()),
+        T.StructField('foo', T.StringType()),
+        T.StructField('year', T.IntegerType()),
+        T.StructField('month', T.IntegerType()),
+        T.StructField('day', T.IntegerType()),
+    ]))
+
+    table_def = convert_to_esbulk.Table(
+        table='pytest_example_table',
+        join_on='project',
+        update_kind=convert_to_esbulk.UPDATE_ALL,
+        fields=[
+            convert_to_esbulk.Field(field='foo', alias='bar', handler='equals')
+        ])
+
+    return table_def, df
+
+
 def test_document_data_happy_path():
-    row = Row(wikiid='pytestwiki', page_id=5, custom="example")
+    row = Row(wikiid='pytestwiki', page_id=5,
+              elastic_index='pytestwiki_content', custom="example")
     handlers = {
         'custom': 'within 20%',
     }
@@ -30,14 +81,21 @@ def test_document_data_happy_path():
 
 
 def test_document_data_null_fields():
-    row = Row(wikiid='pytestwiki', page_id=6, a=None, b=20)
+    row = Row(wikiid='pytestwiki', elastic_index='pytestwiki_content',
+              page_id=6, a=None, b=20)
     handlers = {
         'a': 'equals',
         'b': 'equals'
     }
     header, update = convert_to_esbulk._document_data(row, handlers)
     for key in ('handlers', 'source'):
+        # These properties should not have snuck into the update, they
+        # are only for decision making
+        for k in ('wikiid', 'elastic_index', 'page_id'):
+            assert k not in update['script']['params'][key]
+        # a is None, should not be shipped as an update
         assert 'a' not in update['script']['params'][key]
+        # b must have values assigned
         assert 'b' in update['script']['params'][key]
         assert len(update['script']['params'][key]) == 1
 
@@ -74,34 +132,39 @@ def test_unique_value_per_partition(spark):
         assert len(rows) < (num_rows / num_partition_keys)
 
 
-def test_prepare_table_join_on_project(spark, df_wikis):
-    rdd = spark.sparkContext.parallelize([
-        ['test.wikipedia', 42, 'indexed content']
-    ])
-    df = spark.createDataFrame(rdd, T.StructType([
-        T.StructField('project', T.StringType()),
-        T.StructField('page_id', T.IntegerType()),
-        T.StructField('foo', T.StringType())
-    ]))
-
-    table = convert_to_esbulk.Table(
-        table='pytest_example_table',
-        join_on='project',
-        fields=[
-            convert_to_esbulk.Field(field='foo', alias='bar', handler='equals')
-        ])
-
+def test_prepare_table_join_on_project(
+    spark, df_wikis, df_namespace_map, table_to_convert
+):
+    table_def, df = table_to_convert
     df_result = convert_to_esbulk.prepare_table(
-        df, df_wikis, table)
-    # Project converted to wikiid
-    # foo aliased to bar
-    assert {'wikiid', 'page_id', 'bar'} == set(df_result.columns)
+        df, df_wikis, df_namespace_map, table_def)
+    # Project converted to wikiid. foo aliased to bar. page_namespace
+    # transformed into elastic_index and dropped. page_id passed through.
+    assert {'elastic_index', 'wikiid', 'page_id', 'bar'} == set(df_result.columns)
 
     results = df_result.collect()
-    # The join must have kept our row
-    assert len(results) == 1
-    # Verify join resolved correct wikiid
-    assert results[0].wikiid == 'testwiki'
-    assert results[0].page_id == 42
-    # Verify alias contains same data
-    assert results[0].bar == 'indexed content'
+    assert len(results) == 1, "The join must have kept our row"
+    assert results[0].wikiid == 'testwiki', 'Resolved correct wikiid'
+    assert results[0].elastic_index == 'testwiki_content', \
+        'Resolved correct elastic index'
+    assert results[0].page_id == 42, "Page id unchanged"
+    assert results[0].bar == 'indexed content', "content appropriately aliased"
+
+
+def test_prepare_happy_path(mocker, df_wikis, df_namespace_map, table_to_convert):
+    table_def, df_to_convert = table_to_convert
+
+    mocked_tables = {
+        'canonical_data.wikis': df_wikis.withColumnRenamed('wikiid', 'database_code'),
+        'mock_namespace_map_table': df_namespace_map,
+        table_def.table: df_to_convert
+    }
+
+    spark = mocker.MagicMock()
+    spark.read.table.side_effect = lambda table: mocked_tables[table]
+
+    df_result, field_handlers = convert_to_esbulk.prepare(
+        spark, DATE, [table_def], 'mock_namespace_map_table')
+    rows = df_result.collect()
+    # ???
+    assert len(rows) > 0

@@ -6,10 +6,15 @@ from airflow.sensors.external_task_sensor import ExternalTaskSensor
 
 from wmf_airflow.spark_submit import SparkSubmitOperator
 from wmf_airflow.swift_upload import SwiftUploadOperator
+from wmf_airflow.template import REPO_BASE
 
 
-APPLICATION = '{{ var.value.wikimedia_discovery_analytics_path }}/spark/convert_to_esbulk.py'
-PATH_OUT = 'hdfs://analytics-hadoop/wmf/data/discovery/transfer_to_es/date={{ ds_nodash }}'
+def dag_conf(key):
+    """DAG specific configuration stored in airflow variable"""
+    return '{{ var.json.transfer_to_es_conf.%s }}' % key
+
+
+PATH_OUT = dag_conf('base_output_path') + '/date={{ ds_nodash }}'
 
 # Default kwargs for all Operators
 default_args = {
@@ -50,6 +55,7 @@ with DAG(
         external_dag_id='popularity_score_weekly',
         external_task_id='complete')
 
+    # Similarly wait for ores prediction prepartition to run
     ores_articletopic = ExternalTaskSensor(
         task_id='wait_for_ores_predictions',
         # Same sensor reasoning and config as above
@@ -70,17 +76,19 @@ with DAG(
         spark_submit_env_vars={
             'PYSPARK_PYTHON': 'python3.7',
         },
-        application=APPLICATION,
+        application=REPO_BASE + '/spark/convert_to_esbulk.py',
         application_args=[
+            '--namespace-map-table', dag_conf('table_namespace_map'),
             '--output', PATH_OUT,
             '--date', '{{ ds }}',
         ])
+
     [popularity_score, ores_articletopic] >> convert_to_esbulk
 
     # Ship to production
     swift_upload = SwiftUploadOperator(
         task_id='upload_to_swift',
-        swift_container='search_popularity_score',
+        swift_container=dag_conf('swift_container'),
         source_directory=PATH_OUT,
         swift_object_prefix='{{ ds_nodash }}',
         swift_overwrite=True,

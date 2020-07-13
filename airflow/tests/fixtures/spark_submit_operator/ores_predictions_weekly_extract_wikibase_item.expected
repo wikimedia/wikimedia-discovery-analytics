@@ -35,7 +35,7 @@
     "--date",
     "2038-01-17",
     "--query",
-    "\n            SELECT pp_page as page_id, pp_value as wikibase_item\n            FROM page_props\n            WHERE pp_propname=\"wikibase_item\"\n        ",
+    "\n            SELECT pp_page as page_id, page_namespace, pp_value as wikibase_item\n            FROM page_props\n            JOIN page ON page_id = pp_page\n            WHERE pp_propname=\"wikibase_item\"\n        ",
     "--output-table",
     "discovery.wikibase_item"
 ]

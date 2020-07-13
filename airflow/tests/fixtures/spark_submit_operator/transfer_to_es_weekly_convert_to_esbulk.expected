@@ -10,6 +10,8 @@
     "--queue",
     "root.default",
     "/path/to/wikimedia/discovery/analytics/repo/spark/convert_to_esbulk.py",
+    "--namespace-map-table",
+    "discovery.cirrus_namespace_index_map",
     "--output",
     "hdfs://analytics-hadoop/wmf/data/discovery/transfer_to_es/date=20380117",
     "--date",

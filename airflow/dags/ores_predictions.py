@@ -173,8 +173,9 @@ with DAG(
         task_id='extract_wikibase_item',
         output_table=WIKIBASE_ITEM_TABLE,
         sql_query="""
-            SELECT pp_page as page_id, pp_value as wikibase_item
+            SELECT pp_page as page_id, page_namespace, pp_value as wikibase_item
             FROM page_props
+            JOIN page ON page_id = pp_page
             WHERE pp_propname="wikibase_item"
         """)
 

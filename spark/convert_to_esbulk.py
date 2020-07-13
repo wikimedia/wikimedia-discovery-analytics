@@ -7,7 +7,7 @@ except ImportError:
     import findspark
     findspark.init()
     from pyspark.sql import SparkSession
-from pyspark.sql import DataFrame, Row, functions as F
+from pyspark.sql import Column, DataFrame, Row, functions as F
 from pyspark import RDD
 from argparse import ArgumentParser
 from datetime import datetime
@@ -20,7 +20,10 @@ from typing import cast, Dict, Mapping, NamedTuple, Sequence, Tuple
 
 Field = NamedTuple('Field', [('field', str), ('alias', str), ('handler', str)])
 Table = NamedTuple('Table', [
-    ('table', str), ('join_on', str), ('fields', Sequence[Field])])
+    ('table', str), ('join_on', str), ('update_kind', str), ('fields', Sequence[Field])])
+
+UPDATE_CONTENT_ONLY = 'content_only'
+UPDATE_ALL = 'all'
 
 # Each entry defines a table to load from hive and the fields to source
 # from this table.
@@ -28,6 +31,7 @@ CONFIG = [
     Table(
         table='discovery.popularity_score',
         join_on='project',
+        update_kind=UPDATE_CONTENT_ONLY,
         fields=[
             Field(field='score', alias='popularity_score', handler='within 20%')
         ]
@@ -35,6 +39,7 @@ CONFIG = [
     Table(
         table='discovery.ores_articletopic',
         join_on='wikiid',
+        update_kind=UPDATE_ALL,
         fields=[
             Field(field='articletopic', alias='ores_articletopics', handler='equals')
         ]
@@ -42,14 +47,24 @@ CONFIG = [
 ]
 
 
+def index_is_allowed(update_kind: str, col: Column) -> Column:
+    if update_kind == UPDATE_CONTENT_ONLY:
+        return col.endswith('_content')
+    elif update_kind == UPDATE_ALL:
+        return F.lit(True)
+    else:
+        raise ValueError('Unknown update_kind: {}'.format(update_kind))
+
+
 def prepare_table(
-    df: DataFrame, df_wikis: DataFrame, table: Table
+    df: DataFrame, df_wikis: DataFrame, df_nsmap: DataFrame, table: Table,
 ) -> DataFrame:
     """Convert input dataframe into expected shape
 
-    Adjusts the table, per configuration, to contain the wikiid, page_id, and
-    fields selected for upload. Input data must be a row-per-page and can identify
-    the wiki either by db name (ex: eswiki) or project (ex: es.wikipedia).
+    Adjusts the table, per configuration, to contain the wikiid, page_id,
+    page_namespace, and fields selected for upload. Input data must be a
+    row-per-page and can identify the wiki either by db name (ex: eswiki) or
+    project (ex: es.wikipedia).
     """
     if table.join_on == 'project':
         df = df.join(
@@ -60,17 +75,29 @@ def prepare_table(
 
     cols = [F.col(field.field).alias(field.alias) for field in table.fields]
 
-    return df.select('wikiid', 'page_id', *cols)
+    return (
+        df
+        .withColumnRenamed('page_namespace', 'namespace_id')
+        .join(
+            F.broadcast(df_nsmap),
+            how='inner', on=['wikiid', 'namespace_id'])
+        .drop('namespace_id')
+        .where(index_is_allowed(table.update_kind, F.col('elastic_index')))
+        .select('elastic_index', 'wikiid', 'page_id', *cols)
+    )
 
 
 def prepare(
-    spark: SparkSession, date: datetime, config: Sequence[Table]
+    spark: SparkSession, date: datetime, config: Sequence[Table],
+    namespace_map_table: str,
 ) -> Tuple[DataFrame, Mapping[str, str]]:
     """Collect varied inputs into single dataframe"""
     df_wikis = (
         spark.read.table('canonical_data.wikis')
         .select(F.col('database_code').alias('wikiid'), 'domain_name')
     )
+
+    df_nsmap = spark.read.table(namespace_map_table)
 
     current_partition = (F.col('year') == date.year) \
         & (F.col('month') == date.month) & (F.col('day') == date.day)
@@ -86,14 +113,20 @@ def prepare(
 
         df_current = prepare_table(
             spark.read.table(table.table).where(current_partition),
-            df_wikis, table)
+            df_wikis, df_nsmap, table)
 
         if df is None:
             df = df_current
         else:
             df = df.join(df_current, how='outer', on=['wikiid', 'page_id'])
     assert df is not None
-    return df, field_handlers
+
+    # Lookup the elastic index updates go to.
+    df_with_elastic_index = (
+        df
+    )
+
+    return df_with_elastic_index, field_handlers
 
 
 def unique_value_per_partition(
@@ -136,12 +169,12 @@ def unique_value_per_partition(
 
 
 def _document_data(
-    document: Row, handlers: Mapping[str, str]
+    document: Row, handlers: Mapping[str, str],
 ) -> Tuple[Mapping, Mapping]:
     """Transform document into elasticsearch bulk import request structures"""
     header = {
         'update': {
-            '_index': '{}_content'.format(document.wikiid),
+            '_index': document.elastic_index,
             '_type': 'page',
             '_id': document.page_id,
         }
@@ -180,9 +213,10 @@ def main(
     output: str,
     limit_per_file: int,
     date: datetime,
+    namespace_map_table: str,
     config: Sequence[Table] = CONFIG
 ) -> int:
-    df, field_handlers = prepare(spark, date, config)
+    df, field_handlers = prepare(spark, date, config, namespace_map_table)
     (
         # Note that this returns an RDD, not a DataFrame
         unique_value_per_partition(df, limit_per_file, 'wikiid')
@@ -202,6 +236,8 @@ if __name__ == "__main__":
                         default=200000, help='Maximum number of records per output file')
     parser.add_argument('-d', '--date', dest='date', metavar='DATE', type=date,
                         help='Date of input partitions in YYYY-MM-DD format')
+    parser.add_argument('-n', '--namespace-map-table', dest='namespace_map_table',
+                        help='Table mapping wikiid + namespace_id to an elasticsearch index')
     args = parser.parse_args()
 
     spark = SparkSession.builder.getOrCreate()

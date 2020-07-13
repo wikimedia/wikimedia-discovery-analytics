@@ -122,7 +122,7 @@ def propagate_by_wbitem(
         pages: Optional[Sequence[Row]]
     ):
         # All predictions must be emitted as-is.
-        out = [(p.wikiid, p.page_id, p[prediction_col]) for p in predictions]
+        out = [(p.wikiid, p.page_id, p.page_namespace, p[prediction_col]) for p in predictions]
 
         # If pages is None then this wikid/page_id pair was not found
         # in the dataset used for propagation. Emit only the source rows.
@@ -148,23 +148,29 @@ def propagate_by_wbitem(
                     # We do not propagate scores to wikis that generate their own predictions,
                     # those are only provided by the model directly.
                     continue
-                out.append((page.wikiid, page.page_id, preferred))
+                out.append((page.wikiid, page.page_id, page.page_namespace, preferred))
 
         return out
 
     # Ensure we have the set of columns we think we do
-    df_wikibase = df_wikibase.select('wikiid', 'page_id', 'wikibase_item')
-    df_predictions = df_predictions.select('wikiid', 'page_id', prediction_col)
+    df_wikibase = df_wikibase.select('wikiid', 'page_id', 'page_namespace', 'wikibase_item')
+    df_predictions = df_predictions.select(
+        'wikiid', 'page_id', 'page_namespace', prediction_col)
 
     df_pages_by_link = (
         df_wikibase
         .groupBy('wikibase_item')
-        .agg(F.collect_list(F.struct('wikiid', 'page_id')).alias('pages'))
+        .agg(F.collect_list(F.struct('wikiid', 'page_id', 'page_namespace')).alias('pages'))
     )
 
     df_predictions_by_link = (
         df_predictions
-        .join(df_wikibase, how='left', on=['wikiid', 'page_id'])
+        # Both sides of the join have page_namespace and they should be the
+        # same.  We could join on the page_namespace, but it's not part of
+        # identifying a unique page. In the rare case they vary (perhaps a page
+        # move) we shouldn't throw out the prediction, so drop page_namespace
+        # from df being joined.
+        .join(df_wikibase.drop('page_namespace'), how='left', on=['wikiid', 'page_id'])
         # Not every prediction will have a wikibase_item, but we don't want
         # to pull them into a single giant row. Assign fake wikibase_item strings
         # that are unique per prediction to avoid skew.
@@ -173,7 +179,7 @@ def propagate_by_wbitem(
             F.concat_ws('-', F.lit('notfound'), F.col('wikiid'), F.col('page_id').cast(T.StringType()))))
         .groupBy('wikibase_item')
         .agg(F.collect_list(F.struct(
-            'wikiid', 'page_id', prediction_col
+            'wikiid', 'page_id', 'page_namespace', prediction_col
         )).alias('predictions'))
     )
 
@@ -182,6 +188,7 @@ def propagate_by_wbitem(
         T.ArrayType(T.StructType([
             T.StructField('wikiid', T.StringType()),
             T.StructField('page_id', T.IntegerType()),
+            T.StructField('page_namespace', T.IntegerType()),
             T.StructField(prediction_col, T.ArrayType(T.StringType()))
         ])))
 
@@ -198,7 +205,7 @@ def extract_prediction(
     prediction: str,
     thresholds: Mapping[str, Mapping[str, float]],
 ) -> DataFrame:
-    """Extract and format predictions from mediawiki/revision/score schema"""
+    """Extract and format predictions from the shared input schema"""
     # Reshape for shipping to elasticesarch
     stringify_prediction_udf = F.udf(
         make_stringify_prediction(thresholds),
@@ -208,6 +215,7 @@ def extract_prediction(
         df.select(
             F.col('wikiid'),
             F.col('page_id'),
+            F.col('page_namespace'),
             stringify_prediction_udf(
                 F.col('wikiid'),
                 F.col('probability')
@@ -245,6 +253,7 @@ def load_mediawiki_revision_score(
     return df_transformed.select(
         F.col('database').alias('wikiid'),
         F.col('page_id'),
+        F.col('page_namespace'),
         F.col('scores')[prediction].probability.alias('probability'))
 
 
@@ -268,7 +277,7 @@ def load_ores_scores_export(
         # Limit the input dataset to the time range requested
         .where(daily_partition(start_date))
         # Verify we have the expected fields
-        .select('wikiid', 'page_id', 'probability')
+        .select('wikiid', 'page_id', 'page_namespace', 'probability')
     )
 
 
@@ -378,7 +387,7 @@ def main(raw_args: Sequence[str]) -> int:
     insert_stmt = """
         INSERT OVERWRITE TABLE {table}
         PARTITION(year={year}, month={month}, day={day})
-        SELECT wikiid, CAST(page_id AS int), {prediction}
+        SELECT wikiid, CAST(page_id AS int), CAST(page_namespace AS int), {prediction}
         FROM tmp_revision_score_out
     """.format(
         table=args.output_table,

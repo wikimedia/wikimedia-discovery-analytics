@@ -4,6 +4,11 @@ import pytest
 import prepare_mw_rev_score
 
 
+# Used to clarify where namespaces are used
+NS_MAIN = 0
+NS_TALK = 1
+
+
 @pytest.fixture
 def stringify_prediction():
     return prepare_mw_rev_score.make_stringify_prediction({
@@ -62,32 +67,32 @@ def test_top_row_per_group(spark):
         # predictions
         [
             # prediction to propagate
-            ('pytestwiki', 42, ['pred|123']),
+            ('pytestwiki', 42, NS_MAIN, ['pred|123']),
             # prediction not linked, will not be propagated
-            ('pytestwiki', 1, ['pred|654']),
+            ('pytestwiki', 1, NS_MAIN, ['pred|654']),
             # prediction from non-preferred wiki, will not be propagated
-            ('secondwiki', 22, ['pred|555']),
+            ('secondwiki', 22, NS_MAIN, ['pred|555']),
         ],
         # wikibase_item properties
         [
             # Linked rows to propagate over
-            ('pytestwiki', 42, 'Q987'),
-            ('otherwiki', 11, 'Q987'),
+            ('pytestwiki', 42, NS_MAIN, 'Q987'),
+            ('otherwiki', 11, NS_TALK, 'Q987'),
             # random extra data that gets ignored
-            ('otherwiki', 15, 'Q2'),
+            ('otherwiki', 15, NS_TALK, 'Q2'),
             # link between secondwiki and otherwiki, will not be followed
             # as secondwiki is not preferred.
-            ('secondwiki', 22, 'Q9'),
-            ('otherwiki', 99, 'Q9'),
+            ('secondwiki', 22, NS_MAIN, 'Q9'),
+            ('otherwiki', 99, NS_TALK, 'Q9'),
         ],
         # Expected set of propagated predictions
         {
             # original predictions retained
-            ('pytestwiki', 42, ('pred|123',)),
-            ('pytestwiki', 1, ('pred|654',)),
-            ('secondwiki', 22, ('pred|555',)),
+            ('pytestwiki', 42, NS_MAIN, ('pred|123',)),
+            ('pytestwiki', 1, NS_MAIN, ('pred|654',)),
+            ('secondwiki', 22, NS_MAIN, ('pred|555',)),
             # Additional propagated predictions
-            ('otherwiki', 11, ('pred|123',)),
+            ('otherwiki', 11, NS_TALK, ('pred|123',)),
         }
     ]
 ])
@@ -95,12 +100,14 @@ def test_propagate_by_wbitem(spark, predictions, wbitems, expected):
     df_predictions = spark.createDataFrame(predictions, T.StructType([
         T.StructField('wikiid', T.StringType()),
         T.StructField('page_id', T.IntegerType()),
+        T.StructField('page_namespace', T.IntegerType()),
         T.StructField('prediction', T.ArrayType(T.StringType())),
     ]))
 
     df_wbitem = spark.createDataFrame(wbitems, T.StructType([
         T.StructField('wikiid', T.StringType()),
         T.StructField('page_id', T.IntegerType()),
+        T.StructField('page_namespace', T.IntegerType()),
         T.StructField('wikibase_item', T.StringType()),
     ]))
 
@@ -111,7 +118,7 @@ def test_propagate_by_wbitem(spark, predictions, wbitems, expected):
         df_predictions, df_wbitem, 'prediction',
         source_wikis, preferred_wiki
     ).collect()
-    results = [(r.wikiid, r.page_id, tuple(r.prediction)) for r in results]
+    results = [(r.wikiid, r.page_id, r.page_namespace, tuple(r.prediction)) for r in results]
 
     assert set(results) == expected
     assert len(results) == len(set(results))
