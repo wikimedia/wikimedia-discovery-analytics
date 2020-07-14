@@ -270,6 +270,14 @@ CONFIG = [
             MultiListField(field='articletopic', alias='ores_articletopic', prefix=None)
         ]
     ),
+    Table(
+        table_name='discovery.ores_drafttopic',
+        join_on='wikiid',
+        update_kind=UPDATE_ALL,
+        fields=[
+            MultiListField(field='drafttopic', alias='ores_articletopic', prefix='drafttopic')
+        ]
+    ),
 ]
 
 
@@ -386,6 +394,8 @@ def prepare(
     )
 
     df_nsmap = spark.read.table(namespace_map_table)
+    assert df_nsmap._jdf.isEmpty() is False  # type: ignore
+
     df: Optional[DataFrame] = None
     # Non-field columns that will exist on all dataframes
     shared_cols = {'wikiid', 'page_id', 'elastic_index'}
@@ -442,6 +452,7 @@ def unique_value_per_partition(
     explicit partitioning scheme with a number of partitions per wiki.
     """
     start = 0
+    end = 0
     partition_ranges = {}
     for row in df.groupBy(df[col_name]).count().collect():
         end = int(start + math.ceil(row['count'] / limit_per_partition))
@@ -449,6 +460,8 @@ def unique_value_per_partition(
         partition_ranges[row[col_name]] = (start, end - 1)
         start = end
     # As end is exclusive this is also the count of final partitions
+    if end == 0:
+        raise Exception('Empty dataframe provided')
     numPartitions = end
 
     def partitioner(value: str) -> int:

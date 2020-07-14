@@ -15,7 +15,7 @@
     "--namespace-map-table",
     "discovery.cirrus_namespace_index_map",
     "--output",
-    "hdfs://analytics-hadoop/wmf/data/discovery/transfer_to_es/date=20380117",
+    "hdfs:///wmf/data/discovery/transfer_to_es/date=20380117",
     "--date",
     "2038-01-17"
 ]

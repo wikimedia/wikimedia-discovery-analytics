@@ -1,0 +1,7 @@
+{
+    "thresholds_prefix": "hdfs://analytics-hadoop/wmf/data/discovery/ores/thresholds",
+    "table_articletopic": "discovery.ores_articletopic",
+    "table_drafttopic": "discovery.ores_drafttopic",
+    "table_mw_rev_score": "event.mediawiki_revision_score",
+    "table_wikibase_item": "discovery.wikibase_item"
+}

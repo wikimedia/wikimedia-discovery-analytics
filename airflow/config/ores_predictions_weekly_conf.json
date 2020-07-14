@@ -1,0 +1,9 @@
+{
+    "ores_predictions_weekly_conf": {
+        "table_mw_rev_score": "event.mediawiki_revision_score",
+        "table_wikibase_item": "discovery.wikibase_item",
+        "thresholds_prefix": "hdfs:///wmf/data/discovery/ores/thresholds",
+        "table_articletopic": "discovery.ores_articletopic",
+        "table_drafttopic": "discovery.ores_drafttopic"
+    }
+}
