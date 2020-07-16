@@ -33,6 +33,7 @@ from pyspark.sql import Column, DataFrame, Row, functions as F
 from pyspark import RDD
 
 from argparse import ArgumentParser
+from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 import json
@@ -40,7 +41,7 @@ import logging
 import math
 import random
 import sys
-from typing import Callable, Mapping, Optional, Sequence, Set, Tuple
+from typing import cast, Callable, Mapping, MutableSequence, Optional, Sequence, Set, Tuple
 
 
 def arg_parser() -> ArgumentParser:
@@ -69,6 +70,23 @@ class Field:
     # Name of field in elasticsearch
     alias: str
 
+    @staticmethod
+    def validate_equiv_fields(fields: Sequence[Field]):
+        """Validate that fields defined in separate input sources are compatible
+
+        The set of fields provided will have the same concrete type and alias,
+        and be from separate data sources. This is primarily a pre-check that
+        the `merge` method can be used. Implementations should log any issues
+        with the configuration.
+        """
+        is_ok = True
+        if len(fields) != 1:
+            logging.critical(
+                'Only one field with alias %s may be defined globally for type %s',
+                fields[0].alias, type(fields[0]))
+            is_ok = False
+        return is_ok
+
     @property
     def column(self) -> Column:
         """Spark column applied to source table returning data to index"""
@@ -77,6 +95,15 @@ class Field:
     @property
     def handler(self) -> str:
         raise NotImplementedError('Incomplete implementation, no handler defined')
+
+    @staticmethod
+    def merge(old_value: Column, new_value: Column) -> Column:
+        """Merge fields provided by both sides of an input dataframe join
+
+        Defined statically as the context of execution is not specific to
+        a single instance.
+        """
+        raise NotImplementedError('No merge strategy implemented')
 
 
 @dataclass
@@ -100,6 +127,64 @@ class WithinPercentageField(Field):
     def handler(self) -> str:
         assert 0 < self.percentage < 100
         return 'within {}%'.format(self.percentage)
+
+
+@dataclass
+class MultiListField(Field):
+    """Stores string inputs from multiple sources in a single list
+
+    Implemented primarily to store predicted classes from multiple ML models in
+    the same field. Data is stored and searchable in a single elasticsearch
+    field while each prefix is updated independently.
+
+    Specified field in hive table must be an array of strings.
+    """
+
+    # Prefix, typically the model name, to apply to each element of array
+    # in source table. Prefixes must be unique per source. On update the
+    # noop script removes all elements with matching prefix, and then adds
+    # the new values.
+    prefix: Optional[str]
+
+    @staticmethod
+    def validate_equiv_fields(fields: Sequence[Field]):
+        # Not sure how to represent this in the type system, but
+        # caller ensures all fields are of our concrete type.
+        assert all(type(field) == MultiListField for field in fields)
+        fields = cast(Sequence[MultiListField], fields)
+
+        is_ok = True
+        if len(fields) != len({field.prefix for field in fields}):
+            logging.critical(
+                'All tables must have unique prefixes for multilist aliased to %s',
+                fields[0].alias)
+            is_ok = False
+        return is_ok
+
+    @property
+    def column(self) -> Column:
+        # Apply chosen multilist prefix.
+        if self.prefix is None:
+            # For historical reasons we have unprefixed data in the same
+            # field for a single model.
+            return super().column
+        else:
+            # F.expr is used as higher order functions aren't available through
+            # the pyspark api directly.
+            return F.expr('transform({}, x -> concat("{}/", x))'.format(
+                self.field, self.prefix
+            )).alias(self.alias)
+
+    @staticmethod
+    def merge(old_value: Column, new_value: Column) -> Column:
+        """Merge fields provided by both sides of an input dataframe join"""
+        # concat(null, array) and concat(array, null) both return null, so
+        # we need a coalesce to find the non-null one.
+        return F.coalesce(F.concat(old_value, new_value), old_value, new_value)
+
+    @property
+    def handler(self) -> str:
+        return 'multilist'
 
 
 UPDATE_CONTENT_ONLY = 'content_only'
@@ -178,9 +263,13 @@ CONFIG = [
         join_on=JOIN_ON_WIKIID,
         update_kind=UPDATE_ALL,
         fields=[
-            EqualsField(field='articletopic', alias='ores_articletopics')
+            # When migrating from only articletopic in this field to accepting
+            # multiple models we kept articletopic unprefixed to avoid
+            # migrating in-place data. At some point the appropriate prefix
+            # should be populated from a dump and this should be prefixed.
+            MultiListField(field='articletopic', alias='ores_articletopic', prefix=None)
         ]
-    )
+    ),
 ]
 
 
@@ -195,7 +284,7 @@ def validate_config(config: Sequence[Table]) -> bool:
         logging.critical('Empty configuration supplied!')
         return False
 
-    seen: Set[str] = set()
+    fields: Mapping[str, MutableSequence[Field]] = defaultdict(list)
     is_ok = True
     for table in config:
         logging.info('Validating configuration for table %s', table.table_name)
@@ -209,10 +298,21 @@ def validate_config(config: Sequence[Table]) -> bool:
             logging.critical('No fields defined for table')
             is_ok = False
         for field in table.fields:
-            if field.alias in seen:
-                logging.critical('Duplicate field alias %s', field.alias)
-                is_ok = False
-            seen.add(field.alias)
+            fields[field.alias].append(field)
+
+    for shared_alias_fields in fields.values():
+        head = shared_alias_fields[0]
+        logging.info('Validating fields aliased to %s', head.alias)
+        # When Field.merge is invoked we only have a Field implementation
+        # representing the current data source. For this to work sanely we
+        # must guarantee the values are produced in equivent ways, making
+        # them mergable
+        if all(type(field) == type(head) for field in shared_alias_fields):
+            is_ok &= head.validate_equiv_fields(shared_alias_fields)
+        else:
+            logging.critical(
+                'All fields with same alias must be of the same concrete type')
+            is_ok = False
 
     return is_ok
 
@@ -234,6 +334,45 @@ def resolve_cirrus_index(df: DataFrame, df_nsmap: DataFrame) -> DataFrame:
             how='inner', on=['wikiid', 'namespace_id'])
         .drop('namespace_id')
     )
+
+
+def prepare_merged_cols(
+    # Set of column names in left side of the join that were provided by a Field impl.
+    current_column_names: Set[str],
+    # Set of Field impl defining right side of join.
+    new_fields: Sequence[Field],
+) -> Sequence[Column]:
+    """Prepares a set of columns that will merge the fields after a join
+
+    This is hard coded fairly specifically to the conditions necessary:
+
+    Assumes that current_column_names are in a table aliased `left`, and
+    new_fields are are a table aliased `right`.
+
+    Assumes that validate_config has guaranteed if we see two columns with the
+    same name (field alias) on either side of the join they must be equivalent,
+    such that the Field.merge method for the new field can operate correctly
+    with the old value.
+    """
+    right = set(field.alias for field in new_fields)
+    # Should have been previously verified
+    assert len(right) == len(new_fields)
+
+    out = []
+    for field in new_fields:
+        if field.alias in current_column_names:
+            # Field found on both sides of join
+            field_column = field.merge(F.col('left.' + field.alias), F.col('right.' + field.alias))
+        else:
+            field_column = F.col('right.' + field.alias)
+        out.append(field_column.alias(field.alias))
+    # The set of columns in the current dataframe and not the joined dataframe.
+    # current_column_names must only contain columns defined by Field impl, and
+    # not fields like elastic_index
+    for field_name in (current_column_names - right):
+        out.append(F.col('left.' + field_name))
+
+    return out
 
 
 def prepare(
@@ -264,8 +403,10 @@ def prepare(
         if df is None:
             df = df_current
         else:
-            # validate_configuration previously verified this is all unique
-            merged_cols = set(df.columns + df_current.columns) - shared_cols
+            merged_cols = prepare_merged_cols(
+                # Only pass columns defined by Field impl's
+                set(df.columns) - shared_cols,
+                table.fields)
             df = (
                 df.alias('left')
                 .join(df_current.alias('right'),

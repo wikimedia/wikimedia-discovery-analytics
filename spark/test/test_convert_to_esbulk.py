@@ -155,6 +155,7 @@ def test_prepare_happy_path(
         spark=spark, config=[table_def],
         namespace_map_table=namespace_map_table,
         partition_cond=F.lit(True))
+
     # project resolved to wikiid and dropped. foo aliased to bar.
     # page_namespace transformed into elastic_index and dropped.
     # page_id passed through.
@@ -206,6 +207,113 @@ def test_prepare_happy_path(
             convert_to_esbulk.EqualsField(field='field', alias='alias'),
         ]
     )]),
+    (True, "multilist allows unique prefixes", [convert_to_esbulk.Table(
+        table_name='pytest_table',
+        join_on=convert_to_esbulk.JOIN_ON_WIKIID,
+        update_kind=convert_to_esbulk.UPDATE_ALL,
+        fields=[
+            convert_to_esbulk.MultiListField(field='field', alias='alias', prefix='a'),
+            convert_to_esbulk.MultiListField(field='field', alias='alias', prefix='b'),
+        ]
+    )]),
+    (False, "multilist rejects duplicate prefixes", [convert_to_esbulk.Table(
+        table_name='pytest_table',
+        join_on=convert_to_esbulk.JOIN_ON_WIKIID,
+        update_kind=convert_to_esbulk.UPDATE_ALL,
+        fields=[
+            convert_to_esbulk.MultiListField(field='field', alias='alias', prefix='dupe'),
+            convert_to_esbulk.MultiListField(field='field', alias='alias', prefix='dupe'),
+        ]
+    )]),
+    (True, "alias duplication limits are per-alias", [convert_to_esbulk.Table(
+        table_name='pytest_table',
+        join_on=convert_to_esbulk.JOIN_ON_WIKIID,
+        update_kind=convert_to_esbulk.UPDATE_ALL,
+        fields=[
+            convert_to_esbulk.MultiListField(field='field', alias='one', prefix='dupe'),
+            convert_to_esbulk.MultiListField(field='field', alias='two', prefix='dupe'),
+        ]
+    )]),
 ])
 def test_validate_config(is_valid, msg, config):
     assert is_valid == convert_to_esbulk.validate_config(config), msg
+
+
+def test_multilist_unprefixed(mocker, df_wikis, df_namespace_map, table_to_convert):
+    source_table_def, source_df = table_to_convert
+    mocked_tables = {
+        'canonical_data.wikis': df_wikis,
+        'mock_namespace_map_table': df_namespace_map,
+        'source_table': source_df.withColumn('foo', F.lit('a')),
+    }
+
+    spark = mocker.MagicMock()
+    spark.read.table.side_effect = lambda table: mocked_tables[table]
+
+    table_defs = [
+        convert_to_esbulk.Table(
+            table_name='source_table',
+            join_on=convert_to_esbulk.JOIN_ON_PROJECT,
+            # content_only limits test to single row
+            update_kind=convert_to_esbulk.UPDATE_CONTENT_ONLY,
+            fields=[
+                convert_to_esbulk.MultiListField(field='foo', alias='bar', prefix=None)
+            ]),
+    ]
+    df_result = convert_to_esbulk.prepare(
+        spark=spark, config=table_defs,
+        namespace_map_table='mock_namespace_map_table',
+        partition_cond=F.lit(True))
+
+    rows = df_result.collect()
+    assert len(rows) == 1, "one row in, one row out"
+    assert rows[0].bar == 'a', "Output should be unprefixed"
+
+
+def test_multiple_multilist(mocker, df_wikis, df_namespace_map, table_to_convert):
+    source_table_def, source_df = table_to_convert
+
+    # Transform the source_df into two dataframes that should have multilist
+    # values merged.
+    df_a = source_df.withColumn('foo', F.array(F.lit('z'), F.lit('y')))
+    df_b = source_df.withColumn('foo', F.array(F.lit('y'), F.lit('x')))
+
+    mocked_tables = {
+        'canonical_data.wikis': df_wikis,
+        'mock_namespace_map_table': df_namespace_map,
+        'pytest_example_table_a': df_a,
+        'pytest_example_table_b': df_b,
+    }
+
+    spark = mocker.MagicMock()
+    spark.read.table.side_effect = lambda table: mocked_tables[table]
+
+    table_defs = [
+        convert_to_esbulk.Table(
+            table_name='pytest_example_table_a',
+            join_on=convert_to_esbulk.JOIN_ON_PROJECT,
+            # content_only limits test to single row
+            update_kind=convert_to_esbulk.UPDATE_CONTENT_ONLY,
+            fields=[
+                convert_to_esbulk.MultiListField(field='foo', alias='bar', prefix='a')
+            ]),
+        convert_to_esbulk.Table(
+            table_name='pytest_example_table_b',
+            join_on=convert_to_esbulk.JOIN_ON_PROJECT,
+            update_kind=convert_to_esbulk.UPDATE_CONTENT_ONLY,
+            fields=[
+                convert_to_esbulk.MultiListField(field='foo', alias='bar', prefix='b')
+            ]),
+    ]
+
+    df_result = convert_to_esbulk.prepare(
+        spark=spark, config=table_defs,
+        namespace_map_table='mock_namespace_map_table',
+        partition_cond=F.lit(True))
+
+    rows = df_result.collect()
+    assert len(rows) == 1, "Both tables should have been merged into single row"
+    assert len(rows[0].bar) == len(set(rows[0].bar)), \
+        "Unique inputs were provided, all outputs should be unique as well"
+    assert set(rows[0].bar) == {'a/z', 'a/y', 'b/y', 'b/x'}, \
+        "Both sources should be represented in the result"
