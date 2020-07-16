@@ -17,7 +17,7 @@ from wmf_airflow.hdfs_cli import HdfsCliHook
 from wmf_airflow.hdfs_to_druid import HdfsToDruidOperator
 from wmf_airflow.hive_partition_range_sensor import HivePartitionRangeSensor
 from wmf_airflow.spark_submit import SparkSubmitOperator
-from wmf_airflow.template import REPO_BASE
+from wmf_airflow.template import REPO_PATH
 
 
 def dag_conf(key):
@@ -36,7 +36,7 @@ TABLE_SEARCH_SATISFACTION = dag_conf('table_search_satisfaction')
 DRUID_DATASOURCE = dag_conf('druid_datasource')
 
 # Template used to create druid ingestion spec
-DRUID_SPEC_TEMPLATE = REPO_BASE + dag_conf('druid_spec_template')
+DRUID_SPEC_TEMPLATE = REPO_PATH + dag_conf('druid_spec_template')
 
 # Base path for temporary files
 TEMP_DIR = 'hdfs://analytics-hadoop/tmp/{{ dag.dag_id }}_{{ ds }}'
@@ -111,7 +111,7 @@ with DAG(
         spark_submit_env_vars={
             'PYSPARK_PYTHON': 'python3.7',
         },
-        application=REPO_BASE + '/spark/generate_daily_search_satisfaction.py',
+        application=REPO_PATH + '/spark/generate_daily_search_satisfaction.py',
         application_args=[
             '--cirrus-table', TABLE_SEARCH_LOGS,
             '--satisfaction-table', TABLE_SEARCH_EVENTS,
@@ -133,7 +133,7 @@ with DAG(
         spark_submit_env_vars={
             'PYSPARK_PYTHON': 'python3.7',
         },
-        application=REPO_BASE + '/spark/generate_daily_druid_search_satisfaction.py',
+        application=REPO_PATH + '/spark/generate_daily_druid_search_satisfaction.py',
         application_args=[
             '--source-table', TABLE_SEARCH_SATISFACTION,
             '--destination-directory', TEMP_DIR,

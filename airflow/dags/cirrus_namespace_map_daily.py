@@ -6,7 +6,7 @@ from airflow.operators.dummy_operator import DummyOperator
 
 import jinja2
 from wmf_airflow.spark_submit import SparkSubmitOperator
-from wmf_airflow.template import REPO_BASE
+from wmf_airflow.template import HTTPS_PROXY, REPO_PATH
 
 
 def dag_conf(key):
@@ -46,12 +46,12 @@ with DAG(
             # hive/hdfs/parquet integration used by downstream consumers
             'spark.dynamicAllocation.maxExecutors': 10,
             # Provide access to public internet to query prod apis
-            'spark.executorEnv.https_proxy': dag_conf('https_proxy'),
+            'spark.executorEnv.https_proxy': HTTPS_PROXY,
         },
         spark_submit_env_vars={
             'PYSPARK_PYTHON': 'python3.7',
         },
-        application=REPO_BASE + '/spark/fetch_cirrussearch_namespace_map.py',
+        application=REPO_PATH + '/spark/fetch_cirrussearch_namespace_map.py',
         application_args=[
             '--canonical-wikis-table', dag_conf('table_canonical_wikis'),
             '--output-table', dag_conf('table_output'),

@@ -6,7 +6,7 @@ from airflow.sensors.external_task_sensor import ExternalTaskSensor
 
 from wmf_airflow.spark_submit import SparkSubmitOperator
 from wmf_airflow.swift_upload import SwiftUploadOperator
-from wmf_airflow.template import REPO_BASE
+from wmf_airflow.template import REPO_PATH
 
 
 def dag_conf(key):
@@ -76,7 +76,7 @@ with DAG(
         spark_submit_env_vars={
             'PYSPARK_PYTHON': 'python3.7',
         },
-        application=REPO_BASE + '/spark/convert_to_esbulk.py',
+        application=REPO_PATH + '/spark/convert_to_esbulk.py',
         application_args=[
             '--namespace-map-table', dag_conf('table_namespace_map'),
             '--output', PATH_OUT,

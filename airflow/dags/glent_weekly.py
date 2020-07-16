@@ -13,7 +13,7 @@ from wmf_airflow.hdfs_cli import HdfsCliHook
 from wmf_airflow.hive_partition_range_sensor import HivePartitionRangeSensor
 from wmf_airflow.spark_submit import SparkSubmitOperator
 from wmf_airflow.swift_upload import SwiftUploadOperator
-from wmf_airflow.template import REPO_BASE
+from wmf_airflow.template import REPO_PATH
 
 
 def dag_conf(key):
@@ -31,7 +31,7 @@ TABLE_M0_PREP = dag_conf('table_m0_prep')
 TABLE_M1_PREP = dag_conf('table_m1_prep')
 TABLE_SUGGESTIONS = dag_conf('table_suggestions')
 
-GLENT_JAR_PATH = REPO_BASE + '/artifacts/glent-0.2.2-jar-with-dependencies.jar'
+GLENT_JAR_PATH = REPO_PATH + '/artifacts/glent-0.2.2-jar-with-dependencies.jar'
 
 # Temporary paths for each run, deleted after dagrun is done (success or fail)
 TEMP_DIR = dag_conf('base_temp_dir') + '/{{ dag.dag_id }}_{{ ds }}'

@@ -125,7 +125,9 @@ class SkeinHook(BaseHook):
 
 
 class SkeinOperator(BaseOperator):
-    template_fields = ('_application', '_application_args', '_output_files')
+    template_fields = (
+        '_application', '_application_args', '_queue', '_venv',
+        '_files', '_output_files', '_env')
 
     @apply_defaults
     def __init__(

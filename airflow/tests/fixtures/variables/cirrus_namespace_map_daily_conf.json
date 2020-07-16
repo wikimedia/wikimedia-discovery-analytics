@@ -1,5 +1,4 @@
 {
-    "https_proxy": "http://webproxy.eqiad.wmnet:8080",
     "table_canonical_wikis": "canonical_data.wikis",
     "table_output": "discovery.cirrus_namespace_index_map"
 }

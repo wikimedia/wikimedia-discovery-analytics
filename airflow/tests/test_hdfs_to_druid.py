@@ -17,7 +17,10 @@ def test_hdfs_to_druid_against_fixtures(fixture_factory, mock_airflow_variables,
     # read files from the repo, so we need to put a real value
     # in there.
     mock_airflow_variables({
-        'wikimedia_discovery_analytics_path': os.path.realpath(os.path.join(__file__, '../../..'))
+        'wmf_conf': {
+            'wikimedia_discovery_analytics_path':
+                os.path.realpath(os.path.join(__file__, '../../..'))
+        }
     })
     ti = TaskInstance(task, datetime(year=2038, month=1, day=17))
     ti.render_templates()

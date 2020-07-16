@@ -28,7 +28,9 @@ from airflow.operators.dummy_operator import DummyOperator
 from wmf_airflow.hive_partition_range_sensor import HivePartitionRangeSensor
 from wmf_airflow.skein import SkeinOperator
 from wmf_airflow.spark_submit import SparkSubmitOperator
-from wmf_airflow.template import REPO_BASE
+from wmf_airflow.template import (
+    HTTPS_PROXY, IVY_SETTINGS_PATH, MARIADB_CREDENTIALS_PATH,
+    MEDIAWIKI_CONFIG_PATH, REPO_PATH, REPO_HDFS_PATH)
 
 
 INPUT_TABLE = 'event.mediawiki_revision_score'
@@ -40,9 +42,6 @@ MODEL = 'articletopic'
 
 THRESHOLDS_PATH = 'hdfs://analytics-hadoop/wmf/data/discovery/ores/thresholds/' \
     + MODEL + '/{{ ds_nodash }}.json'
-
-# Path to root of this repository in HDFS
-REPO_HDFS_BASE = 'hdfs://analytics-hadoop/wmf/discovery/current'
 
 # Default kwargs for all Operators
 default_args = {
@@ -62,10 +61,8 @@ def mw_sql_to_hive(
     task_id: str,
     sql_query: str,
     output_table: str,
-    mysql_defaults_path: str = '{{ var.value.analytics_mariadb_credentials_path }}',
-    # There isn't a great default here, but this will make it "just work"
-    # when doing debug runs against prod cluster.
-    mediawiki_config_repo: str = '/srv/mediawiki-config',
+    mysql_defaults_path: str = MARIADB_CREDENTIALS_PATH,
+    mediawiki_config_repo: str = MEDIAWIKI_CONFIG_PATH,
 ) -> SparkSubmitOperator:
     # The set of wikis to collect from, and where to find the databases
     # for those wikis, is detected through the dblist files.
@@ -82,7 +79,7 @@ def mw_sql_to_hive(
         # Custom environment provides dnspython dependency. The environment must come
         # from hdfs, because it has to be built on an older version of debian than runs
         # on the airflow instance.
-        archives=REPO_HDFS_BASE + '/environments/mw_sql_to_hive/venv.zip#venv',
+        archives=REPO_HDFS_PATH + '/environments/mw_sql_to_hive/venv.zip#venv',
         # jdbc connector for talking to analytics replicas
         packages='mysql:mysql-connector-java:8.0.19',
         spark_submit_env_vars={
@@ -97,7 +94,7 @@ def mw_sql_to_hive(
             # Use the venv shipped in archives.
             'spark.pyspark.python': 'venv/bin/python3.7',
             # Fetch jars specified in packages from archiva
-            'spark.jars.ivySettings': '/etc/maven/ivysettings.xml',
+            'spark.jars.ivySettings': IVY_SETTINGS_PATH,
             # By default ivy will use $HOME/.ivy2, but system users dont have a home
             'spark.jars.ivy': '/tmp/airflow_ivy2',
             # Limit parallelism so we don't try and query 900 databases all at once
@@ -108,7 +105,7 @@ def mw_sql_to_hive(
             'spark.executor.memory': '4g',
         },
         files=','.join([mysql_defaults_path] + local_dblists),
-        application=REPO_BASE + '/spark/mw_sql_to_hive.py',
+        application=REPO_PATH + '/spark/mw_sql_to_hive.py',
         application_args=[
             '--mysql-defaults-file', 'mysql.cnf',
             '--dblists', ','.join(dblists),
@@ -153,7 +150,7 @@ with DAG(
     # Fetch per-topic thresholds from ORES to use when collecting predictions
     fetch_prediction_thresholds = SkeinOperator(
         task_id='fetch_prediction_thresholds',
-        application=REPO_BASE + '/spark/fetch_ores_thresholds.py',
+        application=REPO_PATH + '/spark/fetch_ores_thresholds.py',
         application_args=[
             '--model', MODEL,
             '--output-path', 'thresholds.json',
@@ -164,7 +161,7 @@ with DAG(
         # ORES is not available from the analytics network, we need to
         # proxy to the outside world.
         env={
-            'HTTPS_PROXY': 'http://webproxy.eqiad.wmnet:8080',
+            'HTTPS_PROXY': HTTPS_PROXY,
         })
 
     # Collect wikibase_item page props to facilitate propagating
@@ -191,7 +188,7 @@ with DAG(
             'PYSPARK_PYTHON': 'python3.7',
         },
         files=THRESHOLDS_PATH + '#thresholds.json',
-        application=REPO_BASE + '/spark/prepare_mw_rev_score.py',
+        application=REPO_PATH + '/spark/prepare_mw_rev_score.py',
         application_args=[
             '--input-table', INPUT_TABLE,
             '--input-kind', 'mediawiki_revision_score',

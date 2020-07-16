@@ -105,8 +105,15 @@ def mock_airflow_variables(mocker):
             else:
                 mock_var = mocker.MagicMock()
                 mock_var.key = key
-                mock_var.get_val.return_value = value
-                mock_var.__str__.return_value = value
+                if hasattr(value, 'items'):
+                    # dict input. The mock itself is returned in templates from
+                    # {{ var.json.<foo>.<key> }}, key is accessed as a property
+                    # of the Variable.
+                    for k, v in value.items():
+                        setattr(mock_var, k, v)
+                else:
+                    mock_var.get_val.return_value = value
+                    mock_var.__str__.return_value = value
                 return mock_var
         mocker.patch.object(Variable, 'get').side_effect = mock_Variable_get
     return mock_variables
