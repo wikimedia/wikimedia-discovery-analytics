@@ -1,5 +1,4 @@
 import convert_to_esbulk
-import datetime
 from pyspark.sql import Row, functions as F, types as T
 import pytest
 
@@ -8,18 +7,16 @@ import pytest
 NS_MAIN = 0
 NS_TALK = 1
 
-# Ensure everything uses the same date for partition filtering
-DATE = datetime.date(2020, 2, 3)
-
 
 @pytest.fixture
 def df_wikis(spark):
+    """Minimal match of canonical_data.wikis table"""
     rdd = spark.sparkContext.parallelize([
         ['testwiki', 'test.wikipedia.org'],
         ['zhwiki', 'zh.wikipedia.org'],
     ])
     return spark.createDataFrame(rdd, T.StructType([
-        T.StructField('wikiid', T.StringType()),
+        T.StructField('database_code', T.StringType()),
         T.StructField('domain_name', T.StringType()),
     ]))
 
@@ -42,24 +39,22 @@ def df_namespace_map(spark):
 @pytest.fixture
 def table_to_convert(spark):
     rdd = spark.sparkContext.parallelize([
-        ['test.wikipedia', 42, NS_MAIN, 'indexed content', DATE.year, DATE.month, DATE.day]
+        ['test.wikipedia', 42, NS_MAIN, 'indexed content'],
+        ['test.wikipedia', 43, NS_TALK, 'indexed talkpage']
     ])
     df = spark.createDataFrame(rdd, T.StructType([
         T.StructField('project', T.StringType()),
         T.StructField('page_id', T.IntegerType()),
         T.StructField('page_namespace', T.IntegerType()),
         T.StructField('foo', T.StringType()),
-        T.StructField('year', T.IntegerType()),
-        T.StructField('month', T.IntegerType()),
-        T.StructField('day', T.IntegerType()),
     ]))
 
     table_def = convert_to_esbulk.Table(
-        table='pytest_example_table',
-        join_on='project',
+        table_name='pytest_example_table',
+        join_on=convert_to_esbulk.JOIN_ON_PROJECT,
         update_kind=convert_to_esbulk.UPDATE_ALL,
         fields=[
-            convert_to_esbulk.Field(field='foo', alias='bar', handler='equals')
+            convert_to_esbulk.EqualsField(field='foo', alias='bar')
         ])
 
     return table_def, df
@@ -132,39 +127,48 @@ def test_unique_value_per_partition(spark):
         assert len(rows) < (num_rows / num_partition_keys)
 
 
-def test_prepare_table_join_on_project(
-    spark, df_wikis, df_namespace_map, table_to_convert
+def test_join_on_project(df_wikis, table_to_convert):
+    table_def, df = table_to_convert
+
+    df_result = table_def.resolve_wikiid(df, df_wikis)
+    assert 'wikiid' in df_result.columns
+
+    rows = df_result.collect()
+    wikis = {row.wikiid for row in rows}
+    assert wikis == {'testwiki'}
+
+
+def test_prepare_happy_path(
+    mocker, spark, df_wikis, df_namespace_map, table_to_convert
 ):
     table_def, df = table_to_convert
-    df_result = convert_to_esbulk.prepare_table(
-        df, df_wikis, df_namespace_map, table_def)
-    # Project converted to wikiid. foo aliased to bar. page_namespace
-    # transformed into elastic_index and dropped. page_id passed through.
+    namespace_map_table = 'pytest_cirrus_nsmap'
+
+    spark = mocker.MagicMock()
+    spark.read.table.side_effect = lambda table_name: {
+        namespace_map_table: df_namespace_map,
+        'canonical_data.wikis': df_wikis,
+        table_def.table_name: df
+    }[table_name]
+
+    df_result = convert_to_esbulk.prepare(
+        spark=spark, config=[table_def],
+        namespace_map_table=namespace_map_table,
+        partition_cond=F.lit(True))
+    # project resolved to wikiid and dropped. foo aliased to bar.
+    # page_namespace transformed into elastic_index and dropped.
+    # page_id passed through.
     assert {'elastic_index', 'wikiid', 'page_id', 'bar'} == set(df_result.columns)
 
     results = df_result.collect()
-    assert len(results) == 1, "The join must have kept our row"
+    assert len(results) == 2, "The join must have kept our rows"
+    results = list(sorted(results, key=lambda x: x.page_id))
     assert results[0].wikiid == 'testwiki', 'Resolved correct wikiid'
     assert results[0].elastic_index == 'testwiki_content', \
         'Resolved correct elastic index'
     assert results[0].page_id == 42, "Page id unchanged"
     assert results[0].bar == 'indexed content', "content appropriately aliased"
 
-
-def test_prepare_happy_path(mocker, df_wikis, df_namespace_map, table_to_convert):
-    table_def, df_to_convert = table_to_convert
-
-    mocked_tables = {
-        'canonical_data.wikis': df_wikis.withColumnRenamed('wikiid', 'database_code'),
-        'mock_namespace_map_table': df_namespace_map,
-        table_def.table: df_to_convert
-    }
-
-    spark = mocker.MagicMock()
-    spark.read.table.side_effect = lambda table: mocked_tables[table]
-
-    df_result, field_handlers = convert_to_esbulk.prepare(
-        spark, DATE, [table_def], 'mock_namespace_map_table')
-    rows = df_result.collect()
-    # ???
-    assert len(rows) > 0
+    assert results[1].wikiid == 'testwiki'
+    assert results[1].page_id == 43
+    assert results[1].elastic_index == 'testwiki_general'
