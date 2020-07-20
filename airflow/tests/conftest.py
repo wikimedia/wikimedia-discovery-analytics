@@ -16,6 +16,7 @@ import pytest
 all_dag_ids = [
     'cirrus_namespace_map_daily',
     'drop_old_data_daily',
+    'fulltext_head_queries_daily',
     'glent_weekly',
     'mjolnir',
     'ores_predictions_weekly',

@@ -1,0 +1,1 @@
+"PYTHONPATH=/srv/deployment/analytics/refinery/python/ /path/to/wikimedia/discovery/analytics/repo/environments/refinery/venv/bin/python '/srv/deployment/analytics/refinery/bin/refinery-drop-hive-partitions' --verbose --database=glent --older-than-days=29"

@@ -5,6 +5,7 @@ from airflow.contrib.operators.spark_submit_operator \
     import SparkSubmitOperator as WrongSparkSubmitOperator
 from airflow.models.dagbag import DagBag
 from airflow.models.taskinstance import TaskInstance
+from airflow.operators.bash_operator import BashOperator
 from airflow.sensors.external_task_sensor import ExternalTaskSensor
 
 import pytest
@@ -109,10 +110,24 @@ def test_spark_submit_sets_python_version(task):
     assert 'PYSPARK_DRIVER_PYTHON' not in task._spark_submit_env_vars
 
 
+# Some dags depend on dag_run.conf having values. Provide
+# them when needed for generic fixture based testing.
+DAG_RUN_CONF = {
+    'top_fulltext_queries_for_wiki': {
+        'wiki': 'pytestwiki',
+    },
+}
+
+
 @pytest.mark.parametrize('task', tasks(SparkSubmitOperator))
 def test_spark_submit_cli_args_against_fixture(task, fixture_factory, mocker):
     ti = TaskInstance(task, datetime(year=2038, month=1, day=17))
-    ti.render_templates()
+    context = ti.get_template_context()
+    context['run_id'] = 'pytest_compare_against_fixtures'
+    if task.dag_id in DAG_RUN_CONF:
+        context['dag_run'] = mocker.MagicMock()
+        context['dag_run'].conf = DAG_RUN_CONF[task.dag_id]
+    ti.render_templates(context=context)
 
     # The conf dict comes out in random order...sort for stable cli command output
     # Must come after rendering templates, as they may replace or re-order the dict.
@@ -129,6 +144,23 @@ def test_spark_submit_cli_args_against_fixture(task, fixture_factory, mocker):
 
     fixture = '{}_{}'.format(task.dag_id, task.task_id)
     comparer = fixture_factory('spark_submit_operator', fixture)
+    comparer(command)
+
+
+@pytest.mark.parametrize('task', tasks(BashOperator))
+def test_bash_commandline_against_fixture(task, fixture_factory, mocker):
+    ti = TaskInstance(task, datetime(year=2038, month=1, day=17))
+    ti.render_templates()
+
+    command = task.bash_command
+    # Record explicit env as well
+    assert task.env is not None
+    if task.env is not None:
+        env_str = ' '.join('{}={}'.format(k, v) for k, v in task.env.items())
+        command = env_str + ' ' + command
+
+    fixture = '{}_{}'.format(task.dag_id, task.task_id)
+    comparer = fixture_factory('bash_operator_command_line', fixture)
     comparer(command)
 
 

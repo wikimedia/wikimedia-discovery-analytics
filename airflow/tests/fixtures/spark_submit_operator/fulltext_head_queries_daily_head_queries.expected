@@ -1,0 +1,21 @@
+[
+    "PYSPARK_PYTHON=python3.7",
+    "spark-submit",
+    "--master",
+    "yarn",
+    "--conf",
+    "spark.dynamicAllocation.maxExecutors=200",
+    "--conf",
+    "spark.yarn.maxAppAttempts=1",
+    "--name",
+    "airflow: fulltext_head_queries - 2038-01-17",
+    "--queue",
+    "root.default",
+    "/path/to/wikimedia/discovery/analytics/repo/spark/fulltext_head_queries.py",
+    "--search-satisfaction-table",
+    "event.searchsatisfaction",
+    "--num-queries",
+    "10000",
+    "--output-partition",
+    "discovery.fulltext_head_queries/date=20380117"
+]
