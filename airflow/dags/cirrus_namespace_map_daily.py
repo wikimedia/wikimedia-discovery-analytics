@@ -31,6 +31,8 @@ with DAG(
     default_args=default_args,
     # expression order: min hour month dom dow
     schedule_interval='0 1 * * *',
+    # The dag overwrites, catchup would only add repeated work
+    catchup=False,
     # The dag overwrites data, so running two at a time would be silly
     max_active_runs=1,
     # no undefined variables allowed in templates
