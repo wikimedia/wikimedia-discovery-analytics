@@ -43,7 +43,9 @@ for ENV_DIR in ${BASE}/environments/*; do
 
         # Install the frozen requirements first to avoid unnecessary upgrades.
         # To remove a package it must be deleted from both requirements files.
-        $PIP install -r "${REQUIREMENTS_FROZEN}"
+        if [ -e "${REQUIREMENTS_FROZEN}" ]; then
+            $PIP install -r "${REQUIREMENTS_FROZEN}"
+        fi
         $PIP install -r "${REQUIREMENTS}"
         $PIP freeze --local | grep -v pkg-resources > "${REQUIREMENTS_FROZEN}"
         $PIP install wheel

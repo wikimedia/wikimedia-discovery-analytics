@@ -99,6 +99,6 @@ if __name__ == "__main__":
                     urllib.urlretrieve(url, path)
         else:
             mvn_deploy_file(
-                repositoryId='wikimedia.python', url=REPO, file=path,
+                repositoryId='archiva.python', url=REPO, file=path,
                 groupId=GROUP_ID, artifactId=artifact, version=version,
                 generatePom=False, packaging="whl")

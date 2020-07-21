@@ -4,5 +4,6 @@
     "ivy_settings_path": "/etc/maven/ivysettings.xml",
     "mariadb_credentials_path": "/path/to/mysql/conf.d/pytest-client.cnf",
     "mediawiki_config_path": "/srv/mediawiki-config",
-    "wikimedia_discovery_analytics_hdfs_path": "hdfs://analytics-hadoop/wmf/discovery/current"
+    "wikimedia_discovery_analytics_hdfs_path": "hdfs://analytics-hadoop/wmf/discovery/current",
+    "analytics_refinery_path": "/srv/deployment/analytics/refinery"
 }

@@ -32,3 +32,6 @@ MARIADB_CREDENTIALS_PATH = wmf_conf('mariadb_credentials_path')
 
 # Local path to the operations/mediawiki-config repository on the airflow server
 MEDIAWIKI_CONFIG_PATH = wmf_conf('mediawiki_config_path')
+
+# Local path to the analytics/refinery repository on the airflow server
+ANALYTICS_REFINERY_PATH = wmf_conf('analytics_refinery_path')

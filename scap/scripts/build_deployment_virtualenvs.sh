@@ -54,10 +54,6 @@ for ENV_DIR in ${ENVIRONMENTS_DIR}/*; do
             -r "$REQUIREMENTS"
         # Wrap it all up to be deployed by spark to executors
         ( cd "$VENV" && zip -qr "${ZIP_PATH}" . )
-        # When deploying applications on yarn (via oozie, skein or
-        # spark-submit) the actual venv directory is unnecessary, only
-        # the zip which is deployed and decompressed where needed.
-        rm -rf "$VENV"
         echo Saved virtualenv to $ZIP_PATH
     fi
 done
