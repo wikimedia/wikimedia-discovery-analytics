@@ -46,6 +46,7 @@ TEMP_DIR = 'hdfs://analytics-hadoop/tmp/{{ dag.dag_id }}_{{ ds }}'
 PRODUCTION_USERNAME = dag_conf('production_username')
 
 # Some reusable templated values
+TEMPLATE_YMD_PARTITION = '{{ macros.ds_format(ds, "%Y-%m-%d", "year=%Y/month=%m/day=%d") }}'
 TEMPLATE_YEAR = '{{ macros.ds_format(ds, "%Y-%m-%d", "%Y") }}'
 TEMPLATE_MONTH = '{{ macros.ds_format(ds, "%Y-%m-%d", "%m") }}'
 TEMPLATE_DAY = '{{ macros.ds_format(ds, "%Y-%m-%d", "%d") }}'
@@ -112,14 +113,12 @@ with DAG(
         spark_submit_env_vars={
             'PYSPARK_PYTHON': 'python3.7',
         },
+        py_files=REPO_PATH + '/spark/wmf_spark.py',
         application=REPO_PATH + '/spark/generate_daily_search_satisfaction.py',
         application_args=[
-            '--cirrus-table', TABLE_SEARCH_LOGS,
-            '--satisfaction-table', TABLE_SEARCH_EVENTS,
-            '--output-table', TABLE_SEARCH_SATISFACTION,
-            '--year', TEMPLATE_YEAR,
-            '--month', TEMPLATE_MONTH,
-            '--day', TEMPLATE_DAY,
+            '--cirrus-partition', TABLE_SEARCH_LOGS + '/' + TEMPLATE_YMD_PARTITION,
+            '--satisfaction-partition', TABLE_SEARCH_EVENTS + '/' + TEMPLATE_YMD_PARTITION,
+            '--output-partition', TABLE_SEARCH_SATISFACTION + '/' + TEMPLATE_YMD_PARTITION
         ])
 
     # Reduces precision (for example, bucketing the number of total hits)
@@ -134,13 +133,11 @@ with DAG(
         spark_submit_env_vars={
             'PYSPARK_PYTHON': 'python3.7',
         },
+        py_files=REPO_PATH + '/spark/wmf_spark.py',
         application=REPO_PATH + '/spark/generate_daily_druid_search_satisfaction.py',
         application_args=[
-            '--source-table', TABLE_SEARCH_SATISFACTION,
+            '--source-partition', TABLE_SEARCH_SATISFACTION + '/' + TEMPLATE_YMD_PARTITION,
             '--destination-directory', TEMP_DIR,
-            '--year', TEMPLATE_YEAR,
-            '--month', TEMPLATE_MONTH,
-            '--day', TEMPLATE_DAY,
         ])
 
     index_into_druid = HdfsToDruidOperator(

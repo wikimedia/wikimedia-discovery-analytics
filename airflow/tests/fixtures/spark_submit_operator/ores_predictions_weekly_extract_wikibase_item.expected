@@ -19,6 +19,8 @@
     "spark.yarn.maxAppAttempts=1",
     "--files",
     "/etc/mysql/conf.d/analytics-search-client.cnf#mysql.cnf,/srv/mediawiki-config/dblists/s1.dblist,/srv/mediawiki-config/dblists/s2.dblist,/srv/mediawiki-config/dblists/s3.dblist,/srv/mediawiki-config/dblists/s4.dblist,/srv/mediawiki-config/dblists/s5.dblist,/srv/mediawiki-config/dblists/s6.dblist,/srv/mediawiki-config/dblists/s7.dblist,/srv/mediawiki-config/dblists/s8.dblist",
+    "--py-files",
+    "/srv/deployment/wikimedia/discovery/analytics/spark/wmf_spark.py",
     "--archives",
     "hdfs://analytics-hadoop/wmf/discovery/current/environments/mw_sql_to_hive/venv.zip#venv",
     "--packages",
@@ -32,10 +34,8 @@
     "mysql.cnf",
     "--dblists",
     "s1.dblist,s2.dblist,s3.dblist,s4.dblist,s5.dblist,s6.dblist,s7.dblist,s8.dblist",
-    "--date",
-    "2038-01-17",
     "--query",
     "\n            SELECT pp_page as page_id, page_namespace, pp_value as wikibase_item\n            FROM page_props\n            JOIN page ON page_id = pp_page\n            WHERE pp_propname=\"wikibase_item\"\n        ",
-    "--output-table",
-    "discovery.wikibase_item"
+    "--output-partition",
+    "discovery.wikibase_item/date=20380117"
 ]

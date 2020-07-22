@@ -10,6 +10,7 @@ from typing import Iterator, Mapping, Sequence, Tuple, TypeVar
 from pyspark.sql import SparkSession, functions as F, types as T
 import mwapi
 import oresapi
+from wmf_spark import HivePartitionWriter
 
 T_ = TypeVar('T_')
 
@@ -23,18 +24,20 @@ def arg_parser() -> ArgumentParser:
         return datetime.strptime(val, '%Y-%m-%d')
 
     parser = ArgumentParser()
-    parser.add_argument('--mediawiki-dbname', required=True, help='dbname, ex: arwiki')
+    parser.add_argument(
+        '--mediawiki-dbname', required=True,
+        help='dbname, ex: arwiki')
     parser.add_argument('--ores-host', default='https://ores.wikimedia.org')
     parser.add_argument('--user-agent', default='Search Platform Airflow Bot')
     parser.add_argument(
-        '--output-table', required=True,
-        help='Hive table to write exported predictions to')
-    parser.add_argument(
-        '--date', type=date, required=True,
-        help='Date to use for output table partition specification')
+        '--output-partition', required=True, type=HivePartitionWriter.from_spec,
+        help='Hive partition to write exported predictions to')
     parser.add_argument(
         '--namespace', dest='namespaces', nargs='+', type=int, default=[0],
         help='Set of namespaces to export. By default only NS_MAIN is exported')
+    parser.add_argument(
+        '--ores-model', default='articletopic',
+        help='ORES model to export scores for')
     return parser
 
 
@@ -86,8 +89,11 @@ class ErrorThreshold:
 
 
 def fetch_scores(
-    mediawiki_host: str, mediawiki_dbname: str,
-    ores_host: str, user_agent: str,
+    mediawiki_host: str,
+    mediawiki_dbname: str,
+    ores_host: str,
+    model: str,
+    user_agent: str,
     namespaces: Sequence[int],
     error_threshold=ErrorThreshold(1 / 1000),
 ) -> Iterator[Tuple[int, int, Mapping[str, float]]]:
@@ -140,11 +146,11 @@ def fetch_scores(
 def main(
     mediawiki_dbname: str,
     ores_host: str,
+    ores_model: str,
     user_agent: str,
-    output_table: str,
-    date: datetime,
-    namespaces: Sequence[int],
-) -> int:
+    output_partition: HivePartitionWriter,
+    namespaces: Sequence[int]
+):
     # Basically a hack, here we create an rdd with a single row and use it to
     # run our function on the executor.  Once we have an rdd representing the
     # exported scores convert it to a DataFrame and write to a hive table.
@@ -164,7 +170,9 @@ def main(
     rdd = (
         spark.sparkContext.parallelize([True], numSlices=1)
         .flatMap(lambda x: fetch_scores(
-            mediawiki_host, mediawiki_dbname, ores_host, user_agent, namespaces))
+            mediawiki_host, mediawiki_dbname,
+            ores_host, ores_model,
+            user_agent, namespaces))
     )
 
     df = spark.createDataFrame(rdd, T.StructType([  # type: ignore
@@ -173,22 +181,7 @@ def main(
         T.StructField('probability', T.MapType(T.StringType(), T.FloatType()))
     ]))
 
-    df.createTempView('tmp_revision_score_out')
-
-    insert_stmt = """
-        INSERT OVERWRITE TABLE {table}
-        PARTITION(wikiid="{wiki}", model="{model}", year={year}, month={month}, day={day})
-        SELECT page_id, page_namespace, probability
-        FROM tmp_revision_score_out
-    """.format(
-        table=output_table,
-        year=date.year,
-        month=date.month,
-        day=date.day,
-        wiki=mediawiki_dbname,
-        model=MODEL)
-
-    spark.sql(insert_stmt)
+    output_partition.overwrite_with(df)
     return 0
 
 

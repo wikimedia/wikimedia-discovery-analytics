@@ -80,6 +80,7 @@ def mw_sql_to_hive(
         # from hdfs, because it has to be built on an older version of debian than runs
         # on the airflow instance.
         archives=REPO_HDFS_PATH + '/environments/mw_sql_to_hive/venv.zip#venv',
+        py_files=REPO_PATH + '/spark/wmf_spark.py',
         # jdbc connector for talking to analytics replicas
         packages='mysql:mysql-connector-java:8.0.19',
         spark_submit_env_vars={
@@ -109,9 +110,8 @@ def mw_sql_to_hive(
         application_args=[
             '--mysql-defaults-file', 'mysql.cnf',
             '--dblists', ','.join(dblists),
-            '--date', '{{ ds }}',
             '--query', sql_query,
-            '--output-table', output_table,
+            '--output-partition', output_table + '/date={{ ds_nodash }}',
         ],
     )
 
@@ -190,16 +190,15 @@ with DAG(
             'PYSPARK_PYTHON': 'python3.7',
         },
         files=THRESHOLDS_PATH + '#thresholds.json',
+        py_files=REPO_PATH + '/spark/wmf_spark.py',
         application=REPO_PATH + '/spark/prepare_mw_rev_score.py',
         application_args=[
-            '--input-table', INPUT_TABLE,
+            '--input-partition', INPUT_TABLE + '/@{{ ds }}/{{ macros.ds_add(ds, 7) }}',
             '--input-kind', 'mediawiki_revision_score',
-            '--output-table', OUTPUT_TABLE,
-            '--start-date', '{{ ds }}',
-            '--end-date', '{{ macros.ds_add(ds, 7) }}',
+            '--output-partition', OUTPUT_TABLE + '/date={{ ds_nodash }}',
             '--thresholds-path', 'thresholds.json',
             '--prediction', MODEL,
-            '--wikibase-item-table', WIKIBASE_ITEM_TABLE,
+            '--wikibase-item-partition', WIKIBASE_ITEM_TABLE + '/date={{ ds_nodash }}',
             '--propagate-from', PROPAGATE_FROM_WIKI,
         ],
     )

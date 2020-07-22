@@ -18,19 +18,20 @@ import requests
 from pyspark.sql import DataFrame, SparkSession, functions as F, types as T
 import sys
 from typing import Sequence, Tuple
+from wmf_spark import HivePartition, HivePartitionWriter
 
 
 def arg_parser() -> ArgumentParser:
     parser = ArgumentParser()
-    parser.add_argument('--canonical-wikis-table', required=True)
-    parser.add_argument('--output-table', required=True)
+    parser.add_argument('--canonical-wikis-partition', required=True, type=HivePartition.from_spec)
+    parser.add_argument('--output-partition', required=True, type=HivePartitionWriter.from_spec)
     return parser
 
 
-def load_wikiid_to_domain_name_map(spark: SparkSession, table_name: str) -> DataFrame:
-    """Load the set of active public wiki databases and their domain name"""
+def filter_wikiid_to_domain_name_map(df: DataFrame) -> DataFrame:
+    """Filter to the set of active public wiki databases and their domain name"""
     return (
-        spark.read.table(table_name)
+        df
         # We can only query live wikis
         .where(F.col('status') == 'open')
         # We can only query public wikis
@@ -66,8 +67,8 @@ def fetch_namespaces(
 
 
 def main(
-    canonical_wikis_table: str,
-    output_table: str
+    canonical_wikis_partition: HivePartition,
+    output_partition: HivePartitionWriter
 ) -> int:
     spark = SparkSession.builder.getOrCreate()
 
@@ -76,23 +77,16 @@ def main(
         T.StructField('elastic_index', T.StringType()),
     ])))
 
-    (
-        load_wikiid_to_domain_name_map(
-            spark, canonical_wikis_table)
+    df = (
+        filter_wikiid_to_domain_name_map(
+            canonical_wikis_partition.read(spark))
         .withColumn('ns', F.explode(fetch_namespace_udf(F.col('domain_name'))))
         # The dataset is downright miniscule, perhaps 800 wikis and 50 namespaces
         # each. The whole thing should be done with a single partition.
         .coalesce(1)
-        .registerTempTable('namespace_map_to_write')
     )
 
-    spark.sql("""
-        INSERT OVERWRITE TABLE {table}
-        SELECT database_code, ns.namespace_id, ns.elastic_index
-        FROM namespace_map_to_write
-    """.format(
-        table=output_table))
-
+    output_partition.overwrite_with(df)
     return 0
 
 

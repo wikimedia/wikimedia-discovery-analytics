@@ -17,25 +17,28 @@ This is over aggressive for full punctuation queries, but otherwise does a
 reasonable job of capturing query intent. The exact queries issued along with
 the number of times each was seen is reported in the queries column.
 """
-
 from argparse import ArgumentParser
 from collections import Counter
 import logging
 from pyspark.sql import (
     Column, DataFrame, SparkSession, Window,
     functions as F, types as T)
-from typing import Mapping, Optional, Sequence, Tuple
+from typing import Sequence, Tuple
+
+from wmf_spark import HivePartition, HivePartitionWriter
 
 
 def arg_parser() -> ArgumentParser:
     parser = ArgumentParser()
     parser.add_argument(
-        '--search-satisfaction-table', default='event.searchsatisfaction',
+        '--search-satisfaction-partition', default='event.searchsatisfaction/', type=HivePartition.from_spec,
         help='Eventbus table containing SearchSatisfaction events')
     parser.add_argument(
         '--num-queries', default=10000, type=int,
         help='The number of queries to report per wiki')
-    parser.add_argument('--output-partition', required=True)
+    parser.add_argument(
+        '--output-partition', required=True, type=HivePartitionWriter.from_spec,
+        help='Output partition in hive partition format: mydb.mytable/k1=v1/k2=v2')
     return parser
 
 
@@ -108,59 +111,17 @@ def extract_head_queries(
     )
 
 
-def parse_partition_spec(spec: str) -> Tuple[str, Optional[Mapping[str, str]]]:
-    if '/' not in spec:
-        return spec, None
-    pieces = spec.split('/')
-    table_name = pieces[0]
-    partitions = dict(kv_pair.split('=', 1) for kv_pair in pieces[1:])  # type: ignore
-    return table_name, partitions
-
-
-def insert_into(df: DataFrame, spec: str) -> None:
-    table_name, partitioning = parse_partition_spec(spec)
-    if partitioning is None:
-        raise Exception('Invalid partition spec, no partitioning provided')
-    for k, v in partitioning.items():
-        if k in df.columns:
-            raise Exception('Partition key {} overwriting dataframe column'.format(k))
-        df = df.withColumn(k, F.lit(v))
-
-    # In testing spark put values in the wrong columns of the table unless
-    # we made the order exactly the same.
-    columns = df.sql_ctx.read.table(table_name).columns
-    if set(columns) != set(df.columns):
-        raise Exception(
-            'Mismatched columns, provided {} but found {} in target table'.format(
-                list(columns), list(df.columns)))
-
-    # insertInto is position based insert, align with loaded schema
-    df = df.select(*columns)
-
-    # Required for insert_into to only overwrite the partitions being
-    # written to and not the whole table.
-    df.sql_ctx.setConf('spark.sql.sources.partitionOverwriteMode', 'dynamic')
-    # Required for insert_into to perform partition selection on per-row
-    # basis. We can't specify anything more strict from spark. Also there
-    # is no way to tell spark we are writing a single partition, we have to
-    # let it choose per-row.
-    df.sql_ctx.setConf('hive.exec.dynamic.partition.mode', 'nonstrict')
-    # Testing showed .mode('overwrite') to be ignored, this only appropriately
-    # clears existing partitions when passing overwrite=True directly to the
-    # insertInto method.
-    df.write.insertInto(table_name, overwrite=True)
-
-
 def main(
-    search_satisfaction_table: str,
+    search_satisfaction_partition: HivePartition,
     num_queries: int,
-    output_partition: str,
-):
+    output_partition: HivePartitionWriter,
+) -> int:
     spark = SparkSession.builder.getOrCreate()
-    df_in = spark.read.table(search_satisfaction_table)
+    df_in = search_satisfaction_partition.read(spark)
     df_out = extract_head_queries(df_in, num_queries) \
         .repartition(10)
-    insert_into(df_out, output_partition)
+    output_partition.overwrite_with(df_out)
+    return 0
 
 
 if __name__ == "__main__":

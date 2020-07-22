@@ -111,14 +111,3 @@ def test_norm_query(spark, source, expected):
     )
 
     assert norm_query == expected
-
-
-@pytest.mark.parametrize('spec,expect_table_name,expect_partitioning', [
-    ('mydb.mytable/key=value', 'mydb.mytable', {'key': 'value'}),
-    ('pytest/date=1234/wiki=abc', 'pytest', {'date': '1234', 'wiki': 'abc'}),
-    ('qqq/k1=v1/k2=v2/k3=v3', 'qqq', {'k1': 'v1', 'k2': 'v2', 'k3': 'v3'})
-])
-def test_parse_partition_spec(spec, expect_table_name, expect_partitioning):
-    table_name, partitioning = fulltext_head_queries.parse_partition_spec(spec)
-    assert table_name == expect_table_name
-    assert partitioning == expect_partitioning

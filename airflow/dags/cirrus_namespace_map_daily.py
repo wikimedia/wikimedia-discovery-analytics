@@ -51,10 +51,13 @@ with DAG(
         spark_submit_env_vars={
             'PYSPARK_PYTHON': 'python3.7',
         },
+        py_files=REPO_PATH + '/spark/wmf_spark.py',
         application=REPO_PATH + '/spark/fetch_cirrussearch_namespace_map.py',
         application_args=[
-            '--canonical-wikis-table', dag_conf('table_canonical_wikis'),
-            '--output-table', dag_conf('table_output'),
+            # The trailing '/' indicates they are unpartitioned tables.
+            # Current convention is that config specifys tables, DAGS specify partitions.
+            '--canonical-wikis-partition', dag_conf('table_canonical_wikis') + '/',
+            '--output-partition', dag_conf('table_output') + '/',
         ]
     )
 

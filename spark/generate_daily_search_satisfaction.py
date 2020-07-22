@@ -12,6 +12,7 @@ except ImportError:
     from pyspark.sql import SparkSession
 
 from pyspark.sql import DataFrame, functions as F, types as T
+from wmf_spark import HivePartition, HivePartitionWriter
 
 # Backport from spark 2.4.0
 DataFrame.transform = lambda self, fn: fn(self)  # type: ignore
@@ -19,12 +20,15 @@ DataFrame.transform = lambda self, fn: fn(self)  # type: ignore
 
 def arg_parser() -> ArgumentParser:
     parser = ArgumentParser()
-    parser.add_argument('--cirrus-table', required=True)
-    parser.add_argument('--satisfaction-table', required=True)
-    parser.add_argument('--output-table', required=True)
-    parser.add_argument('--year', required=True)
-    parser.add_argument('--month', required=True)
-    parser.add_argument('--day', required=True)
+    parser.add_argument(
+        '--cirrus-partition', required=True, type=HivePartition.from_spec,
+        help='One day of CirrusSearch backend request logs')
+    parser.add_argument(
+        '--satisfaction-partition', required=True, type=HivePartition.from_spec,
+        help='One day of SearchSatisfaction eventgate events')
+    parser.add_argument(
+        '--output-partition', required=True, type=HivePartitionWriter.from_spec,
+        help='Destination for results')
     return parser
 
 
@@ -239,62 +243,19 @@ def extract_cirrus_suggestions(df):
     )
 
 
-def select_expr(df, table_expr, partition_spec):
-    out = df.sql_ctx.sparkSession.read.table(table_expr)
-    for col_name in partition_spec.keys():
-        out = out.drop(col_name)
-    # spark columns are case insensitive
-    expect_cols = [name.lower() for name in out.columns]
-    found_cols = [name.lower() for name in df.columns]
-    if set(expect_cols) != set(found_cols):
-        raise Exception('Unexpected columns: {} != {}'.format(
-            sorted(expect_cols), sorted(found_cols)))
-    return ','.join(out.columns)
-
-
-def write_partition(df, table_expr, partition_spec):
-    if '.' not in table_expr:
-        raise Exception("both database and table must be provided")
-    output_db, output_table = table_expr.split('.', 1)
-    temp_table = output_table + '_write_partition'
-    df.createOrReplaceTempView(temp_table)
-
-    sql = """
-        INSERT OVERWRITE TABLE {table} PARTITION({partition_expr})
-        SELECT {select_expr} FROM {temp_table}
-    """.format(
-        table=table_expr,
-        select_expr=select_expr(df, table_expr, partition_spec),
-        partition_expr=','.join(
-            '{}="{}"'.format(k, v) for k, v in partition_spec.items()),
-        temp_table=temp_table)
-
-    spark = df.sql_ctx.sparkSession
-    spark.sql(sql).collect()
-    spark.catalog.dropTempView(temp_table)
-
-
 def main(
-    cirrus_table: str,
-    satisfaction_table: str,
-    output_table: str,
-    year: str,
-    month: str,
-    day: str
+    cirrus_partition: HivePartition,
+    satisfaction_partition: HivePartition,
+    output_partition: HivePartitionWriter,
 ) -> int:
     spark = SparkSession.builder.getOrCreate()
-
-    partition_cond = (
-        (F.col('year') == year)
-        & (F.col('month') == month)
-        & (F.col('day') == day))
 
     # We need this to lookup which searchToken gave a query suggestion and
     # give it credit for the clickthrough.
     # TODO: Produce an event against the old searchToken directly using the
     # referer instead of having to find it by joining cirrus logs.
     df_cirrus_sugg = extract_cirrus_suggestions(
-        spark.read.table(cirrus_table).where(partition_cond))
+        cirrus_partition.read(spark))
 
     # TODO: What about sessions that cross daily boundaries? We would need
     # to determine which sessions are unfinished and put those in a second
@@ -302,8 +263,7 @@ def main(
     # report stats across daily boundaries incorrectly.
 
     df_events = (
-        spark.read.table(satisfaction_table)
-        .where(partition_cond)
+        satisfaction_partition.read(spark)
         # autocomplete doesn't make sense on a per-search basis. Needs
         # separate session + page based events.
         .where(F.col('event.source') == 'fulltext')
@@ -319,11 +279,7 @@ def main(
 
     # Our daily dataset is tiny due to sampling at the source,
     # no need for multiple partitions.
-    write_partition(df.repartition(1), output_table, {
-        'year': year,
-        'month': month,
-        'day': day,
-    })
+    output_partition.overwrite_with(df.repartition(1))
     return 0
 
 

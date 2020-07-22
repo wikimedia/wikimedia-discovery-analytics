@@ -15,6 +15,8 @@ from typing import Mapping, Sequence, Tuple
 import dns.resolver
 from pyspark.sql import SparkSession, DataFrame, functions as F
 
+from wmf_spark import HivePartitionWriter
+
 
 # These wikis dont seem to load properly, and are very special case wikis
 EXCLUDE_WIKIS = {'labswiki', 'labtestwiki'}
@@ -34,13 +36,10 @@ def arg_parser() -> ArgumentParser:
         '--dblists', required=True, type=csv,
         help='csv of mediawiki-config s*.dblist files to source wiki to shard mapping from')
     parser.add_argument(
-        '--date', required=True, type=date,
-        help='Date to use for output table partition specification')
-    parser.add_argument(
         '--query', required=True,
         help='SQL query to run against analytics replicas')
     parser.add_argument(
-        '--output-table', required=True,
+        '--output-partition', required=True, type=HivePartitionWriter.from_spec,
         help='Hive table to write query results to')
     parser.add_argument(
         '--num-output-partitions', type=int, default=20,
@@ -168,39 +167,11 @@ def union_all_df(dfs: Sequence[DataFrame]) -> DataFrame:
             dfs[0].schema)
 
 
-def write_partition(
-    df: DataFrame,
-    output_table: str,
-    partition_spec: Mapping[str, str],
-) -> None:
-    for k, v in partition_spec.items():
-        df = df.withColumn(k, F.lit(v))
-    expect_schema = df.sql_ctx.read.table(output_table).schema
-    if set(df.schema.names) != set(expect_schema.names):
-        raise ValueError('Schemas do not have matching names: {} != {}'.format(df.schema.names, expect_schema.names))
-
-    df.createTempView('tmp_output_df')
-    insert_stmt = """
-        INSERT OVERWRITE TABLE {table}
-        PARTITION({partition_stmt})
-        SELECT {select_columns}
-        FROM tmp_output_df
-    """.format(
-        table=output_table,
-        partition_stmt=','.join('{}={}'.format(k, v) for k, v in partition_spec.items()),
-        # choose field names from expected table schema
-        # to ensure same ordering
-        select_columns=','.join(field for field in expect_schema.names if field not in partition_spec))
-
-    df.sql_ctx.sql(insert_stmt)
-
-
 def main(
     mysql_defaults_file: str,
     dblists: Sequence[str],
-    date: datetime,
     query: str,
-    output_table: str,
+    output_partition: HivePartitionWriter,
     num_output_partitions: int
 ) -> int:
     dbname_mapping = get_mediawiki_section_dbname_mapping(dblists)
@@ -219,15 +190,7 @@ def main(
     df_out = union_all_df(per_wiki_dfs) \
         .repartition(num_output_partitions)
 
-    write_partition(
-        df=df_out,
-        output_table=output_table,
-        partition_spec={
-            'year': str(date.year),
-            'month': str(date.month),
-            'day': str(date.day),
-        })
-
+    output_partition.overwrite_with(df_out)
     return 0
 
 

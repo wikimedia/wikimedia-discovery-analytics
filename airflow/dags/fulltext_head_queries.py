@@ -55,9 +55,10 @@ with DAG(
         spark_submit_env_vars={
             'PYSPARK_PYTHON': 'python3.7',
         },
+        py_files=REPO_PATH + '/spark/wmf_spark.py',
         application=REPO_PATH + '/spark/fulltext_head_queries.py',
         application_args=[
-            '--search-satisfaction-table', dag_conf('table_search_satisfaction'),
+            '--search-satisfaction-partition', dag_conf('table_search_satisfaction') + '/',
             '--num-queries', dag_conf('num_queries'),
             '--output-partition', output_partition_spec,
         ])

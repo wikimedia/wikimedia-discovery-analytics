@@ -22,6 +22,7 @@ from typing import cast, Callable, Mapping, Optional, Sequence, Set
 from pyspark.sql import (
     SparkSession, Column, DataFrame, Row, Window,
     functions as F, types as T)
+from wmf_spark import HivePartition, HivePartitionTimeRange, HivePartitionWriter
 
 
 # Probabilities need to be expressed as an integer to integrate into the
@@ -33,27 +34,6 @@ SCALE_FACTOR = 1000
 # If no threshold is available the prediction must have at least
 # this value to be emitted
 DEFAULT_THRESHOLD = 0.9
-
-
-def hourly_partition_range(start_dt: datetime, end_dt: datetime) -> Column:
-    """Boolean condition for hourly partitions within period"""
-    row_date_str = F.concat(
-        F.col('year'), F.lit('-'),
-        F.lpad(F.col('month'), 2, '0'), F.lit('-'),
-        F.lpad(F.col('day'), 2, '0'), F.lit(' '),
-        F.lpad(F.col('hour'), 2, '0'), F.lit(':00:00'))
-    row_date = F.unix_timestamp(row_date_str, 'yyyy-MM-dd HH:mm:ss')
-
-    start_cond = row_date >= start_dt.timestamp()
-    end_cond = row_date < end_dt.timestamp()
-    return start_cond & end_cond
-
-
-def daily_partition(dt: datetime) -> Column:
-    """Boolean condition for single daily partition"""
-    return (F.col('year') == dt.year) \
-        & (F.col('month') == dt.month) \
-        & (F.col('day') == dt.day)
 
 
 def make_stringify_prediction(
@@ -231,17 +211,11 @@ def extract_prediction(
 
 
 def load_mediawiki_revision_score(
-    df: DataFrame, prediction: str,
-    start_date: datetime, end_date: datetime,
+    df: DataFrame, prediction: str
 ) -> DataFrame:
     """Load probabilities from mediawiki/revision/score events"""
-    df_filtered = (
-        df
-        # Limit the input dataset to the time range requested
-        .where(hourly_partition_range(start_date, end_date))
-        # Only take predictions that involve the model we care about
-        .where(F.col('scores')[prediction].isNotNull())
-    )
+    # Only take predictions that involve the model we care about
+    df_filtered = df.where(F.col('scores')[prediction].isNotNull())
 
     # A given page may have multiple predictions in the time
     # span. Keep only the most recent prediction per page
@@ -259,8 +233,7 @@ def load_mediawiki_revision_score(
 
 
 def load_ores_scores_export(
-    df: DataFrame, prediction: str,
-    start_date: datetime, end_date: datetime
+    df: DataFrame, prediction: str
 ) -> DataFrame:
     """Load probabilities from bulk export
 
@@ -269,17 +242,8 @@ def load_ores_scores_export(
     exported and a single invocation of this script should prepare
     the export for shipping to elasticsearch.
     """
-    # This is of course odd, but it seemed easier than defining
-    # some partition specification abstraction.
-    if start_date != end_date:
-        raise Exception("Bulk import cannot accept time range")
-    return (
-        df
-        # Limit the input dataset to the time range requested
-        .where(daily_partition(start_date))
-        # Verify we have the expected fields
-        .select('wikiid', 'page_id', 'page_namespace', 'probability')
-    )
+    # Verify we have the expected fields
+    return df.select('wikiid', 'page_id', 'page_namespace', 'probability')
 
 
 INPUT_KINDS = {
@@ -292,24 +256,23 @@ def arg_parser() -> ArgumentParser:
     def date(val: str) -> datetime:
         return datetime.strptime(val, '%Y-%m-%d')
 
+    def json_path(file_path: str) -> Mapping:
+        with open(file_path, 'r') as f:
+            return json.load(f)
+
     parser = ArgumentParser()
     parser.add_argument(
-        '--input-table', required=True,
-        help='Table containing prediction inputs')
+        '--input-partition', required=True, type=HivePartitionTimeRange.from_spec,
+        help='Specification for input partition(s). Exact format depends '
+             'on the --input-kind specified.')
     parser.add_argument(
         '--input-kind', required=True, choices=list(INPUT_KINDS.keys()),
         help='The format of the input to read')
     parser.add_argument(
-        '--output-table', required=True,
-        help='Table to write prepared predictions to')
+        '--output-partition', required=True, type=HivePartitionWriter.from_spec,
+        help='Table and partition to write prepared predictions to')
     parser.add_argument(
-        '--start-date', type=date, required=True,
-        help='Inclusive date to start reading input from')
-    parser.add_argument(
-        '--end-date', type=date, required=True,
-        help='Exclusive date to stop reading input from')
-    parser.add_argument(
-        '--thresholds-path', type=str, required=True,
+        '--thresholds-path', dest='thresholds', type=json_path, required=True,
         help='Path to json file containing per-wiki/topic thresholds to apply')
     parser.add_argument(
         '--prediction', required=True,
@@ -318,9 +281,9 @@ def arg_parser() -> ArgumentParser:
         '--alias', default=None, required=False,
         help='Name of prediction column in output table. Model name will be used if not provided.')
     parser.add_argument(
-        '--wikibase-item-table', required=True,
-        help='Table containing export of wikibase_item page props from mw replicas. '
-             'The partition matching start-date will be read.')
+        '--wikibase-item-partition', required=True, type=HivePartition.from_spec,
+        help='Table and partition containing export of wikibase_item '
+             'page props from mw replicas.')
     parser.add_argument(
         '--propagate-from', required=True,
         help='Wiki database name to propagate predictions from.')
@@ -333,33 +296,26 @@ def arg_parser() -> ArgumentParser:
 
 
 def main(
-    input_table: str,
+    input_partition: HivePartitionTimeRange,
     input_kind: str,
-    output_table: str,
-    start_date: datetime,
-    end_date: datetime,
-    thresholds_path: str,
-    prediction: str,
-    alias: str,
-    wikibase_item_table: str,
-    propagate_from: str,
-    num_output_partitions: int,
-) -> int:
-    # Path is expected to contain a two level dict. top level must be
+    output_partition: HivePartitionWriter,
+    # Thresholds is expected to contain a two level dict. top level must be
     # keyed by mediawiki database name, second level must be a mapping
     # from predicted label to minimum acceptable threshold. Unlisted
     # wikis / labels recieve DEFAULT_THRESHOLD
-    with open(thresholds_path, 'rt') as f:
-        thresholds = json.load(f)
-
+    thresholds: Mapping[str, Mapping[str, float]],
+    prediction: str,
+    alias: str,
+    wikibase_item_partition: HivePartition,
+    propagate_from: str,
+    num_output_partitions: int
+) -> int:
     if propagate_from not in thresholds:
         raise Exception('No thresholds provided for propagation wiki, no propagation can occur.')
 
     spark = SparkSession.builder.getOrCreate()
-
     df_in = INPUT_KINDS[input_kind](
-        spark.read.table(input_table),
-        prediction, start_date, end_date)
+        input_partition.read(spark), prediction)
 
     # Find appropriate data, convert into expected formats
     df_predictions = extract_prediction(df_in, prediction, thresholds)
@@ -374,14 +330,9 @@ def main(
 
     # Propagate predictions from wikis we have models to all the other
     # wikis by wikibase_item.
-    df_wikibase_item = (
-        spark.read.table(wikibase_item_table)
-        .where(daily_partition(start_date))
-    )
-
     df_propagated = propagate_by_wbitem(
         df_predictions,
-        df_wikibase_item,
+        wikibase_item_partition.read(spark),
         prediction_col,
         source_wikis=set(thresholds.keys()),
         preferred_wiki=propagate_from)
@@ -389,29 +340,15 @@ def main(
     # Repartition as desired, spark typically has hundreds of partitions but
     # the final outputs may be anywhere from hundreds of MB to dozens of GB
     # depending on the input dataset.
-    df_propagated \
+    df_out = df_propagated \
         .repartition(num_output_partitions) \
-        .createTempView('tmp_revision_score_out')
+        .select(
+            'wikiid',
+            F.col('page_id').cast('int'),
+            F.col('page_namespace').cast('int'),
+            prediction_col)
 
-    # Take care that selected columns must be of the same types and in the same
-    # order as the table. The names used here are not used to align columns with
-    # the table, it is strictly order-based.
-    # TODO: Some sort of helper library code for writing to tables, defining
-    # partition specs from strings (cli args) possibly? Would be nice to not
-    # deal with exact partitioning here.
-    insert_stmt = """
-        INSERT OVERWRITE TABLE {table}
-        PARTITION(year={year}, month={month}, day={day})
-        SELECT wikiid, CAST(page_id AS int), CAST(page_namespace AS int), {prediction}
-        FROM tmp_revision_score_out
-    """.format(
-        table=output_table,
-        year=start_date.year,
-        month=start_date.month,
-        day=start_date.day,
-        prediction=prediction_col)
-
-    spark.sql(insert_stmt)
+    output_partition.overwrite_with(df_out)
     return 0
 
 

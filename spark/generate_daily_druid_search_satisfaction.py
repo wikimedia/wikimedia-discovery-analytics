@@ -12,15 +12,14 @@ except ImportError:
     from pyspark.sql import SparkSession
 
 from pyspark.sql import DataFrame, functions as F
-
-
-# Backport from spark 2.4.0
-DataFrame.transform = lambda df, fn: fn(df)  # type: ignore
+from wmf_spark import HivePartition
 
 
 def arg_parser() -> ArgumentParser:
     parser = ArgumentParser()
-    parser.add_argument('--source-table', default='discovery.search_satisfaction_daily')
+    parser.add_argument(
+        '--source-partition', default='discovery.search_satisfaction_daily',
+        type=HivePartition.from_spec)
     parser.add_argument('--destination-directory', required=True)
     parser.add_argument('--year', required=True, type=int)
     parser.add_argument('--month', required=True, type=int)
@@ -48,39 +47,44 @@ def bucketize(source_col, buckets):
     return agg_cond.otherwise(F.lit('{}+'.format(min_val)))
 
 
-def group_by_excluding(*col_names):
-    def transform(df):
-        group_cols = set(df.columns) - set(col_names)
-        return df.groupBy(*list(group_cols))
-    return transform
+def transform(df_source: DataFrame) -> DataFrame:
+    """Transform search satisfaction dataset into druid dataset
 
-
-def main(
-    source_table: str,
-    destination_directory: str,
-    year: str,
-    month: str,
-    day: str
-) -> int:
-    spark = SparkSession.builder.getOrCreate()
-
-    (
-        spark.read.table(source_table)  # type: ignore
-        .where(F.col('year') == year)
-        .where(F.col('month') == month)
-        .where(F.col('day') == day)
-        .drop('searchSessionId')
+    Reduces precision of dataset to satisfy druid's need for
+    low cardinality data. Pre-aggregates over remaining columns
+    """
+    df = (
+        df_source
+        # Remove columns we don't want to aggregate over later
+        .drop('year', 'month', 'day', 'hour', 'searchSessionId')
         # Replace dt with low-precision hourly dt
         .withColumn('dt', F.concat(
             F.substring(F.col('dt'), 0, len('0000-00-00T00:')),
             F.lit('00:00Z')))
+        # Replace hits with range buckets
         .withColumn('hits_returned', bucketize(F.col('hits_returned'), [
             -1, 0, 1, 2, 5, 10, 20, 50, 100, 1000, 10000, 100000, 1000000
         ]))
-        .drop('year', 'month', 'day', 'hour')
-        .transform(group_by_excluding('sample_multiplier'))
+    )
+
+    return (
+        df
+        # All values should now be low cardinality, take search
+        # session counts over all fields.
+        .groupBy(*list(set(df.columns) - {'sample_multiplier'}))
         .agg(F.count(F.lit(1)).alias('search_count'),
              F.sum(F.col('sample_multiplier')).alias('search_count_norm'))
+    )
+
+
+def main(
+    source_partition: HivePartition,
+    destination_directory: str,
+) -> int:
+    spark = SparkSession.builder.getOrCreate()
+
+    (
+        transform(source_partition.read(spark))
         # The daily output is tiny, no need for a bunch of partitions
         .repartition(1)
         .write
