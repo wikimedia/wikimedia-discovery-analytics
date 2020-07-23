@@ -15,3 +15,9 @@ checks:
         timeout: 300
         group: airflow
         command: build_deployment_virtualenvs.sh
+    airflow_variables:
+        type: script
+        stage: promote
+        timeout: 300
+        group: airflow
+        command: import_airflow_variables.sh

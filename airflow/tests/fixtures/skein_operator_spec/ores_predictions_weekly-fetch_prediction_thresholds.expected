@@ -15,7 +15,7 @@
         "files": {
             "fetch_ores_thresholds.py": {
                 "size": 0,
-                "source": "file:///path/to/wikimedia/discovery/analytics/repo/spark/fetch_ores_thresholds.py",
+                "source": "file:///srv/deployment/wikimedia/discovery/analytics/spark/fetch_ores_thresholds.py",
                 "timestamp": 0,
                 "type": "FILE",
                 "visibility": "APPLICATION"

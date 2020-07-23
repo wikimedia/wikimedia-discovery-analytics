@@ -1,5 +1,0 @@
-{
-    "num_queries": 10000,
-    "output_table": "discovery.fulltext_head_queries",
-    "table_search_satisfaction": "event.searchsatisfaction"
-}

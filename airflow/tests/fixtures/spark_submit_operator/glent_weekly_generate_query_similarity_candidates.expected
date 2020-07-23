@@ -24,7 +24,7 @@
     "airflow-spark",
     "--queue",
     "root.default",
-    "/path/to/wikimedia/discovery/analytics/repo/artifacts/glent-0.2.2-jar-with-dependencies.jar",
+    "/srv/deployment/wikimedia/discovery/analytics/artifacts/glent-0.2.2-jar-with-dependencies.jar",
     "m1run.candidates",
     "--input-table",
     "glent.m1prep",

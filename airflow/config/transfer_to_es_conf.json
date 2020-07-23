@@ -1,0 +1,8 @@
+{
+    "transfer_to_es_conf": {
+        "base_output_path": "hdfs://analytics-hadoop/wmf/data/discovery/transfer_to_es",
+        "table_canonical_wikis": "canonical_data.wikis",
+        "table_namespace_map": "discovery.cirrus_namespace_index_map",
+        "swift_container": "search_popularity_score"
+    }
+}

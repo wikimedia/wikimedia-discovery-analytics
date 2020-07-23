@@ -1,0 +1,10 @@
+{
+    "search_satisfaction_conf": {
+        "table_search_events": "event.SearchSatisfaction",
+        "table_search_logs": "event.mediawiki_cirrussearch_request",
+        "table_search_satisfaction": "discovery.search_satisfaction_daily",
+        "druid_datasource": "search_satisfaction_daily",
+        "druid_spec_template": "/druid/search_satisfaction_spec.json.template",
+        "production_username": "analytics-search"
+    }
+}

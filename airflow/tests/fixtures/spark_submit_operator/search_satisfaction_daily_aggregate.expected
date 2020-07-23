@@ -11,7 +11,7 @@
     "airflow-spark",
     "--queue",
     "root.default",
-    "/path/to/wikimedia/discovery/analytics/repo/spark/generate_daily_search_satisfaction.py",
+    "/srv/deployment/wikimedia/discovery/analytics/spark/generate_daily_search_satisfaction.py",
     "--cirrus-table",
     "event.mediawiki_cirrussearch_request",
     "--satisfaction-table",

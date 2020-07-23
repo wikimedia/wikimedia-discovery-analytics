@@ -1,0 +1,14 @@
+Each file here must be a json dict containing variables to import to the
+production instance. A file may define one or more variables.  Convention is
+for each independant unit (whatever that is) to have it's own .json file
+defining the set of related variables.
+
+Variables defined here will be imported to the production instance when scap
+deployment promotes a deployment to active. There is room for race conditions
+here, If variables are changing in a non-compatible way the relevant dags must
+be paused while the deployment is run, and then re-enabled (future work may
+stop the scheduler or some other approach during deployment to avoid races).
+
+No affordance is provided for deleting unused variables from the production
+installation. An operator (typically human) must clean up the unused variables
+post-deployment.

@@ -13,7 +13,7 @@
     "airflow-spark",
     "--queue",
     "root.default",
-    "/path/to/wikimedia/discovery/analytics/repo/spark/fetch_cirrussearch_namespace_map.py",
+    "/srv/deployment/wikimedia/discovery/analytics/spark/fetch_cirrussearch_namespace_map.py",
     "--canonical-wikis-table",
     "canonical_data.wikis",
     "--output-table",

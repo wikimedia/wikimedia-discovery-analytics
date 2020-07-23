@@ -11,7 +11,7 @@
     "airflow-spark",
     "--queue",
     "root.default",
-    "/path/to/wikimedia/discovery/analytics/repo/spark/generate_daily_druid_search_satisfaction.py",
+    "/srv/deployment/wikimedia/discovery/analytics/spark/generate_daily_druid_search_satisfaction.py",
     "--source-table",
     "discovery.search_satisfaction_daily",
     "--destination-directory",

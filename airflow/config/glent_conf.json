@@ -1,0 +1,19 @@
+{
+    "glent_conf": {
+        "table_canonical_wikis": "canonical_data.wikis",
+        "table_cirrus_event": "event.mediawiki_cirrussearch_request",
+        "table_m0_prep": "glent.m0prep",
+        "table_m1_prep": "glent.m1prep",
+        "table_suggestions": "glent.suggestions",
+        "base_temp_dir": "hdfs://analytics-hadoop/tmp",
+        "max_n_queries_per_ident": 2000,
+        "max_edit_dist_sugg": 3,
+        "max_norm_edit_dist": 1.5,
+        "min_hits_diff": 100,
+        "min_hits_perc_diff": 10,
+        "sugg_max_ts_diff": "PT120S",
+        "swift_auth_file": "hdfs://analytics-hadoop/user/analytics/swift_auth_analytics_admin.env",
+        "swift_delete_after_days": 7,
+        "swift_container": "search_glent"
+    }
+}

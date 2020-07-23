@@ -11,7 +11,7 @@
     "airflow-spark",
     "--queue",
     "root.default",
-    "/path/to/wikimedia/discovery/analytics/repo/spark/prepare_mw_rev_score.py",
+    "/srv/deployment/wikimedia/discovery/analytics/spark/prepare_mw_rev_score.py",
     "--input-table",
     "event.mediawiki_revision_score",
     "--input-kind",

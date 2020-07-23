@@ -1,0 +1,6 @@
+{
+    "cirrus_namespace_map_daily_conf": {
+        "table_canonical_wikis": "canonical_data.wikis",
+        "table_output": "discovery.cirrus_namespace_index_map"
+    }
+}

@@ -31,8 +31,14 @@ def fixture_dir():
     return os.path.join(os.path.dirname(__file__), 'fixtures')
 
 
+@pytest.fixture(scope='session')
+def airflow_variables_dir():
+    return os.path.realpath(
+        os.path.join(os.path.dirname(__file__), '../config'))
+
+
 @pytest.fixture(scope='session', autouse=True)
-def configure_airflow_variables(fixture_dir):
+def configure_airflow_variables(airflow_variables_dir):
     """Global airflow variable configuration for tests.
 
     This configuration is written to the airflow database, and as
@@ -40,17 +46,9 @@ def configure_airflow_variables(fixture_dir):
     use Variable.set, as the state crosses test boundaries. See
     mock_airflow_variables.
     """
-    for path in glob(os.path.join(fixture_dir, 'variables', '*')):
-        with open(path, 'r') as f:
-            content = f.read().strip()
-        name, ext = os.path.splitext(os.path.basename(path))
-        if ext == '.json':
-            # As long as we are here, verify all json is valid json.
-            try:
-                json.loads(content)
-            except ValueError:
-                raise ValueError("Fixture does not contain valid json: " + path)
-        Variable.set(name, content)
+    from airflow.bin.cli import import_helper
+    for path in glob(os.path.join(airflow_variables_dir, '*.json')):
+        import_helper(path)
 
 
 def on_disk_fixture(path):

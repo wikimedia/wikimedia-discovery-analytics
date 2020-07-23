@@ -9,7 +9,7 @@
     "airflow-spark",
     "--queue",
     "root.default",
-    "/path/to/wikimedia/discovery/analytics/repo/spark/convert_to_esbulk.py",
+    "/srv/deployment/wikimedia/discovery/analytics/spark/convert_to_esbulk.py",
     "--namespace-map-table",
     "discovery.cirrus_namespace_index_map",
     "--output",
