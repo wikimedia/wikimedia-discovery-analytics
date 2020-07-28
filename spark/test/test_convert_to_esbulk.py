@@ -172,3 +172,40 @@ def test_prepare_happy_path(
     assert results[1].wikiid == 'testwiki'
     assert results[1].page_id == 43
     assert results[1].elastic_index == 'testwiki_general'
+
+
+@pytest.mark.parametrize('is_valid,msg,config', [
+    (False, "must define at least one table", []),
+    (True, "happy path", [convert_to_esbulk.Table(
+        table_name='pytest_table',
+        join_on=convert_to_esbulk.JOIN_ON_WIKIID,
+        update_kind=convert_to_esbulk.UPDATE_ALL,
+        fields=[
+            convert_to_esbulk.EqualsField(field='field', alias='alias')
+        ]
+    )]),
+    (False, "table must have fields", [convert_to_esbulk.Table(
+        table_name='pytest_table',
+        join_on=convert_to_esbulk.JOIN_ON_WIKIID,
+        update_kind=convert_to_esbulk.UPDATE_ALL,
+        fields=[]
+    )]),
+    (False, "update_kind must be valid", [convert_to_esbulk.Table(
+        table_name='pytest_table',
+        join_on=convert_to_esbulk.JOIN_ON_WIKIID,
+        update_kind='does-not-exist',
+        fields=[
+            convert_to_esbulk.EqualsField(field='field', alias='alias'),
+        ]
+    )]),
+    (False, "join_on must be valid", [convert_to_esbulk.Table(
+        table_name='pytest_table',
+        join_on='does-not-exist',
+        update_kind=convert_to_esbulk.UPDATE_ALL,
+        fields=[
+            convert_to_esbulk.EqualsField(field='field', alias='alias'),
+        ]
+    )]),
+])
+def test_validate_config(is_valid, msg, config):
+    assert is_valid == convert_to_esbulk.validate_config(config), msg

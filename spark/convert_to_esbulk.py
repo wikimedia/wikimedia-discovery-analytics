@@ -176,7 +176,12 @@ def validate_config(config: Sequence[Table]) -> bool:
     particularly around fields with the same name from multiple sources having
     equivalent configuration.
     """
+    if len(config) == 0:
+        logging.critical('Empty configuration supplied!')
+        return False
+
     seen: Set[str] = set()
+    is_ok = True
     for table in config:
         logging.info('Validating configuration for table %s', table.table_name)
         if table.join_on not in ('wikiid', 'project'):
@@ -184,6 +189,9 @@ def validate_config(config: Sequence[Table]) -> bool:
             is_ok = False
         if table.update_kind not in UPDATE_KINDS:
             logging.critical('Unknown update_kind of %s', table.update_kind)
+            is_ok = False
+        if len(table.fields) == 0:
+            logging.critical('No fields defined for table')
             is_ok = False
         for field in table.fields:
             if field.alias in seen:
