@@ -110,7 +110,7 @@ with DAG(
             # Intentionally excluded:
             # - cirrus_namespace_index_map: Not private, not partitioned
             # - wikibase_rdf: Managed somewhere else
-            # - top_queries: Handled below with shorter allowed lifetime
+            # - fulltext_head_queries: Handled below with shorter allowed lifetime
         ])
     ) >> complete
 
@@ -118,5 +118,5 @@ with DAG(
         task_id='drop_discovery_short_term_partitions',
         older_than_days=6,  # Data derived from 84 day tables
         database='discovery',
-        tables='top_queries'
+        tables='fulltext_head_queries'
     ) >> complete
