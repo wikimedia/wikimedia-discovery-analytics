@@ -154,7 +154,6 @@ def test_bash_commandline_against_fixture(task, fixture_factory, mocker):
 
     command = task.bash_command
     # Record explicit env as well
-    assert task.env is not None
     if task.env is not None:
         env_str = ' '.join('{}={}'.format(k, v) for k, v in task.env.items())
         command = env_str + ' ' + command

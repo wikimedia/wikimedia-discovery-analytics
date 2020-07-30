@@ -19,9 +19,10 @@ def refinery_drop_hive_partitions(
     # Refinery isn't packaged like our own python, so it's hard
     # to invoke remotely with skein. Simply execute it locally
     # with a venv that has the appropriate dependencies.
-    env = {'PYTHONPATH': ANALYTICS_REFINERY_PATH + '/python/'}
-    executable = REPO_PATH + '/environments/refinery/venv/bin/python'
+    executable = '/usr/bin/env'
     arguments = [
+        'PYTHONPATH={}/python/'.format(ANALYTICS_REFINERY_PATH),
+        REPO_PATH + '/environments/refinery/venv/bin/python',
         ANALYTICS_REFINERY_PATH + '/bin/refinery-drop-hive-partitions',
         '--verbose',
         '--database=' + database,
@@ -35,7 +36,7 @@ def refinery_drop_hive_partitions(
     safe_arguments = ' '.join(shlex.quote(x) for x in arguments)
     bash_command = executable + ' ' + safe_arguments
 
-    return BashOperator(bash_command=bash_command, env=env, *args, **kwargs)
+    return BashOperator(bash_command=bash_command, *args, **kwargs)
 
 
 # Default kwargs for all Operators
