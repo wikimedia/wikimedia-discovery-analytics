@@ -16,26 +16,6 @@ from pyspark.sql import DataFrame, functions as F, types as T
 DataFrame.transform = lambda self, fn: fn(self)  # type: ignore
 
 
-def backfill_sample_multiplier(df):
-    """Populate sample multiplier before it was directly logged"""
-    cond = F
-    if 'sampleMultiplier' in df.schema['event'].dataType.fieldNames():
-        mult = F.col('event.sampleMultiplier')
-        cond = cond.when(mult.isNotNull(), mult)
-
-    # 2019-07-25T13:04Z: all wikis to 1.34.0-wmf.15
-    # All sampling rates to 1:8
-    cond = cond.when(F.col('dt') > F.lit('2019-07-25T13:05:00Z'), F.lit(8))
-
-    # 2019-05-16T13:04Z: all wikis to 1.34.0-wmf.5
-    # enwiki: 1:40, everyone else: 1:10
-    # Not expecting to consume any data prior to 2019-05-16, so not handling
-    # prior sampling rates.
-    cond = cond.when(F.col('wiki') == 'enwiki', F.lit(40)).otherwise(F.lit(10))
-
-    return df.withColumn('sample_multiplier', cond.cast(T.FloatType()))
-
-
 def explode_and_flatten_list_of_structs(col_name):
     def transform(df):
         assert 'exploded' not in df.columns
@@ -222,7 +202,6 @@ def transform_sessions(df):
 
     return (
         df
-        .transform(backfill_sample_multiplier)
         .groupBy('wiki', 'event.searchSessionId')
         .agg(*agg_cols, *geo_cols, *ua_cols)
         .withColumn('dym_events', udf(F.col('events')))
