@@ -8,6 +8,7 @@ host/port for mariadb replicas
 from argparse import ArgumentParser
 from configparser import ConfigParser
 from datetime import datetime
+import logging
 import sys
 from typing import Mapping, Sequence, Tuple
 
@@ -17,6 +18,34 @@ from pyspark.sql import SparkSession, DataFrame, functions as F
 
 # These wikis dont seem to load properly, and are very special case wikis
 EXCLUDE_WIKIS = {'labswiki', 'labtestwiki'}
+
+
+def arg_parser() -> ArgumentParser:
+    def date(val: str) -> datetime:
+        return datetime.strptime(val, '%Y-%m-%d')
+
+    def csv(val: str) -> Sequence[str]:
+        return val.split(',')
+
+    parser = ArgumentParser()
+    parser.add_argument(
+        '--mysql-defaults-file', default='/etc/mysql/conf.d/analytics-research-client.cnf')
+    parser.add_argument(
+        '--dblists', required=True, type=csv,
+        help='csv of mediawiki-config s*.dblist files to source wiki to shard mapping from')
+    parser.add_argument(
+        '--date', required=True, type=date,
+        help='Date to use for output table partition specification')
+    parser.add_argument(
+        '--query', required=True,
+        help='SQL query to run against analytics replicas')
+    parser.add_argument(
+        '--output-table', required=True,
+        help='Hive table to write query results to')
+    parser.add_argument(
+        '--num-output-partitions', type=int, default=20,
+        help='Number of partitions to write to hdfs. Estimate value based on 100MB per partition')
+    return parser
 
 
 def _get_mediawiki_section_dbname_mapping(
@@ -166,61 +195,43 @@ def write_partition(
     df.sql_ctx.sql(insert_stmt)
 
 
-def main(raw_args: Sequence[str]) -> int:
-    def date(val: str) -> datetime:
-        return datetime.strptime(val, '%Y-%m-%d')
-
-    def csv(val: str) -> Sequence[str]:
-        return val.split(',')
-
-    parser = ArgumentParser()
-    parser.add_argument(
-        '--mysql-defaults-file', default='/etc/mysql/conf.d/analytics-research-client.cnf')
-    parser.add_argument(
-        '--dblists', required=True, type=csv,
-        help='csv of mediawiki-config s*.dblist files to source wiki to shard mapping from')
-    parser.add_argument(
-        '--date', required=True, type=date,
-        help='Date to use for output table partition specification')
-    parser.add_argument(
-        '--query', required=True,
-        help='SQL query to run against analytics replicas')
-    parser.add_argument(
-        '--output-table', required=True,
-        help='Hive table to write query results to')
-    parser.add_argument(
-        '--num-output-partitions', type=int, default=20,
-        help='Number of partitions to write to hdfs. Estimate value based on 100MB per partition')
-
-    args = parser.parse_args(raw_args)
-
-    dbname_mapping = get_mediawiki_section_dbname_mapping(args.dblists)
-    with open(args.mysql_defaults_file, 'rt') as f:
+def main(
+    mysql_defaults_file: str,
+    dblists: Sequence[str],
+    date: datetime,
+    query: str,
+    output_table: str,
+    num_output_partitions: int
+) -> int:
+    dbname_mapping = get_mediawiki_section_dbname_mapping(dblists)
+    with open(mysql_defaults_file, 'rt') as f:
         user, password = get_mysql_options_file_user_pass(f.read())
     spark = SparkSession.builder.getOrCreate()
     loader = WikiDbQuery(spark, dbname_mapping, user, password)
 
     wikis = [dbname for dbname in dbname_mapping.keys() if dbname not in EXCLUDE_WIKIS]
-    per_wiki_dfs = [loader.query(dbname, args.query) for dbname in wikis]
+    per_wiki_dfs = [loader.query(dbname, query) for dbname in wikis]
 
     # If we don't repartition the output we will have 1 per source database, most
     # of those will be tiny wikis with very few rows, and then a few giants like
     # enwiki will introduce significant skew. Instead randomly repartition into
     # even pieces.
     df_out = union_all_df(per_wiki_dfs) \
-        .repartition(args.num_output_partitions)
+        .repartition(num_output_partitions)
 
     write_partition(
         df=df_out,
-        output_table=args.output_table,
+        output_table=output_table,
         partition_spec={
-            'year': str(args.date.year),
-            'month': str(args.date.month),
-            'day': str(args.date.day),
+            'year': str(date.year),
+            'month': str(date.month),
+            'day': str(date.day),
         })
 
     return 0
 
 
 if __name__ == '__main__':
-    sys.exit(main(sys.argv[1:]))
+    logging.basicConfig(level=logging.INFO)
+    args = arg_parser().parse_args()
+    sys.exit(main(**dict(vars(args))))

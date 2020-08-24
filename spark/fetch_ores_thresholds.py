@@ -30,17 +30,22 @@ Config = NamedTuple('Config', [
 ])
 
 
-def main(raw_args: Optional[Sequence[str]] = None) -> int:
+def arg_parser() -> ArgumentParser:
     parser = ArgumentParser()
     parser.add_argument('--model', required=True)
     parser.add_argument('--output-path', required=True)
     parser.add_argument('--ores-host', default='https://ores.wikimedia.org')
-    args = parser.parse_args(raw_args)
+    return parser
 
-    ores_scores_api = args.ores_host + PATH
 
-    thresholds = get_all_thresholds(args.model, ores_scores_api)
-    with open(args.output_path, 'wt') as f:
+def main(
+    model: str,
+    output_path: str,
+    ores_host: str
+) -> int:
+    ores_scores_api = ores_host + PATH
+    thresholds = get_all_thresholds(model, ores_scores_api)
+    with open(output_path, 'wt') as f:
         json.dump(thresholds, f)
 
     return 0
@@ -105,4 +110,5 @@ def get_all_thresholds(model: str, ores_scores_api: str) -> Mapping[str, Mapping
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    sys.exit(main(sys.argv[1:]))
+    args = arg_parser().parse_args()
+    sys.exit(main(**dict(vars(args))))

@@ -20,13 +20,14 @@ the number of times each was seen is reported in the queries column.
 
 from argparse import ArgumentParser
 from collections import Counter
+import logging
 from pyspark.sql import (
     Column, DataFrame, SparkSession, Window,
     functions as F, types as T)
 from typing import Mapping, Optional, Sequence, Tuple
 
 
-def arg_parser():
+def arg_parser() -> ArgumentParser:
     parser = ArgumentParser()
     parser.add_argument(
         '--search-satisfaction-table', default='event.searchsatisfaction',
@@ -152,21 +153,17 @@ def insert_into(df: DataFrame, spec: str) -> None:
 
 def main(
     search_satisfaction_table: str,
-    num_queries: int, output_partition: str,
+    num_queries: int,
+    output_partition: str,
 ):
-    spark = (
-        SparkSession.builder
-        .getOrCreate()
-    )
-
+    spark = SparkSession.builder.getOrCreate()
     df_in = spark.read.table(search_satisfaction_table)
-
     df_out = extract_head_queries(df_in, num_queries) \
         .repartition(10)
-
     insert_into(df_out, output_partition)
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     args = arg_parser().parse_args()
     main(**dict(vars(args)))

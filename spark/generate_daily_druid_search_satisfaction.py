@@ -1,6 +1,7 @@
 """Extracts one day of json formatted hourly search_satisfaction to be loaded in Druid."""
 
 from argparse import ArgumentParser
+import logging
 import sys
 
 try:
@@ -17,7 +18,7 @@ from pyspark.sql import DataFrame, functions as F
 DataFrame.transform = lambda df, fn: fn(df)  # type: ignore
 
 
-def arg_parser():
+def arg_parser() -> ArgumentParser:
     parser = ArgumentParser()
     parser.add_argument('--source-table', default='discovery.search_satisfaction_daily')
     parser.add_argument('--destination-directory', required=True)
@@ -54,11 +55,17 @@ def group_by_excluding(*col_names):
     return transform
 
 
-def main(source_table, destination_directory, year, month, day):
+def main(
+    source_table: str,
+    destination_directory: str,
+    year: str,
+    month: str,
+    day: str
+) -> int:
     spark = SparkSession.builder.getOrCreate()
 
     (
-        spark.read.table(source_table)
+        spark.read.table(source_table)  # type: ignore
         .where(F.col('year') == year)
         .where(F.col('month') == month)
         .where(F.col('day') == day)
@@ -80,8 +87,10 @@ def main(source_table, destination_directory, year, month, day):
         .option('compression', 'gzip')
         .json(destination_directory)
     )
+    return 0
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     args = arg_parser().parse_args()
     sys.exit(main(**dict(vars(args))))

@@ -15,6 +15,7 @@ structured to be passed on to convert_to_esbulk.py.
 from argparse import ArgumentParser
 from datetime import datetime
 import json
+import logging
 import sys
 from typing import cast, Callable, Mapping, Optional, Sequence, Set
 
@@ -281,21 +282,22 @@ def load_ores_scores_export(
     )
 
 
-def main(raw_args: Sequence[str]) -> int:
+INPUT_KINDS = {
+    'mediawiki_revision_score': load_mediawiki_revision_score,
+    'ores_scores_export': load_ores_scores_export,
+}
+
+
+def arg_parser() -> ArgumentParser:
     def date(val: str) -> datetime:
         return datetime.strptime(val, '%Y-%m-%d')
-
-    input_kinds = {
-        'mediawiki_revision_score': load_mediawiki_revision_score,
-        'ores_scores_export': load_ores_scores_export,
-    }
 
     parser = ArgumentParser()
     parser.add_argument(
         '--input-table', required=True,
         help='Table containing prediction inputs')
     parser.add_argument(
-        '--input-kind', required=True, choices=list(input_kinds.keys()),
+        '--input-kind', required=True, choices=list(INPUT_KINDS.keys()),
         help='The format of the input to read')
     parser.add_argument(
         '--output-table', required=True,
@@ -327,41 +329,54 @@ def main(raw_args: Sequence[str]) -> int:
     parser.add_argument(
         '--num-output-partitions', default=1, type=int,
         help='Number of output partitions to create. Estimate at 100MB per partition.')
+    return parser
 
-    args = parser.parse_args(raw_args)
 
+def main(
+    input_table: str,
+    input_kind: str,
+    output_table: str,
+    start_date: datetime,
+    end_date: datetime,
+    thresholds_path: str,
+    prediction: str,
+    alias: str,
+    wikibase_item_table: str,
+    propagate_from: str,
+    num_output_partitions: int,
+) -> int:
     # Path is expected to contain a two level dict. top level must be
     # keyed by mediawiki database name, second level must be a mapping
     # from predicted label to minimum acceptable threshold. Unlisted
     # wikis / labels recieve DEFAULT_THRESHOLD
-    with open(args.thresholds_path, 'rt') as f:
+    with open(thresholds_path, 'rt') as f:
         thresholds = json.load(f)
 
-    if args.propagate_from not in thresholds:
+    if propagate_from not in thresholds:
         raise Exception('No thresholds provided for propagation wiki, no propagation can occur.')
 
     spark = SparkSession.builder.getOrCreate()
 
-    df_in = input_kinds[args.input_kind](
-        spark.read.table(args.input_table),
-        args.prediction, args.start_date, args.end_date)
+    df_in = INPUT_KINDS[input_kind](
+        spark.read.table(input_table),
+        prediction, start_date, end_date)
 
     # Find appropriate data, convert into expected formats
-    df_predictions = extract_prediction(df_in, args.prediction, thresholds)
+    df_predictions = extract_prediction(df_in, prediction, thresholds)
 
     # The model name may not exactly match the field we index into, provide
     # support rename the exported field.
-    if args.alias is None:
-        prediction_col = args.prediction
+    if alias is None:
+        prediction_col = prediction
     else:
-        prediction_col = args.alias
-        df_predictions = df_predictions.withColumnRenamed(args.prediction, args.alias)
+        prediction_col = alias
+        df_predictions = df_predictions.withColumnRenamed(prediction, alias)
 
     # Propagate predictions from wikis we have models to all the other
     # wikis by wikibase_item.
     df_wikibase_item = (
-        spark.read.table(args.wikibase_item_table)
-        .where(daily_partition(args.start_date))
+        spark.read.table(wikibase_item_table)
+        .where(daily_partition(start_date))
     )
 
     df_propagated = propagate_by_wbitem(
@@ -369,13 +384,13 @@ def main(raw_args: Sequence[str]) -> int:
         df_wikibase_item,
         prediction_col,
         source_wikis=set(thresholds.keys()),
-        preferred_wiki=args.propagate_from)
+        preferred_wiki=propagate_from)
 
     # Repartition as desired, spark typically has hundreds of partitions but
     # the final outputs may be anywhere from hundreds of MB to dozens of GB
     # depending on the input dataset.
     df_propagated \
-        .repartition(args.num_output_partitions) \
+        .repartition(num_output_partitions) \
         .createTempView('tmp_revision_score_out')
 
     # Take care that selected columns must be of the same types and in the same
@@ -390,10 +405,10 @@ def main(raw_args: Sequence[str]) -> int:
         SELECT wikiid, CAST(page_id AS int), CAST(page_namespace AS int), {prediction}
         FROM tmp_revision_score_out
     """.format(
-        table=args.output_table,
-        year=args.start_date.year,
-        month=args.start_date.month,
-        day=args.start_date.day,
+        table=output_table,
+        year=start_date.year,
+        month=start_date.month,
+        day=start_date.day,
         prediction=prediction_col)
 
     spark.sql(insert_stmt)
@@ -401,4 +416,6 @@ def main(raw_args: Sequence[str]) -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))
+    logging.basicConfig(level=logging.INFO)
+    args = arg_parser().parse_args()
+    sys.exit(main(**dict(vars(args))))

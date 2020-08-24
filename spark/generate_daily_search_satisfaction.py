@@ -1,6 +1,7 @@
 from argparse import ArgumentParser
 from collections import defaultdict
 import json
+import logging
 import sys
 
 try:
@@ -14,6 +15,17 @@ from pyspark.sql import DataFrame, functions as F, types as T
 
 # Backport from spark 2.4.0
 DataFrame.transform = lambda self, fn: fn(self)  # type: ignore
+
+
+def arg_parser() -> ArgumentParser:
+    parser = ArgumentParser()
+    parser.add_argument('--cirrus-table', required=True)
+    parser.add_argument('--satisfaction-table', required=True)
+    parser.add_argument('--output-table', required=True)
+    parser.add_argument('--year', required=True)
+    parser.add_argument('--month', required=True)
+    parser.add_argument('--day', required=True)
+    return parser
 
 
 def explode_and_flatten_list_of_structs(col_name):
@@ -262,21 +274,14 @@ def write_partition(df, table_expr, partition_spec):
     spark.catalog.dropTempView(temp_table)
 
 
-def arg_parser():
-    parser = ArgumentParser()
-    parser.add_argument('--cirrus-table', required=True)
-    parser.add_argument('--satisfaction-table', required=True)
-    parser.add_argument('--output-table', required=True)
-    parser.add_argument('--year', required=True)
-    parser.add_argument('--month', required=True)
-    parser.add_argument('--day', required=True)
-    return parser
-
-
 def main(
-    cirrus_table, satisfaction_table, output_table,
-    year, month, day
-):
+    cirrus_table: str,
+    satisfaction_table: str,
+    output_table: str,
+    year: str,
+    month: str,
+    day: str
+) -> int:
     spark = SparkSession.builder.getOrCreate()
 
     partition_cond = (
@@ -288,18 +293,15 @@ def main(
     # give it credit for the clickthrough.
     # TODO: Produce an event against the old searchToken directly using the
     # referer instead of having to find it by joining cirrus logs.
-    df_cirrus_sugg = (
-        spark.read.table(cirrus_table)
-        .where(partition_cond)
-        .transform(extract_cirrus_suggestions)
-    )
+    df_cirrus_sugg = extract_cirrus_suggestions(
+        spark.read.table(cirrus_table).where(partition_cond))
 
     # TODO: What about sessions that cross daily boundaries? We would need
     # to determine which sessions are unfinished and put those in a second
     # table to be brought in to the next day of processing. For now we simply
     # report stats across daily boundaries incorrectly.
 
-    df = (
+    df_events = (
         spark.read.table(satisfaction_table)
         .where(partition_cond)
         # autocomplete doesn't make sense on a per-search basis. Needs
@@ -311,8 +313,9 @@ def main(
               on=F.col('searchToken') == F.col('event.searchToken'))
         # Drop the duplicate searchToken field, we still have event.searchToken
         .drop('searchToken')
-        .transform(transform_sessions)
     )
+
+    df = transform_sessions(df_events)
 
     # Our daily dataset is tiny due to sampling at the source,
     # no need for multiple partitions.
@@ -321,8 +324,10 @@ def main(
         'month': month,
         'day': day,
     })
+    return 0
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     args = arg_parser().parse_args()
     sys.exit(main(**dict(vars(args))))
