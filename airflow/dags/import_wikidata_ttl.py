@@ -5,9 +5,11 @@
 - The refinery job runs hdfs_rsync every days around 1am and 3am
   (see puppet import_wikidata_entities_dumps.pp)
 """
-from datetime import timedelta, datetime
+from datetime import timedelta
+
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
+from airflow.utils.dates import days_ago
 
 from wmf_airflow.hdfs_cli import HdfsCliSensor
 from wmf_airflow.spark_submit import SparkSubmitOperator
@@ -34,8 +36,7 @@ RDF_DATA_TABLE = dag_conf("rdf_data_table")
 default_args = {
     'owner': 'discovery-analytics',
     'depends_on_past': False,
-    'start_date': datetime(2020, 7, 19),
-    'end_date': datetime(2020, 7, 30),
+    'start_date': days_ago(1),
     'email': ['discovery-alerts@lists.wikimedia.org'],
     'email_on_failure': True,
     'email_on_retry': True,
