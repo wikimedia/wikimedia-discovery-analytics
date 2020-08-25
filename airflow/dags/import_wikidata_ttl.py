@@ -121,7 +121,7 @@ with DAG(
         executor_memory="16g",
         driver_memory="2g",
         application_args=[
-            '--table', rdf_table_and_partition,
+            '--input-table', rdf_table_and_partition,
             '--output-path', "%s/%s/rev_map.csv" % (ENTITY_REV_MAP_CSV, all_ttl_ds)
         ]
     )
