@@ -49,6 +49,8 @@ class HdfsCliHook(BaseHook):
 
 
 class HdfsCliSensor(BaseSensorOperator):
+    template_fields = ('filepath',)
+
     @apply_defaults
     def __init__(self,
                  filepath: str,
