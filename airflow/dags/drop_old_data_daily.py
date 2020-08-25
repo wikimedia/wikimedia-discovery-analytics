@@ -121,3 +121,12 @@ with DAG(
         database='discovery',
         tables='fulltext_head_queries'
     ) >> complete
+
+    refinery_drop_hive_partitions(
+        task_id='drop_wikidata_rdf_partitions',
+        database='discovery',
+        tables="wikidata_rdf",
+        # we want to keep 4 partition (generated weekly). But since the data takes
+        # multiple days to arrive we allow a 6 days tolerance here
+        older_than_days=29 + 6,
+    ) >> complete
