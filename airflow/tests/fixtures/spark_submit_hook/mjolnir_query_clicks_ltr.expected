@@ -28,7 +28,7 @@
     "mjolnir-query_clicks_ltr-20200108-spark",
     "--queue",
     "root.default",
-    "hdfs://analytics-hadoop/user/ebernhardson/discovery-analytics/current/spark/mjolnir-utilities.py",
+    "/srv/deployment/wikimedia/discovery/analytics/spark/mjolnir-utilities.py",
     "query_clicks_ltr",
     "--date",
     "20200108",

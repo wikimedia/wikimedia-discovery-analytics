@@ -10,6 +10,8 @@ from wmf_airflow.swift_upload import SwiftUploadOperator
 
 
 # Set of wikis to train
+from wmf_airflow.template import REPO_PATH
+
 WIKIS = [
     'arwiki', 'dewiki', 'enwiki', 'fawiki',
     'fiwiki', 'frwiki', 'hewiki', 'idwiki',
@@ -40,9 +42,10 @@ TABLES = {
 
 # Paths to deployed resources for MjolnirOperator
 deploys = {
+    # TODO: decide how, when and where to deploy the mjolnir venv
     'mjolnir_venv': NAME_NODE + '/user/ebernhardson/mjolnir_venv.zip',
     'refinery': NAME_NODE + '/wmf/refinery/current',
-    'discovery-analytics': NAME_NODE + '/user/ebernhardson/discovery-analytics/current',
+    'discovery-analytics': REPO_PATH,
 }
 
 # Shared CLI args for scripts that talk with kafka
@@ -60,7 +63,7 @@ default_args = {
     'owner': 'discovery-analytics',
     'depends_on_past': False,
     'start_date': datetime(2020, 1, 8),
-    'email': ['ebernhardson@wikimedia.org'],
+    'email': ['discovery-alerts@lists.wikimedia.org'],
     'email_on_failure': True,
     'email_on_retry': False,
     # Probably should be lower for prod

@@ -176,7 +176,7 @@ class MjolnirOperator(BaseOperator, LoggingMixin):
     """
     template_fields = (
         '_table', '_partition_spec', '_transformer_args',
-        '_output_path', '_auto_size_metadata_dir')
+        '_output_path', '_auto_size_metadata_dir', '_deploys')
 
     @apply_defaults
     def __init__(
