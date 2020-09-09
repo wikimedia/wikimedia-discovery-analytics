@@ -28,7 +28,7 @@
     "mjolnir-norm_query_clustering-20200108-spark",
     "--queue",
     "root.default",
-    "hdfs://analytics-hadoop/user/ebernhardson/discovery-analytics/current/spark/mjolnir-utilities.py",
+    "/srv/deployment/wikimedia/discovery/analytics/spark/mjolnir-utilities.py",
     "norm_query_clustering",
     "--date",
     "20200108",
