@@ -4,6 +4,7 @@ from argparse import ArgumentParser
 from datetime import datetime
 import itertools
 import logging
+import sys
 from typing import Iterator, Mapping, Sequence, Tuple, TypeVar
 
 from pyspark.sql import SparkSession, functions as F, types as T
@@ -15,6 +16,26 @@ T_ = TypeVar('T_')
 MW_API_BATCH_SIZE = 500
 ORES_API_BATCH_SIZE = 1000
 MODEL = 'articletopic'
+
+
+def arg_parser() -> ArgumentParser:
+    def date(val: str) -> datetime:
+        return datetime.strptime(val, '%Y-%m-%d')
+
+    parser = ArgumentParser()
+    parser.add_argument('--mediawiki-dbname', required=True, help='dbname, ex: arwiki')
+    parser.add_argument('--ores-host', default='https://ores.wikimedia.org')
+    parser.add_argument('--user-agent', default='Search Platform Airflow Bot')
+    parser.add_argument(
+        '--output-table', required=True,
+        help='Hive table to write exported predictions to')
+    parser.add_argument(
+        '--date', type=date, required=True,
+        help='Date to use for output table partition specification')
+    parser.add_argument(
+        '--namespace', dest='namespaces', nargs='+', type=int, default=[0],
+        help='Set of namespaces to export. By default only NS_MAIN is exported')
+    return parser
 
 
 def make_batch(iterable: Iterator[T_], size: int) -> Iterator[Sequence[T_]]:
@@ -116,26 +137,14 @@ def fetch_scores(
         mediawiki_dbname, error_threshold.status))
 
 
-def main():
-    def date(val: str) -> datetime:
-        return datetime.strptime(val, '%Y-%m-%d')
-
-    parser = ArgumentParser()
-    parser.add_argument('--mediawiki-dbname', required=True, help='dbname, ex: arwiki')
-    parser.add_argument('--ores-host', default='https://ores.wikimedia.org')
-    parser.add_argument('--user-agent', default='Search Platform Airflow Bot')
-    parser.add_argument(
-        '--output-table', required=True,
-        help='Hive table to write exported predictions to')
-    parser.add_argument(
-        '--date', type=date, required=True,
-        help='Date to use for output table partition specification')
-    parser.add_argument(
-        '--namespace', nargs='+', type=int, default=[0],
-        help='Set of namespaces to export. By default only NS_MAIN is exported')
-
-    args = parser.parse_args()
-
+def main(
+    mediawiki_dbname: str,
+    ores_host: str,
+    user_agent: str,
+    output_table: str,
+    date: datetime,
+    namespaces: Sequence[int],
+) -> int:
     # Basically a hack, here we create an rdd with a single row and use it to
     # run our function on the executor.  Once we have an rdd representing the
     # exported scores convert it to a DataFrame and write to a hive table.
@@ -150,15 +159,15 @@ def main():
     # restart from the beginning if it fails.
 
     spark = SparkSession.builder.getOrCreate()
-    mediawiki_host = lookup_hostname(spark, args.mediawiki_dbname)
+    mediawiki_host = lookup_hostname(spark, mediawiki_dbname)
 
     rdd = (
         spark.sparkContext.parallelize([True], numSlices=1)
         .flatMap(lambda x: fetch_scores(
-            mediawiki_host, args.mediawiki_dbname, args.ores_host, args.user_agent, args.namespaces))
+            mediawiki_host, mediawiki_dbname, ores_host, user_agent, namespaces))
     )
 
-    df = spark.createDataFrame(rdd, T.StructType([
+    df = spark.createDataFrame(rdd, T.StructType([  # type: ignore
         T.StructField('page_id', T.IntegerType()),
         T.StructField('page_namespace', T.IntegerType()),
         T.StructField('probability', T.MapType(T.StringType(), T.FloatType()))
@@ -172,16 +181,18 @@ def main():
         SELECT page_id, page_namespace, probability
         FROM tmp_revision_score_out
     """.format(
-        table=args.output_table,
-        year=args.date.year,
-        month=args.date.month,
-        day=args.date.day,
-        wiki=args.mediawiki_dbname,
+        table=output_table,
+        year=date.year,
+        month=date.month,
+        day=date.day,
+        wiki=mediawiki_dbname,
         model=MODEL)
 
     spark.sql(insert_stmt)
+    return 0
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    main()
+    args = arg_parser().parse_args()
+    sys.exit(main(**dict(vars(args))))

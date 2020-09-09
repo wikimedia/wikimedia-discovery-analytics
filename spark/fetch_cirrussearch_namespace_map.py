@@ -17,7 +17,14 @@ import logging
 import requests
 from pyspark.sql import DataFrame, SparkSession, functions as F, types as T
 import sys
-from typing import Optional, Sequence, Tuple
+from typing import Sequence, Tuple
+
+
+def arg_parser() -> ArgumentParser:
+    parser = ArgumentParser()
+    parser.add_argument('--canonical-wikis-table', required=True)
+    parser.add_argument('--output-table', required=True)
+    return parser
 
 
 def load_wikiid_to_domain_name_map(spark: SparkSession, table_name: str) -> DataFrame:
@@ -58,13 +65,10 @@ def fetch_namespaces(
     ]
 
 
-def main(raw_args: Optional[Sequence[str]] = None) -> int:
-    parser = ArgumentParser()
-    parser.add_argument('--canonical-wikis-table', required=True)
-    parser.add_argument('--output-table', required=True)
-
-    args = parser.parse_args(raw_args)
-
+def main(
+    canonical_wikis_table: str,
+    output_table: str
+) -> int:
     spark = SparkSession.builder.getOrCreate()
 
     fetch_namespace_udf = F.udf(fetch_namespaces, T.ArrayType(T.StructType([
@@ -74,7 +78,7 @@ def main(raw_args: Optional[Sequence[str]] = None) -> int:
 
     (
         load_wikiid_to_domain_name_map(
-            spark, args.canonical_wikis_table)
+            spark, canonical_wikis_table)
         .withColumn('ns', F.explode(fetch_namespace_udf(F.col('domain_name'))))
         # The dataset is downright miniscule, perhaps 800 wikis and 50 namespaces
         # each. The whole thing should be done with a single partition.
@@ -87,11 +91,12 @@ def main(raw_args: Optional[Sequence[str]] = None) -> int:
         SELECT database_code, ns.namespace_id, ns.elastic_index
         FROM namespace_map_to_write
     """.format(
-        table=args.output_table))
+        table=output_table))
 
     return 0
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    sys.exit(main(sys.argv[1:]))
+    args = arg_parser().parse_args()
+    sys.exit(main(**dict(vars(args))))

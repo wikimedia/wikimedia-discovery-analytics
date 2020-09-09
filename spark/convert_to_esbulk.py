@@ -43,6 +43,21 @@ import sys
 from typing import Callable, Mapping, Optional, Sequence, Set, Tuple
 
 
+def arg_parser() -> ArgumentParser:
+    def date(val: str) -> datetime:
+        return datetime.strptime(val, '%Y-%m-%d')
+
+    parser = ArgumentParser()
+    parser.add_argument('-o', '--output', dest='output', metavar='OUTPUT', help='Output to store results')
+    parser.add_argument('-l', '--limit-per-file', dest='limit_per_file', metavar='N', type=int,
+                        default=200000, help='Maximum number of records per output file')
+    parser.add_argument('-d', '--date', dest='date', metavar='DATE', type=date,
+                        help='Date of input partitions in YYYY-MM-DD format')
+    parser.add_argument('-n', '--namespace-map-table', dest='namespace_map_table',
+                        help='Table mapping wikiid + namespace_id to an elasticsearch index')
+    return parser
+
+
 @dataclass
 class Field:
     """Abstract class specifying a field to read
@@ -351,7 +366,6 @@ def document_data(document: Row, handlers: Mapping[str, str]) -> str:
 
 
 def main(
-    spark: SparkSession,
     output: str,
     limit_per_file: int,
     date: datetime,
@@ -360,6 +374,8 @@ def main(
 ) -> int:
     if not validate_config(config):
         return 1
+
+    spark = SparkSession.builder.getOrCreate()
 
     df = prepare(
         spark=spark,
@@ -384,19 +400,5 @@ def main(
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-
-    def date(val: str) -> datetime:
-        return datetime.strptime(val, '%Y-%m-%d')
-
-    parser = ArgumentParser()
-    parser.add_argument('-o', '--output', dest='output', metavar='OUTPUT', help='Output to store results')
-    parser.add_argument('-l', '--limit-per-file', dest='limit_per_file', metavar='N', type=int,
-                        default=200000, help='Maximum number of records per output file')
-    parser.add_argument('-d', '--date', dest='date', metavar='DATE', type=date,
-                        help='Date of input partitions in YYYY-MM-DD format')
-    parser.add_argument('-n', '--namespace-map-table', dest='namespace_map_table',
-                        help='Table mapping wikiid + namespace_id to an elasticsearch index')
-    args = parser.parse_args()
-
-    spark = SparkSession.builder.getOrCreate()
-    sys.exit(main(spark, **dict(vars(args))))
+    args = arg_parser().parse_args()
+    sys.exit(main(**dict(vars(args))))
