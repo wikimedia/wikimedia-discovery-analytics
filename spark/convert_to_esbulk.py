@@ -178,7 +178,7 @@ CONFIG = [
         join_on=JOIN_ON_WIKIID,
         update_kind=UPDATE_ALL,
         fields=[
-            EqualsField(field='articletopic', alias='ores_articletopic')
+            EqualsField(field='articletopic', alias='ores_articletopics')
         ]
     )
 ]
