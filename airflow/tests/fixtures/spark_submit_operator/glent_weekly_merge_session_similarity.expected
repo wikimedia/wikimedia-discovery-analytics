@@ -51,5 +51,7 @@
     "--output-partition",
     "20380124",
     "--max-output-partitions",
-    "5"
+    "5",
+    "--query-normalizer",
+    "icutoknorm"
 ]

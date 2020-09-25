@@ -142,7 +142,9 @@ with DAG(
             # WithPrepOutput
             '--output-table', TABLE_M0_PREP,
             '--output-partition', CUR_PARTITION,
-            '--max-output-partitions', '5'
+            '--max-output-partitions', '5',
+            # use custom normalizer
+            '--query-normalizer', dag_conf('query_normalizer_m0')
         ]
     )
 
@@ -166,6 +168,8 @@ with DAG(
 
             '--output-table', TABLE_M1_PREP,
             '--output-partition', CUR_PARTITION,
+            # use custom normalizer
+            '--query-normalizer', dag_conf('query_normalizer_m1'),
         ]
     )
 

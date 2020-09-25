@@ -14,6 +14,8 @@
         "sugg_max_ts_diff": "PT120S",
         "swift_auth_file": "hdfs://analytics-hadoop/user/analytics/swift_auth_analytics_admin.env",
         "swift_delete_after_days": 7,
-        "swift_container": "search_glent"
+        "swift_container": "search_glent",
+        "query_normalizer_m0" : "icutoknorm",
+        "query_normalizer_m1" : "icutoknorm"
     }
 }

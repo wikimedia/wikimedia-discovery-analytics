@@ -43,5 +43,7 @@
     "--output-table",
     "glent.m1prep",
     "--output-partition",
-    "20380124"
+    "20380124",
+    "--query-normalizer",
+    "icutoknorm"
 ]
