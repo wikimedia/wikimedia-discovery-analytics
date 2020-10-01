@@ -9,7 +9,7 @@
     "--conf",
     "spark.executor.memory=2g",
     "--conf",
-    "spark.executor.memoryOverhead=521",
+    "spark.executor.memoryOverhead=522",
     "--conf",
     "spark.jars.ivy=/tmp/airflow_ivy2",
     "--conf",

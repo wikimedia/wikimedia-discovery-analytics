@@ -34,7 +34,7 @@ AUTO_DETECT_CONFIG = {
     'bytes_per_value': {
         'make_folds': 30,
         'hyperparam': 30,
-        'train': 20
+        'train': 22
     }
 }
 
