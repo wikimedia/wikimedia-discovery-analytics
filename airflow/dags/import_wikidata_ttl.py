@@ -48,7 +48,7 @@ default_args = {
 with DAG(
     'import_wikidata_ttl',
     default_args=default_args,
-    # all ttl is scheduled on mondays and lexeme on saturdays
+    # all ttl is scheduled on mondays and lexeme on fridays
     # The all_ttl dump arrives on cloud replica on thursdays morning (5am - 7am)
     # It'll be picked-up by the hdfs_rsync running on fridays morning
     # Start the job on fridays 3am
@@ -63,7 +63,7 @@ with DAG(
     # an exec date on Fri Jun 5th actually means we run just after Thu Jun 12 23:59
     # but we want to wait for the dumps generated on Mon Jun 8 (thus the ds_add(ds, 3))
     all_ttl_ds = "{{ macros.ds_format(macros.ds_add(ds, 3), '%Y-%m-%d', '%Y%m%d') }}"
-    lexemes_ttl_ds = "{{ macros.ds_format(macros.ds_add(ds, 1), '%Y-%m-%d', '%Y%m%d') }}"
+    lexemes_ttl_ds = "{{ macros.ds_format(macros.ds_add(ds, 0), '%Y-%m-%d', '%Y%m%d') }}"
     path = "%s/%s/_IMPORTED" % (ALL_TTL_DUMP_DIR, all_ttl_ds)
     rdf_table_and_partition = '%s/date=%s' % (RDF_DATA_TABLE, all_ttl_ds)
 
