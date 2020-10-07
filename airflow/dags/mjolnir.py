@@ -177,7 +177,9 @@ def collect_vectors(
             # all of them.
             'wikis': WIKIS,
             'feature-set': feature_set,
-            'samples-per-wiki': 30000000,
+            # Maximum number of records we can train against in a single
+            # instance. Practically this only effects enwiki.
+            'samples-per-wiki': 27000000,
         }))
     clicks >> op
     clusters >> op
