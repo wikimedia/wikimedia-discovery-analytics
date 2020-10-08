@@ -203,7 +203,7 @@ def transform_sessions(df):
         # a single session has a constant test bucket
         F.first(F.col('event.subTest')).alias('bucket'),
         # Sample multiplier should be constant too
-        F.first(F.col('sample_multiplier')).alias('sample_multiplier'),
+        F.first(F.col('event.sampleMultiplier')).alias('sample_multiplier'),
         # source data for as_dym_events udf
         F.collect_list(F.struct(
             'dt', 'suggestion', 'event.action', 'event.didYouMeanVisible',
