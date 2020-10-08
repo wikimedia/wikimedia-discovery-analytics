@@ -70,6 +70,7 @@ def test_date_format_is_padded():
 def test_templating(dag, mock_airflow_variables):
     mock_airflow_variables({
         'some_table': 'pytestdb.pytesttable',
+        'some_partition': 'pytest',
     })
     hook = MagicMock()
     hook.check_for_named_partition.return_value = False
@@ -80,7 +81,7 @@ def test_templating(dag, mock_airflow_variables):
         period=timedelta(days=7),
         partition_frequency='days',
         partition_specs=[
-            [('date', None)],
+            [('tmpl', '{{ var.value.some_partition }}'), ('date', None)],
         ],
         hook=hook)
 
@@ -91,5 +92,5 @@ def test_templating(dag, mock_airflow_variables):
         'execution_date': pendulum.datetime(year=2020, month=1, day=2),
     })
     assert sensor.partition_names == [
-        'pytestdb.pytesttable/date=202001{:02d}'.format(day) for day in range(2, 9)
+        'pytestdb.pytesttable/tmpl=pytest/date=202001{:02d}'.format(day) for day in range(2, 9)
     ]

@@ -35,3 +35,8 @@ MEDIAWIKI_CONFIG_PATH = wmf_conf('mediawiki_config_path')
 
 # Local path to the analytics/refinery repository on the airflow server
 ANALYTICS_REFINERY_PATH = wmf_conf('analytics_refinery_path')
+
+# MediaWiki can only be active in one datacenter at a time and eventgate inputs
+# are partitioned by the datacenter they come from. This marker indicates
+# which datacenter to expect events from.
+MEDIAWIKI_ACTIVE_DC = wmf_conf('mediawiki_active_datacenter')

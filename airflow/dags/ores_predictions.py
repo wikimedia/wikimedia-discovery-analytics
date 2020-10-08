@@ -30,7 +30,7 @@ from wmf_airflow.skein import SkeinOperator
 from wmf_airflow.spark_submit import SparkSubmitOperator
 from wmf_airflow.template import (
     HTTPS_PROXY, IVY_SETTINGS_PATH, MARIADB_CREDENTIALS_PATH,
-    MEDIAWIKI_CONFIG_PATH, REPO_PATH, REPO_HDFS_PATH)
+    MEDIAWIKI_ACTIVE_DC, MEDIAWIKI_CONFIG_PATH, REPO_PATH, REPO_HDFS_PATH)
 
 
 INPUT_TABLE = 'event.mediawiki_revision_score'
@@ -139,10 +139,11 @@ with DAG(
         period=timedelta(days=7),
         partition_frequency='hours',
         partition_specs=[
-            # While multiple datacenters exist, only 'eqiad' is being populated
-            # as of 2020-1-12. The last codfw parition seems to be 2019-9-9.
+            # While multiple datacenters exist, only the currently active
+            # dc is populated. Periods including switchovers will have to
+            # be manually approved.
             [
-                ('datacenter', 'eqiad'), ('year', None),
+                ('datacenter', MEDIAWIKI_ACTIVE_DC), ('year', None),
                 ('month', None), ('day', None), ('hour', None)
             ]
         ])

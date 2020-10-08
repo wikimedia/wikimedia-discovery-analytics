@@ -13,7 +13,7 @@ from wmf_airflow.hdfs_cli import HdfsCliHook
 from wmf_airflow.hive_partition_range_sensor import HivePartitionRangeSensor
 from wmf_airflow.spark_submit import SparkSubmitOperator
 from wmf_airflow.swift_upload import SwiftUploadOperator
-from wmf_airflow.template import REPO_PATH
+from wmf_airflow.template import MEDIAWIKI_ACTIVE_DC, REPO_PATH
 
 
 def dag_conf(key):
@@ -111,7 +111,10 @@ with DAG(
         partition_frequency='hours',
         partition_specs=[
             [
-                ('datacenter', 'eqiad'), ('year', None),
+                # While multiple datacenters exist, only the currently active
+                # dc is populated. Periods including switchovers will have to
+                # be manually approved.
+                ('datacenter', MEDIAWIKI_ACTIVE_DC), ('year', None),
                 ('month', None), ('day', None), ('hour', None)
             ]
         ])

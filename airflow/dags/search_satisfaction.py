@@ -17,7 +17,7 @@ from wmf_airflow.hdfs_cli import HdfsCliHook
 from wmf_airflow.hdfs_to_druid import HdfsToDruidOperator
 from wmf_airflow.hive_partition_range_sensor import HivePartitionRangeSensor
 from wmf_airflow.spark_submit import SparkSubmitOperator
-from wmf_airflow.template import REPO_PATH
+from wmf_airflow.template import MEDIAWIKI_ACTIVE_DC, REPO_PATH
 
 
 def dag_conf(key):
@@ -94,7 +94,7 @@ with DAG(
         partition_frequency='hours',
         partition_specs=[
             [
-                ('datacenter', 'eqiad'),
+                ('datacenter', MEDIAWIKI_ACTIVE_DC),
                 ('year', None), ('month', None),
                 ('day', None), ('hour', None),
             ]
