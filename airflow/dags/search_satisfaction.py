@@ -53,7 +53,7 @@ TEMPLATE_DAY = '{{ macros.ds_format(ds, "%Y-%m-%d", "%d") }}'
 default_args = {
     'owner': 'discovery-analytics',
     'depends_on_past': False,
-    'start_date': datetime(2020, 2, 1),
+    'start_date': datetime(2020, 7, 11),
     'email': ['ebernhardson@wikimedia.org'],
     'email_on_failure': True,
     'email_on_retry': False,
