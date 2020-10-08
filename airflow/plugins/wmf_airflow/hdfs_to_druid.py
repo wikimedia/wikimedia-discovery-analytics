@@ -127,6 +127,7 @@ class HdfsToDruidOperator(BaseOperator):
         with open(self.template_file, 'r') as f:
             index_spec_template = f.read()
         index_spec_str = self._apply_spec_templating(index_spec_template)
+        self.log.info('Templated spec:\n%s', index_spec_str)
         return json.loads(index_spec_str)
 
     def execute(self, context):
