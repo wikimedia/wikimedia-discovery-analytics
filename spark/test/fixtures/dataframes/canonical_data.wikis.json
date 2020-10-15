@@ -1,0 +1,96 @@
+{
+    "rows": [
+        [
+            "commonswiki",
+            "commons.wikimedia.org",
+            "commons",
+            "en",
+            "English",
+            "open",
+            "public",
+            "public",
+            "Wikimedia Commons"
+        ],
+        [
+            "enwiki",
+            "en.wikipedia.org",
+            "wikipedia",
+            "en",
+            "English",
+            "open",
+            "public",
+            "public",
+            "English Wikipedia"
+        ],
+        [
+            "testwiki",
+            "test.wikipedia.org",
+            "test",
+            "en",
+            "English",
+            "open",
+            "public",
+            "public",
+            "Test Wikipedia"
+        ]
+    ],
+    "schema": {
+        "fields": [
+            {
+                "metadata": {},
+                "name": "database_code",
+                "nullable": true,
+                "type": "string"
+            },
+            {
+                "metadata": {},
+                "name": "domain_name",
+                "nullable": true,
+                "type": "string"
+            },
+            {
+                "metadata": {},
+                "name": "database_group",
+                "nullable": true,
+                "type": "string"
+            },
+            {
+                "metadata": {},
+                "name": "language_code",
+                "nullable": true,
+                "type": "string"
+            },
+            {
+                "metadata": {},
+                "name": "language_name",
+                "nullable": true,
+                "type": "string"
+            },
+            {
+                "metadata": {},
+                "name": "status",
+                "nullable": true,
+                "type": "string"
+            },
+            {
+                "metadata": {},
+                "name": "visibility",
+                "nullable": true,
+                "type": "string"
+            },
+            {
+                "metadata": {},
+                "name": "editability",
+                "nullable": true,
+                "type": "string"
+            },
+            {
+                "metadata": {},
+                "name": "english_name",
+                "nullable": true,
+                "type": "string"
+            }
+        ],
+        "type": "struct"
+    }
+}

@@ -2,9 +2,10 @@ from __future__ import absolute_import
 import findspark
 findspark.init()  # must happen before importing pyspark
 
+import json  # noqa: E402
 import logging  # noqa: E402
 import os  # noqa: E402
-from pyspark.sql import SparkSession  # noqa: E402
+from pyspark.sql import SparkSession, types as T  # noqa: E402
 import pytest  # noqa: E402
 
 
@@ -58,4 +59,28 @@ def get_fixture(fixture_dir):
         with open(os.path.join(fixture_dir, group, name), 'rt') as f:
             return f.read()
 
+    return fn
+
+
+def create_df_fixture(df):
+    """Create a fixture from a dataframe
+
+    Not actually used in the test suite, but included as documentation for how
+    to create the files used by get_df_fixture. Don't put real PII in fixtures.
+    """
+    return {
+        # This returns a string, but we will need the decoded
+        # structure when loading so no reason to double encode.
+        'schema': json.loads(df.schema.json()),
+        # Turn everything into a plain list of rows and values
+        'rows': [[getattr(row, field) for field in df.columns] for row in df.collect()],
+    }
+
+
+@pytest.fixture
+def get_df_fixture(spark, get_fixture):
+    def fn(group, name):
+        raw_data = json.loads(get_fixture(group, name + '.json'))
+        schema = T.StructType.fromJson(raw_data['schema'])
+        return spark.createDataFrame(raw_data['rows'], schema)
     return fn

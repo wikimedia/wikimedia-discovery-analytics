@@ -84,6 +84,10 @@ def main(
         # The dataset is downright miniscule, perhaps 800 wikis and 50 namespaces
         # each. The whole thing should be done with a single partition.
         .coalesce(1)
+        .select(
+            F.col('database_code').alias('wikiid'),
+            F.col('ns.namespace_id'),
+            F.col('ns.elastic_index'))
     )
 
     output_partition.overwrite_with(df)
