@@ -261,11 +261,14 @@ class HivePartitionWriter:
                 raise Exception('Partition key {} overwriting dataframe column'.format(k))
             df = df.withColumn(k, F.lit(v))
 
+        def schema_names(schema):
+            return {x.lower() for x in schema.names}
+
         expect_schema = self.partition.schema(df.sql_ctx)
         # The .select() call below would throw, but provide a cryptic error message
-        if set(df.schema.names) != set(expect_schema.names):
+        if schema_names(df.schema) != schema_names(expect_schema):
             raise ValueError('Schemas do not have matching names: {} != {}'.format(
-                df.schema.names, expect_schema.names))
+                df.schema, expect_schema))
 
         # In testing with insertInto spark put values in the wrong columns of the
         # table unless we made the order exactly the same.

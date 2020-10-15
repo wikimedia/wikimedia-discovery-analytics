@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from pyspark.sql import functions as F
 import pytest
 import wmf_spark
-from wmf_spark import DtPrecision, HivePartition, HivePartitionTimeRange
+from wmf_spark import DtPrecision, HivePartition, HivePartitionTimeRange, HivePartitionWriter
 
 
 @pytest.mark.parametrize('spec,expect_table_name,expect_partitioning', [
@@ -136,5 +136,20 @@ def test_DtPrecision_min_value():
     assert min(DtPrecision.HOUR, DtPrecision.INVALID) == DtPrecision.INVALID
 
 
-def test_HivePartitionWriter_make_compatible():
-    pass
+def test_HivePartitionWriter_make_compatible(spark):
+    def test(df, expect_schema, expect_error=False):
+        writer = HivePartitionWriter.from_spec('db.table/k1=v1')
+        writer.partition.schema = lambda _: expect_schema
+        try:
+            writer.make_compatible(df)
+        except Exception as e:
+            assert expect_error is True, e
+        else:
+            assert expect_error is False
+
+    df = spark.range(1)
+    expect_schema = df.withColumn('k1', F.lit('v1')).schema
+    # Standard happy path
+    test(df, expect_schema)
+    # Case shouldn't matter
+    test(df.withColumn('ID', F.col('id')), expect_schema)
