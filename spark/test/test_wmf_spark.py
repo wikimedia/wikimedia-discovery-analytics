@@ -8,12 +8,18 @@ from wmf_spark import DtPrecision
 @pytest.mark.parametrize('spec,expect_table_name,expect_partitioning', [
     ('mydb.mytable/key=value', 'mydb.mytable', {'key': 'value'}),
     ('pytest/date=1234/wiki=abc', 'pytest', {'date': '1234', 'wiki': 'abc'}),
-    ('qqq/k1=v1/k2=v2/k3=v3', 'qqq', {'k1': 'v1', 'k2': 'v2', 'k3': 'v3'})
+    ('qqq/k1=v1/k2=v2/k3=v3', 'qqq', {'k1': 'v1', 'k2': 'v2', 'k3': 'v3'}),
+    ('full.table/', 'full.table', {}),
+    ('full.table', None, None),
 ])
 def test_parse_partition_spec(spec, expect_table_name, expect_partitioning):
-    table_name, partitioning = wmf_spark.parse_partition_spec(spec)
-    assert table_name == expect_table_name
-    assert partitioning == expect_partitioning
+    try:
+        table_name, partitioning = wmf_spark.parse_partition_spec(spec)
+    except ValueError:
+        assert expect_table_name is None
+    else:
+        assert table_name == expect_table_name
+        assert partitioning == expect_partitioning
 
 
 @pytest.mark.parametrize('spec,expect_start,expect_end', [

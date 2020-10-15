@@ -48,7 +48,8 @@ def parse_partition_spec(spec: str) -> Tuple[str, Mapping[str, str]]:
     """
     if '/' not in spec:
         raise ValueError('No partition delimiter found')
-    pieces = spec.split('/')
+    # Strip trailing /, it would leave an empty string as a piece
+    pieces = spec.rstrip('/').split('/')
     table_name = pieces[0]
     partitions = dict(kv_pair.split('=', 1) for kv_pair in pieces[1:])  # type: ignore
     return table_name, partitions
