@@ -159,7 +159,7 @@ class HivePartition:
     def _partition_cond(self) -> Column:
         return reduce(lambda a, b: a & b, (
             F.col(k) == v for k, v in self.partition_spec.items()
-        ))
+        ), F.lit(True))
 
     def read(self, spark: Union[SQLContext, SparkSession]) -> DataFrame:
         return spark.read.table(self.table_name).where(self._partition_cond())

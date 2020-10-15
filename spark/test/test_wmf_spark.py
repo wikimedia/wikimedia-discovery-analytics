@@ -1,8 +1,8 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from pyspark.sql import functions as F
 import pytest
 import wmf_spark
-from wmf_spark import DtPrecision
+from wmf_spark import DtPrecision, HivePartition, HivePartitionTimeRange
 
 
 @pytest.mark.parametrize('spec,expect_table_name,expect_partitioning', [
@@ -39,6 +39,57 @@ def test_partition_time_range(spec, expect_start, expect_end):
         wmf_spark.parse_partition_range_spec(spec)
     assert dt_start == expect_start
     assert dt_end == expect_end
+
+
+def test_HivePartition_partition_cond(spark):
+    def test(df, partition, expect):
+        cond = partition._partition_cond()
+        is_accepted = df.where(cond).count() > 0
+        assert expect == is_accepted
+
+    partition = HivePartition('pytest', {'k1': 'v1'})
+    unpartitioned = HivePartition('pytest', {})
+
+    df = spark.range(1).withColumn('k1', F.lit('v1'))
+    test(df, partition, True)
+    test(df, unpartitioned, True)
+
+    df = spark.range(1).withColumn('k1', F.lit('v2'))
+    test(df, partition, False)
+    test(df, unpartitioned, True)
+
+
+def test_HivePartitionTimeRange_partition_cond(spark):
+    start = datetime(year=2038, month=1, day=17)
+    end = datetime(year=2038, month=1, day=18)
+    partition = HivePartitionTimeRange(HivePartition('pytest', {}), start, end)
+
+    def test(df, expect):
+        cond = partition._partition_cond(df.schema)
+        is_accepted = df.where(cond).count() > 0
+        assert expect == is_accepted
+
+    def as_daily_df(dt: datetime):
+        return (
+            spark.range(1)
+            .withColumn('year', F.lit(dt.year))
+            .withColumn('month', F.lit(dt.month))
+            .withColumn('day', F.lit(dt.day))
+        )
+
+    def as_hourly_df(dt: datetime):
+        return as_daily_df(dt).withColumn('hour', F.lit(dt.hour))
+
+    one_sec = timedelta(seconds=1)
+
+    for as_df in (as_hourly_df, as_daily_df):
+        test(as_df(start - one_sec), False)
+        test(as_df(start), True)
+        test(as_df(start + one_sec), True)
+
+        test(as_df(end - one_sec), True)
+        test(as_df(end), False)
+        test(as_df(end + one_sec), False)
 
 
 def test_row_datetime_ts_happy_path(spark):
