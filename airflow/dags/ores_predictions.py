@@ -43,6 +43,8 @@ MODEL = 'articletopic'
 THRESHOLDS_PATH = 'hdfs://analytics-hadoop/wmf/data/discovery/ores/thresholds/' \
     + MODEL + '/{{ ds_nodash }}.json'
 
+TEMPLATE_YMD_PARTITION = '{{ macros.ds_format(ds, "%Y-%m-%d", "year=%Y/month=%m/day=%d") }}'
+
 # Default kwargs for all Operators
 default_args = {
     'owner': 'discovery-analytics',
@@ -60,7 +62,7 @@ default_args = {
 def mw_sql_to_hive(
     task_id: str,
     sql_query: str,
-    output_table: str,
+    output_partition: str,
     mysql_defaults_path: str = MARIADB_CREDENTIALS_PATH,
     mediawiki_config_repo: str = MEDIAWIKI_CONFIG_PATH,
 ) -> SparkSubmitOperator:
@@ -111,7 +113,7 @@ def mw_sql_to_hive(
             '--mysql-defaults-file', 'mysql.cnf',
             '--dblists', ','.join(dblists),
             '--query', sql_query,
-            '--output-partition', output_table + '/date={{ ds_nodash }}',
+            '--output-partition', output_partition,
         ],
     )
 
@@ -169,7 +171,7 @@ with DAG(
     # predictions from enwiki to all the wikis
     extract_wikibase_items = mw_sql_to_hive(
         task_id='extract_wikibase_item',
-        output_table=WIKIBASE_ITEM_TABLE,
+        output_partition=WIKIBASE_ITEM_TABLE + "/" + TEMPLATE_YMD_PARTITION,
         sql_query="""
             SELECT pp_page as page_id, page_namespace, pp_value as wikibase_item
             FROM page_props
