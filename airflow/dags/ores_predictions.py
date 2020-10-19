@@ -200,7 +200,7 @@ with DAG(
             '--output-partition', OUTPUT_TABLE + '/date={{ ds_nodash }}',
             '--thresholds-path', 'thresholds.json',
             '--prediction', MODEL,
-            '--wikibase-item-partition', WIKIBASE_ITEM_TABLE + '/date={{ ds_nodash }}',
+            '--wikibase-item-partition', WIKIBASE_ITEM_TABLE + '/' + TEMPLATE_YMD_PARTITION,
             '--propagate-from', PROPAGATE_FROM_WIKI,
         ],
     )

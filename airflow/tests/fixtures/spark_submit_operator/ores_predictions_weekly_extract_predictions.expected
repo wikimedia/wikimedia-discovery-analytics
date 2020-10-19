@@ -27,7 +27,7 @@
     "--prediction",
     "articletopic",
     "--wikibase-item-partition",
-    "discovery.wikibase_item/date=20380117",
+    "discovery.wikibase_item/year=2038/month=01/day=17",
     "--propagate-from",
     "enwiki"
 ]
