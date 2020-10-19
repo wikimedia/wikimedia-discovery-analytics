@@ -197,7 +197,7 @@ with DAG(
         application_args=[
             '--input-partition', INPUT_TABLE + '/@{{ ds }}/{{ macros.ds_add(ds, 7) }}',
             '--input-kind', 'mediawiki_revision_score',
-            '--output-partition', OUTPUT_TABLE + '/date={{ ds_nodash }}',
+            '--output-partition', OUTPUT_TABLE + '/' + TEMPLATE_YMD_PARTITION,
             '--thresholds-path', 'thresholds.json',
             '--prediction', MODEL,
             '--wikibase-item-partition', WIKIBASE_ITEM_TABLE + '/' + TEMPLATE_YMD_PARTITION,
