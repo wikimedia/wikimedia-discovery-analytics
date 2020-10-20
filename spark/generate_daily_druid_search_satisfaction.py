@@ -21,9 +21,6 @@ def arg_parser() -> ArgumentParser:
         '--source-partition', default='discovery.search_satisfaction_daily',
         type=HivePartition.from_spec)
     parser.add_argument('--destination-directory', required=True)
-    parser.add_argument('--year', required=True, type=int)
-    parser.add_argument('--month', required=True, type=int)
-    parser.add_argument('--day', required=True, type=int)
     return parser
 
 
