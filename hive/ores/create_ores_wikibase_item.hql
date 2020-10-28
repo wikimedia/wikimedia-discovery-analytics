@@ -1,4 +1,4 @@
-CREATE TABLE `discovery.wikibase_item` (
+CREATE TABLE `discovery`.`wikibase_item` (
   `wikiid` string COMMENT 'MediaWiki database name',
   `page_id` int COMMENT 'MediaWiki page id',
   `page_namespace` int COMMENT 'MediaWiki namespace page_id belongs to',

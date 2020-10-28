@@ -1,4 +1,4 @@
-CREATE EXTERNAL TABLE `discovery.search_satisfaction_daily`(
+CREATE EXTERNAL TABLE `discovery`.`search_satisfaction_daily`(
   `wiki` string COMMENT 'The wiki db name',
   `searchSessionId` string COMMENT 'A unique per-session identifier',
   `bucket` string COMMENT 'The test bucket this event belongs to',

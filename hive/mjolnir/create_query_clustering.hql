@@ -1,4 +1,4 @@
-CREATE TABLE `mjolnir.query_clustering` (
+CREATE TABLE `mjolnir`.`query_clustering` (
   `wikiid` string,
   `query` string,
   `cluster_id` bigint

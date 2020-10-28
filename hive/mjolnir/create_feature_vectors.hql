@@ -1,8 +1,8 @@
-CREATE TABLE `mjolnir.feature_vectors` (
+CREATE TABLE `mjolnir`.`feature_vectors` (
   `wikiid` string,
   `query` string,
   `page_id` int,
-  `features` struct<type:tinyint,size:int,indices:array<int>,values:array<double>>
+  `features` struct<`type`:tinyint,`size`:int,`indices`:array<int>,`values`:array<double>>
 )
 PARTITIONED BY (
   `date` string,

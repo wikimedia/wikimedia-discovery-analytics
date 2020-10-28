@@ -1,4 +1,4 @@
-CREATE TABLE `mjolnir.query_clicks_ltr`(
+CREATE TABLE `mjolnir`.`query_clicks_ltr`(
   `query` string,
   `timestamp` bigint,
   `wikiid` string,

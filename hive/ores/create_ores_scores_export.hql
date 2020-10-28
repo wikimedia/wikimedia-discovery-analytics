@@ -1,4 +1,4 @@
-CREATE TABLE `discovery.ores_scores_export` (
+CREATE TABLE `discovery`.`ores_scores_export` (
   `page_id` int COMMENT 'MediaWiki page id',
   `page_namespace` int COMMENT 'MediaWiki namespace page_id belongs to',
   `probability` map<string,float> COMMENT 'predicted classification as key, confidence as value'

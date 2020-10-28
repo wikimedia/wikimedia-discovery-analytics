@@ -1,4 +1,4 @@
-CREATE EXTERNAL TABLE `discovery.popularity_score` (
+CREATE EXTERNAL TABLE `discovery`.`popularity_score` (
   `project` string COMMENT 'Project name from requests hostname',
   `page_id` int COMMENT 'MediaWiki page_id within the project that the score is for',
   `page_namespace` int COMMENT 'MediaWiki namespace page_id belongs to',

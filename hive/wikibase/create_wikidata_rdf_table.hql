@@ -1,4 +1,4 @@
-CREATE TABLE `discovery.wikidata_rdf` (
+CREATE TABLE `discovery`.`wikidata_rdf` (
   `context` string,
   `subject` string,
   `predicate` string,

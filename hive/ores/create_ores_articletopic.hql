@@ -1,4 +1,4 @@
-CREATE TABLE `discovery.ores_articletopic` (
+CREATE TABLE `discovery`.`ores_articletopic` (
   `wikiid` string COMMENT 'MediaWiki database name',
   `page_id` int COMMENT 'MediaWiki page id',
   `page_namespace` int COMMENT 'MediaWiki namespace page_id belongs to',

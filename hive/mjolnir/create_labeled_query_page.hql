@@ -1,4 +1,4 @@
-CREATE TABLE `mjolnir.labeled_query_page` (
+CREATE TABLE `mjolnir`.`labeled_query_page` (
   `wikiid` string,
   `query` string,
   `page_id` int,

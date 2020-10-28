@@ -1,4 +1,4 @@
-CREATE TABLE `glent.suggestions` (
+CREATE TABLE `glent`.`suggestions` (
   `query` string,
   `dym` string,
   `suggCount` int,

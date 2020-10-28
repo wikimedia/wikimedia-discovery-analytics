@@ -1,4 +1,4 @@
-CREATE TABLE `glent.m0prep` (
+CREATE TABLE `glent`.`m0prep` (
   `q1_query` string,
   `q1_queryNorm` string,
   `q1_wikiid` string,

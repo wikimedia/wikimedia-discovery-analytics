@@ -1,5 +1,5 @@
 -- Each row is a single set of model parameters tested or trained.
-CREATE TABLE `mjolnir.model_parameters` (
+CREATE TABLE `mjolnir`.`model_parameters` (
   `run_id` string,
   `parent_run_id` string,
   `started_at` timestamp,
@@ -9,22 +9,22 @@ CREATE TABLE `mjolnir.model_parameters` (
   `algorithm` string,
   `objective` string,
   `loss` double,
-  -- stringifying numeric params since we don't have union
+  -- stringifying numeric params since we dont have union
   `params` map<string, string>,
   -- basic information about data that was trained against
   `folds` array<struct<
-    wikiid: string,
-    vec_format: string,
-    split_name: string,
-    path: string,
-    fold_id: int
+    `wikiid`: string,
+    `vec_format`: string,
+    `split_name`: string,
+    `path`: string,
+    `fold_id`: int
   >>,
   `metrics` array<struct<
-    key: string,
-    value: double,
-    step: int,
-    fold_id: int,
-    split: string
+    `key`: string,
+    `value`: double,
+    `step`: int,
+    `fold_id`: int,
+    `split`: string
   >>,
   -- artifact name to hdfs path
   `artifacts` map<string, string>
