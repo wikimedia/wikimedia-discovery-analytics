@@ -1,0 +1,30 @@
+== Time based partitioning ==
+
+By convention all date based partitioning is assigned to 2038-01-17T21:00:00.
+Using a far future date helps remind everyone this is test data, and having a
+constant date allows running test invocations of airflow tasks and bare scripts
+against an expected date.
+
+== Kinds of files are found here
+
+=== create_*.hql
+
+These are tables used within the integration testing environment as doubles for
+production tables.  These tables that either don't have a canonical hql (i.e.
+created by transforming a jsonschema in eventgate) or we simply didn't know
+where to find it.
+
+Files were created by running `show create table` in the analytics-hadoop cluster
+and lightly editing the outputs.
+
+=== populate_*.hql
+
+These are insert statements used to populate the various tables and facilitate
+integration testing. This works well for simple data without complex data types.
+
+=== populate_*.py
+
+These are pyspark scripts meant to be executed to populate various tables. Pyspark
+is more convenient for inserting complex data types, and generating fake data for
+complex schemas. By convention any data not explicitly needed for processing is set
+to null.
