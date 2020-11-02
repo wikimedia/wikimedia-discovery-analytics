@@ -40,7 +40,7 @@ WIKIBASE_ITEM_TABLE = 'discovery.wikibase_item'
 PROPAGATE_FROM_WIKI = 'enwiki'
 MODEL = 'articletopic'
 
-THRESHOLDS_PATH = 'hdfs://analytics-hadoop/wmf/data/discovery/ores/thresholds/' \
+THRESHOLDS_PATH = 'hdfs:///wmf/data/discovery/ores/thresholds/' \
     + MODEL + '/{{ ds_nodash }}.json'
 
 TEMPLATE_YMD_PARTITION = '{{ macros.ds_format(ds, "%Y-%m-%d", "year=%Y/month=%m/day=%d") }}'
