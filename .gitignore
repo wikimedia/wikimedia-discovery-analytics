@@ -9,4 +9,6 @@
 /airflow/unittests.cfg
 /airflow/logs
 __pycache__
+# Created by scap scripts
 venv
+venv.zip
