@@ -44,10 +44,15 @@ for ENV_DIR in ${ENVIRONMENTS_DIR}/*; do
         mkdir -p "$VENV"
         virtualenv --never-download --python "$PYTHON" "$VENV"
 
+        pipargs=""
+        if [ "${PIP_ALLOW_INDEX}" != "yes" ]; then
+            pipargs="--no-index"
+        fi
+
         # Install our packages
         $PIP install \
             -vv \
-            --no-index \
+            $pipargs \
             --find-links "$WHEEL_DIR" \
             --upgrade \
             --force-reinstall \
