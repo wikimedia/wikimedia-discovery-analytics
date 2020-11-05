@@ -111,7 +111,12 @@ class SkeinHook(BaseHook):
         # If the client ever needs configuration it should
         # be done through self._conn_id
         with skein.Client() as client:
-            app_id = client.submit(self._build_spec(application))
+            # TODO: Seems we have too much tied together, spec building could
+            # be it's own thing independent from this hook. The hook should
+            # probably only run a provided spec.
+            skein_spec = self._build_spec(application)
+            self.log.info('Rendered skein specification: %s', str(skein_spec))
+            app_id = client.submit(skein_spec)
             report = client.application_report(app_id)
             while report.final_status == "undefined":
                 logging.info('Waiting for [%s] [%s]', report.id, report.state)
