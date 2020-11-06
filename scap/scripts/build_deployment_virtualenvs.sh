@@ -45,7 +45,7 @@ for ENV_DIR in ${ENVIRONMENTS_DIR}/*; do
         virtualenv --never-download --python "$PYTHON" "$VENV"
 
         pipargs=""
-        if [ "${PIP_ALLOW_INDEX}" != "yes" ]; then
+        if [ "${PIP_ALLOW_INDEX:-}" != "yes" ]; then
             pipargs="--no-index"
         fi
 
