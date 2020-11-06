@@ -8,7 +8,7 @@
     "--conf",
     "spark.yarn.maxAppAttempts=1",
     "--files",
-    "hdfs://analytics-hadoop/wmf/data/discovery/ores/thresholds/articletopic/20380117.json#thresholds.json",
+    "hdfs:///wmf/data/discovery/ores/thresholds/articletopic/20380117.json#thresholds.json",
     "--py-files",
     "/srv/deployment/wikimedia/discovery/analytics/spark/wmf_spark.py",
     "--name",
