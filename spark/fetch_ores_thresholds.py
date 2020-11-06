@@ -11,7 +11,11 @@ import json
 import logging
 import requests
 import sys
+from requests.adapters import HTTPAdapter
 from typing import cast, Any, Dict, Mapping, NamedTuple, Optional, Sequence
+
+
+from requests.packages.urllib3.util.retry import Retry
 
 
 # Version of ORES api we know how to talk to
@@ -44,22 +48,30 @@ def main(
     ores_host: str
 ) -> int:
     ores_scores_api = ores_host + PATH
-    thresholds = get_all_thresholds(model, ores_scores_api)
+    thresholds = get_all_thresholds(establish_session(), model, ores_scores_api)
     with open(output_path, 'wt') as f:
         json.dump(thresholds, f)
 
     return 0
 
 
-def get_supported_wikis(model: str, ores_scores_api: str) -> Sequence[str]:
+def establish_session():
+    http = requests.Session()
+    retries = Retry(total=3, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
+    http.mount("http://", TimeoutHTTPAdapter(max_retries=retries))
+    http.mount("https://", TimeoutHTTPAdapter(max_retries=retries))
+    return http
+
+
+def get_supported_wikis(http: requests.Session, model: str, ores_scores_api: str) -> Sequence[str]:
     """Retrieve the set of all wikis the model supports"""
-    doc = requests.get(ores_scores_api).json()
+    doc = http.get(ores_scores_api).json()
     return [wiki for wiki, meta in doc.items() if model in meta['models']]
 
 
-def get_labels(config: Config) -> Sequence[str]:
+def get_labels(http: requests.Session, config: Config) -> Sequence[str]:
     """Retrieve the set of all possible labels from ORES api"""
-    doc = requests.get(
+    doc = http.get(
         config.ores_scores_for_context_api,
         params={
             'models': config.model,
@@ -70,11 +82,10 @@ def get_labels(config: Config) -> Sequence[str]:
     return doc[config.wiki]['models'][config.model]['params']['labels']
 
 
-def get_threshold_at_precision(
-    config: Config, label: str, target: float
-) -> Optional[Mapping[str, Any]]:
+def get_threshold_at_precision(http: requests.Session,
+                               config: Config, label: str, target: float) -> Optional[Mapping[str, Any]]:
     """Retrieve a threshold that will meet the precision target from ORES api"""
-    doc = requests.get(
+    doc = http.get(
         config.ores_scores_for_context_api,
         params={
             'models': config.model,
@@ -91,21 +102,40 @@ def get_threshold_at_precision(
         return None
 
 
-def get_all_thresholds(model: str, ores_scores_api: str) -> Mapping[str, Mapping[str, float]]:
+def get_all_thresholds(http: requests.Session, model: str, ores_scores_api: str) -> Mapping[str, Mapping[str, float]]:
     """Assemble prediction thresholds for all labels of configured model"""
     label_thresholds = cast(Dict[str, Dict[str, float]], {})
-    for wiki in get_supported_wikis(model, ores_scores_api):
+    for wiki in get_supported_wikis(http, model, ores_scores_api):
         label_thresholds[wiki] = {}
         config = Config(wiki, model, ores_scores_api + '/' + wiki)
-        for label in get_labels(config):
+        for label in get_labels(http, config):
             for target in PRECISION_TARGETS:
-                optimization = get_threshold_at_precision(config, label, target)
+                optimization = get_threshold_at_precision(http, config, label, target)
                 if optimization is not None and optimization['recall'] >= 0.5:
                     label_thresholds[wiki][label] = optimization['threshold']
                     break
             else:
                 label_thresholds[wiki][label] = DEFAULT_THRESHOLD
     return label_thresholds
+
+
+#  Taken from https://findwork.dev/blog/advanced-usage-python-requests-timeouts-retries-hooks
+DEFAULT_TIMEOUT = 5  # seconds
+
+
+class TimeoutHTTPAdapter(HTTPAdapter):
+    def __init__(self, *args, **kwargs):
+        self.timeout = DEFAULT_TIMEOUT
+        if "timeout" in kwargs:
+            self.timeout = kwargs["timeout"]
+            del kwargs["timeout"]
+        super().__init__(*args, **kwargs)
+
+    def send(self, request, **kwargs):
+        timeout = kwargs.get("timeout")
+        if timeout is None:
+            kwargs["timeout"] = self.timeout
+        return super().send(request, **kwargs)
 
 
 if __name__ == "__main__":

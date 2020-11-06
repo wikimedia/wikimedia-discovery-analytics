@@ -3,22 +3,29 @@ import json
 import fetch_ores_thresholds
 
 
+from requests import Session, Request
+
+
 def test_get_supported_wikis_response_parsing(get_fixture, mocker):
     # Feed through a recorded response from real api as a happy path test
     response = get_fixture('fetch_ores_thresholds', 'get_supported_wikis.01.json')
-    mocker.patch.object(fetch_ores_thresholds, 'requests').get().json.return_value = json.loads(response)
-
-    wikis = fetch_ores_thresholds.get_supported_wikis('articletopic', 'https://ores.pytest/...')
+    mock_session = Session()
+    mock_request = Request()
+    mock_session.get = mocker.Mock(return_value=mock_request)
+    mock_request.json = mocker.Mock(return_value=json.loads(response))
+    wikis = fetch_ores_thresholds.get_supported_wikis(mock_session, 'articletopic', 'https://ores.pytest/...')
     assert set(wikis) == {'arwiki', 'enwiki', 'kowiki', 'viwiki', 'cswiki'}
     assert len(wikis) == len(set(wikis))
 
 
 def test_get_labels_response_parsing(get_fixture, mocker):
     response = get_fixture('fetch_ores_thresholds', 'get_labels.01.json')
-    mocker.patch.object(fetch_ores_thresholds, 'requests').get().json.return_value = json.loads(response)
-
+    mock_session = Session()
+    mock_request = Request()
+    mock_session.get = mocker.Mock(return_value=mock_request)
+    mock_request.json = mocker.Mock(return_value=json.loads(response))
     config = fetch_ores_thresholds.Config('arwiki', 'articletopic', 'https://ores.pytest/...')
-    labels = fetch_ores_thresholds.get_labels(config)
+    labels = fetch_ores_thresholds.get_labels(mock_session, config)
     # The recorded response was manually cut down to size to make this assertion easier
     assert set(labels) == {
         "Culture.Biography.Biography*",
@@ -57,12 +64,12 @@ def test_threshold_selection_logic(mocker):
     expect['d'] = 0.9
     optimizations['d'] = {}
 
-    def get_threshold_at_precision(config, label, target):
+    def get_threshold_at_precision(http_session, config, label, target):
         return optimizations[label].get(target, None)
 
     mocker.patch.object(fetch_ores_thresholds, 'get_threshold_at_precision').side_effect = get_threshold_at_precision
     mocker.patch.object(fetch_ores_thresholds, 'get_labels').return_value = list(expect.keys())
     mocker.patch.object(fetch_ores_thresholds, 'get_supported_wikis').return_value = ['pytestwiki']
 
-    thresholds = fetch_ores_thresholds.get_all_thresholds('pytestmodel', 'https://ores.pytest/v3/scores')
+    thresholds = fetch_ores_thresholds.get_all_thresholds(Session(), 'pytestmodel', 'https://ores.pytest/v3/scores')
     assert thresholds == {'pytestwiki': expect}
