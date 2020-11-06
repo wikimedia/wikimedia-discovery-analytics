@@ -58,6 +58,8 @@ def main(table='event.mediawiki_revision_score'):
     spark = SparkSession.builder.getOrCreate()
     df = spark.read.table(table)
 
+    # To manually clear:
+    #   ALTER TABLE {table} DROP PARTITION(year=2001)
     assert df.count() == 0, 'Expecting empty table to populate'
 
     row_spec = [
@@ -91,6 +93,21 @@ def main(table='event.mediawiki_revision_score'):
                 }
             ]
         },
+        {
+            'database': 'testwiki',
+            'page_id': 12,
+            'page_namespace': 1,
+            'scores': [
+                {
+                    'model_name': 'drafttopic',
+                    'prediction': ['History and Society.Education'],
+                    'probability': {
+                        'History and Society.Education': 0.998,
+                        'Culture.Literature': 0.001,
+                    }
+                }
+            ]
+        }
     ]
 
     rows = [gen_row(**row) for row in row_spec]

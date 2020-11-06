@@ -21,6 +21,7 @@ pick up.
 """
 from datetime import datetime, timedelta
 import os
+from typing import List, Optional
 
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
@@ -33,15 +34,12 @@ from wmf_airflow.template import (
     MEDIAWIKI_ACTIVE_DC, MEDIAWIKI_CONFIG_PATH, REPO_PATH, REPO_HDFS_PATH)
 
 
-INPUT_TABLE = 'event.mediawiki_revision_score'
-OUTPUT_TABLE = 'discovery.ores_articletopic'
-WIKIBASE_ITEM_TABLE = 'discovery.wikibase_item'
+def dag_conf(var: str) -> str:
+    return '{{ var.json.ores_predictions_weekly_conf.%s }}' % var
 
-PROPAGATE_FROM_WIKI = 'enwiki'
-MODEL = 'articletopic'
 
-THRESHOLDS_PATH = 'hdfs:///wmf/data/discovery/ores/thresholds/' \
-    + MODEL + '/{{ ds_nodash }}.json'
+INPUT_TABLE = dag_conf('table_mw_rev_score')
+WIKIBASE_ITEM_TABLE = dag_conf('table_wikibase_item')
 
 TEMPLATE_YMD_PARTITION = '{{ macros.ds_format(ds, "%Y-%m-%d", "year=%Y/month=%m/day=%d") }}'
 
@@ -81,6 +79,7 @@ def mw_sql_to_hive(
         # Custom environment provides dnspython dependency. The environment must come
         # from hdfs, because it has to be built on an older version of debian than runs
         # on the airflow instance.
+        name='airflow: ores: ' + task_id,
         archives=REPO_HDFS_PATH + '/environments/mw_sql_to_hive/venv.zip#venv',
         py_files=REPO_PATH + '/spark/wmf_spark.py',
         # jdbc connector for talking to analytics replicas
@@ -118,6 +117,71 @@ def mw_sql_to_hive(
     )
 
 
+def fetch_and_extract(
+    model: str,
+    output_table: str,
+    propagate_from_wiki: Optional[str],
+    upstream, downstream
+):
+    """Extract predictions for one model from mediawiki_revision_score events
+
+    Predictions are thresholded and then prepared for passing on to convert_to_esbulk.py
+    """
+    thresholds_path = dag_conf('thresholds_prefix') + '/' + model + '_{{ ds_nodash }}.json'
+
+    # Fetch per-topic thresholds from ORES to use when deciding which
+    # predictions to discard as not-confident enough.
+    fetch_prediction_thresholds = SkeinOperator(
+        task_id='fetch_{}_prediction_thresholds'.format(model),
+        application=REPO_PATH + '/spark/fetch_ores_thresholds.py',
+        application_args=[
+            '--model', model,
+            '--output-path', 'thresholds.json',
+        ],
+        output_files={
+            'thresholds.json': thresholds_path,
+        },
+        # ORES is not available from the analytics network, we need to
+        # proxy to the outside world.
+        env={
+            'HTTPS_PROXY': HTTPS_PROXY,
+        })
+
+    if propagate_from_wiki is None:
+        propagate_args: List[str] = []
+    else:
+        propagate_args = [
+            '--wikibase-item-partition', WIKIBASE_ITEM_TABLE + '/' + TEMPLATE_YMD_PARTITION,
+            '--propagate-from', propagate_from_wiki,
+        ]
+
+    # Extract the data from mediawiki event logs and put into
+    # a format suitable for shipping to elasticsearch.
+    extract_predictions = SparkSubmitOperator(
+        task_id='extract_{}_predictions'.format(model),
+        conf={
+            # Delegate retrys to airflow
+            'spark.yarn.maxAppAttempts': '1',
+            'spark.dynamicAllocation.maxExecutors': '20',
+        },
+        spark_submit_env_vars={
+            'PYSPARK_PYTHON': 'python3.7',
+        },
+        files=thresholds_path + '#thresholds.json',
+        py_files=REPO_PATH + '/spark/wmf_spark.py',
+        application=REPO_PATH + '/spark/prepare_mw_rev_score.py',
+        application_args=propagate_args + [
+            '--input-partition', INPUT_TABLE + '/@{{ ds }}/{{ macros.ds_add(ds, 7) }}',
+            '--input-kind', 'mediawiki_revision_score',
+            '--output-partition', output_table + '/' + TEMPLATE_YMD_PARTITION,
+            '--thresholds-path', 'thresholds.json',
+            '--prediction', model,
+        ],
+    )
+
+    upstream >> fetch_prediction_thresholds >> extract_predictions >> downstream
+
+
 with DAG(
     'ores_predictions_weekly',
     default_args=default_args,
@@ -150,23 +214,6 @@ with DAG(
             ]
         ])
 
-    # Fetch per-topic thresholds from ORES to use when collecting predictions
-    fetch_prediction_thresholds = SkeinOperator(
-        task_id='fetch_prediction_thresholds',
-        application=REPO_PATH + '/spark/fetch_ores_thresholds.py',
-        application_args=[
-            '--model', MODEL,
-            '--output-path', 'thresholds.json',
-        ],
-        output_files={
-            'thresholds.json': THRESHOLDS_PATH,
-        },
-        # ORES is not available from the analytics network, we need to
-        # proxy to the outside world.
-        env={
-            'HTTPS_PROXY': HTTPS_PROXY,
-        })
-
     # Collect wikibase_item page props to facilitate propagating
     # predictions from enwiki to all the wikis
     extract_wikibase_items = mw_sql_to_hive(
@@ -179,37 +226,24 @@ with DAG(
             WHERE pp_propname="wikibase_item"
         """)
 
-    # Extract the data from mediawiki event logs and put into
-    # a format suitable for shipping to elasticsearch.
-    extract_predictions = SparkSubmitOperator(
-        task_id='extract_predictions',
-        conf={
-            # Delegate retrys to airflow
-            'spark.yarn.maxAppAttempts': '1',
-            'spark.dynamicAllocation.maxExecutors': '20',
-        },
-        spark_submit_env_vars={
-            'PYSPARK_PYTHON': 'python3.7',
-        },
-        files=THRESHOLDS_PATH + '#thresholds.json',
-        py_files=REPO_PATH + '/spark/wmf_spark.py',
-        application=REPO_PATH + '/spark/prepare_mw_rev_score.py',
-        application_args=[
-            '--input-partition', INPUT_TABLE + '/@{{ ds }}/{{ macros.ds_add(ds, 7) }}',
-            '--input-kind', 'mediawiki_revision_score',
-            '--output-partition', OUTPUT_TABLE + '/' + TEMPLATE_YMD_PARTITION,
-            '--thresholds-path', 'thresholds.json',
-            '--prediction', MODEL,
-            '--wikibase-item-partition', WIKIBASE_ITEM_TABLE + '/' + TEMPLATE_YMD_PARTITION,
-            '--propagate-from', PROPAGATE_FROM_WIKI,
-        ],
-    )
+    fork_per_model = DummyOperator(task_id='fork_per_model')
+    complete = DummyOperator(task_id='complete')
 
     [
-        fetch_prediction_thresholds,
         extract_wikibase_items,
-        wait_for_data
-    ] >> extract_predictions
+        wait_for_data,
+    ] >> fork_per_model
 
-    complete = DummyOperator(task_id='complete')
-    extract_predictions >> complete
+    fetch_and_extract(
+        model='articletopic',
+        output_table=dag_conf('table_articletopic'),
+        propagate_from_wiki='enwiki',
+        upstream=fork_per_model,
+        downstream=complete)
+
+    fetch_and_extract(
+        model='drafttopic',
+        output_table=dag_conf('table_drafttopic'),
+        propagate_from_wiki=None,
+        upstream=fork_per_model,
+        downstream=complete)

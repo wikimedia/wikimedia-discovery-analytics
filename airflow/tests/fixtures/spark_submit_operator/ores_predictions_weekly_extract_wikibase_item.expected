@@ -26,7 +26,7 @@
     "--packages",
     "mysql:mysql-connector-java:8.0.19",
     "--name",
-    "airflow-spark",
+    "airflow: ores: extract_wikibase_item",
     "--queue",
     "root.default",
     "/srv/deployment/wikimedia/discovery/analytics/spark/mw_sql_to_hive.py",

@@ -281,11 +281,11 @@ def arg_parser() -> ArgumentParser:
         '--alias', default=None, required=False,
         help='Name of prediction column in output table. Model name will be used if not provided.')
     parser.add_argument(
-        '--wikibase-item-partition', required=True, type=HivePartition.from_spec,
+        '--wikibase-item-partition', required=False, type=HivePartition.from_spec,
         help='Table and partition containing export of wikibase_item '
              'page props from mw replicas.')
     parser.add_argument(
-        '--propagate-from', required=True,
+        '--propagate-from', required=False,
         help='Wiki database name to propagate predictions from.')
     # We "know" that the data is relatively small so make a single output
     # partition, with the option to override for larger one-off tasks.
@@ -306,14 +306,15 @@ def main(
     thresholds: Mapping[str, Mapping[str, float]],
     prediction: str,
     alias: str,
-    wikibase_item_partition: HivePartition,
-    propagate_from: str,
+    wikibase_item_partition: Optional[HivePartition],
+    propagate_from: Optional[str],
     num_output_partitions: int
 ) -> int:
-    if propagate_from not in thresholds:
+    if propagate_from is not None and propagate_from not in thresholds:
         raise Exception('No thresholds provided for propagation wiki, no propagation can occur.')
 
     spark = SparkSession.builder.getOrCreate()
+
     df_in = INPUT_KINDS[input_kind](
         input_partition.read(spark), prediction)
 
@@ -330,17 +331,23 @@ def main(
 
     # Propagate predictions from wikis we have models to all the other
     # wikis by wikibase_item.
-    df_propagated = propagate_by_wbitem(
-        df_predictions,
-        wikibase_item_partition.read(spark),
-        prediction_col,
-        source_wikis=set(thresholds.keys()),
-        preferred_wiki=propagate_from)
+    if propagate_from is not None:
+        if wikibase_item_partition is None:
+            raise Exception('propagate_from provided without wikibase_item_table')
+
+        df_predictions = propagate_by_wbitem(
+            df_predictions,
+            wikibase_item_partition.read(spark),
+            prediction_col,
+            source_wikis=set(thresholds.keys()),
+            preferred_wiki=propagate_from)
+    elif wikibase_item_partition is not None:
+        logging.warning('wikibase_item_table provided without propagate_from, no propagation will occur')
 
     # Repartition as desired, spark typically has hundreds of partitions but
     # the final outputs may be anywhere from hundreds of MB to dozens of GB
     # depending on the input dataset.
-    df_out = df_propagated \
+    df_out = df_predictions \
         .repartition(num_output_partitions) \
         .select(
             'wikiid',

@@ -54,7 +54,7 @@ def fetch_namespaces(
     Returns a (namespace_id, elastic_index) tuple for all defined namespaces.
     """
     url = 'https://{}/w/api.php'.format(domain_name)
-    response = session.get(url, params={
+    response = session.get(url, timeout=5, params={
         'action': 'cirrus-config-dump',
         'format': 'json',
         'formatversion': 2,

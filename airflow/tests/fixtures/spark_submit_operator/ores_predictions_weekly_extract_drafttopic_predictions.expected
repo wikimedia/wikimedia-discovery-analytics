@@ -8,7 +8,7 @@
     "--conf",
     "spark.yarn.maxAppAttempts=1",
     "--files",
-    "hdfs:///wmf/data/discovery/ores/thresholds/articletopic/20380117.json#thresholds.json",
+    "hdfs:///wmf/data/discovery/ores/thresholds/drafttopic_20380117.json#thresholds.json",
     "--py-files",
     "/srv/deployment/wikimedia/discovery/analytics/spark/wmf_spark.py",
     "--name",
@@ -21,13 +21,9 @@
     "--input-kind",
     "mediawiki_revision_score",
     "--output-partition",
-    "discovery.ores_articletopic/year=2038/month=01/day=17",
+    "discovery.ores_drafttopic/year=2038/month=01/day=17",
     "--thresholds-path",
     "thresholds.json",
     "--prediction",
-    "articletopic",
-    "--wikibase-item-partition",
-    "discovery.wikibase_item/year=2038/month=01/day=17",
-    "--propagate-from",
-    "enwiki"
+    "drafttopic"
 ]
