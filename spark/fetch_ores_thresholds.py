@@ -18,6 +18,9 @@ from typing import cast, Any, Dict, Mapping, NamedTuple, Optional, Sequence
 from requests.packages.urllib3.util.retry import Retry
 
 
+logger = logging.getLogger(__name__)
+
+
 # Version of ORES api we know how to talk to
 PATH = "/v3/scores"
 
@@ -135,7 +138,10 @@ class TimeoutHTTPAdapter(HTTPAdapter):
         timeout = kwargs.get("timeout")
         if timeout is None:
             kwargs["timeout"] = self.timeout
-        return super().send(request, **kwargs)
+        response = super().send(request, **kwargs)
+        if response.status_code >= 400:
+            logger.error(response.status_code.__str__() + " response received: " + response.text)
+        return response
 
 
 if __name__ == "__main__":
