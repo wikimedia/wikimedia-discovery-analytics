@@ -25,7 +25,9 @@ from typing import List, Optional
 
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
+from airflow.operators.python_operator import PythonOperator
 
+from wmf_airflow.hdfs_cli import HdfsCliHook
 from wmf_airflow.hive_partition_range_sensor import HivePartitionRangeSensor
 from wmf_airflow.skein import SkeinOperator
 from wmf_airflow.spark_submit import SparkSubmitOperator
@@ -226,12 +228,24 @@ with DAG(
             WHERE pp_propname="wikibase_item"
         """)
 
+    # Ensure the location we want to write thresholds to exists.
+    # This should be a no-op on all but the first execution
+    ensure_threshold_dir_exists = PythonOperator(
+        task_id='ensure_threshold_dir_exists',
+        python_callable=HdfsCliHook.mkdir,
+        op_kwargs={
+            'path': dag_conf('thresholds_prefix'),
+            'parents': True
+        },
+        provide_context=False)
+
     fork_per_model = DummyOperator(task_id='fork_per_model')
     complete = DummyOperator(task_id='complete')
 
     [
         extract_wikibase_items,
         wait_for_data,
+        ensure_threshold_dir_exists,
     ] >> fork_per_model
 
     fetch_and_extract(
