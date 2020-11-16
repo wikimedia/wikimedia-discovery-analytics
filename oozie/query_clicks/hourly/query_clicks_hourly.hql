@@ -87,7 +87,10 @@ WITH web_req AS (
         -- is search_req.hits might not be exactly the same, so that will have to be handled
         -- individually by consumers of this data.
         COLLECT_LIST(NAMED_STRUCT(
-            'pageid', page_id,
+            # pageid in webreq changed from int to bigint nov 2020, cast back
+            # to int and delay updating downstream as the largest page_id today
+            # is ~100M.
+            'pageid', CAST(page_id as int),
             -- For some reason hive refuses to read a table with a timestamp field in
             -- the array<struct<...>>. Normalize to unix timestamps instead.
             'timestamp', TO_UNIX_TIMESTAMP(ts),
