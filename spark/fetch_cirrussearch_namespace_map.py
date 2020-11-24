@@ -58,11 +58,12 @@ def fetch_namespaces(
         'action': 'cirrus-config-dump',
         'format': 'json',
         'formatversion': 2,
-    }).json()
+    })
+    response.raise_for_status()
     return [
         # The api made the keys into strings, but they are really ints
         (int(k), v)
-        for k, v in response['CirrusSearchConcreteNamespaceMap'].items()
+        for k, v in response.json()['CirrusSearchConcreteNamespaceMap'].items()
     ]
 
 
@@ -89,6 +90,13 @@ def main(
             F.col('ns.namespace_id'),
             F.col('ns.elastic_index'))
     )
+
+    # For simplicity of downstream use cases this job writes to an unpartitioned table. This
+    # has the downside that if we attempt to overwrite the partition but the job fails the table
+    # will be empty. Try and avoid some of this by calculating everything into memory before
+    # issuing the write request
+    df = df.cache()
+    df.count()
 
     output_partition.overwrite_with(df)
     return 0
