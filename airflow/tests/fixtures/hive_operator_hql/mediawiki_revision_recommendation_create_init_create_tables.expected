@@ -1,0 +1,15 @@
+
+CREATE TABLE IF NOT EXISTS discovery.mediawiki_revision_recommendation_create (
+    `wikiid` string COMMENT 'MediaWiki database name',
+    `page_id` int COMMENT 'MediaWiki page id',
+    `page_namespace` int COMMENT 'MediaWiki namespace page_id belongs to',
+    `recommendation_type` string COMMENT 'The type of the recommendation to create, typically refers to the use case'
+)
+PARTITIONED BY (
+    `year` int COMMENT 'Unpadded year data collection starts at',
+    `month` int COMMENT 'Unpadded month data collection starts at',
+    `day` int COMMENT 'Unpadded day data collection starts at',
+    `hour` int COMMENT 'Unpadded hour data collection starts at'
+)
+STORED AS PARQUET
+LOCATION 'hdfs:///wmf/data/discovery/mediawiki_revision_recommendation_create'

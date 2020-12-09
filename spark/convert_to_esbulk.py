@@ -30,11 +30,11 @@ except ImportError:
     findspark.init()
     from pyspark.sql import SparkSession
 from pyspark.sql import Column, DataFrame, Row, functions as F
-from pyspark import RDD
+from pyspark import RDD, SparkContext
 
 from argparse import ArgumentParser
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field as dataclass_field, InitVar
 from datetime import datetime
 import json
 import logging
@@ -67,13 +67,23 @@ def arg_parser() -> ArgumentParser:
     return parser
 
 
+def escape_hql_literal(value: str):
+    # scala companion objects are funny to access from jvm, we need __getattr__
+    # because the $ are not valid python.
+    Literal = (
+        SparkContext._jvm.org.apache.spark.sql.catalyst.expressions  # type: ignore
+        .__getattr__('Literal$').__getattr__('MODULE$')
+    )
+    return Literal.apply(value).sql()
+
+
 @dataclass
 class Field:
     """Abstract class specifying a field to read
 
     Full implementation must also include a handler property.
     """
-    # Name of field in source table
+    # HQL Expression of the update content. Typically a field name.
     field: str
     # Name of field in elasticsearch
     alias: str
@@ -98,7 +108,7 @@ class Field:
     @property
     def column(self) -> Column:
         """Spark column applied to source table returning data to index"""
-        return F.col(self.field).alias(self.alias)
+        return F.expr(self.field).alias(self.alias)
 
     @property
     def handler(self) -> str:
@@ -147,12 +157,45 @@ class MultiListField(Field):
 
     Specified field in hive table must be an array of strings.
     """
-
     # Prefix, typically the model name, to apply to each element of array
     # in source table. Prefixes must be unique per source. On update the
     # noop script removes all elements with matching prefix, and then adds
     # the new values.
-    prefix: Optional[str]
+    # Values accepted:
+    # - None  - unprefixed, for legacy ores_articletopic data
+    # - str   - constant prefix to apply to all rows in table
+    # - tuple - An hql expression (often a field of the table) to source
+    #           the prefix from, and the set of prefixes to expect.
+    prefix: InitVar[Optional[Union[str, Tuple[str, Set[str]]]]] = None
+
+    # Set of prefixes this field provides
+    prefix_expectlist: Set[str] = dataclass_field(init=False)
+
+    # hql expression of prefix and trailing /
+    prefix_expression: str = dataclass_field(init=False)
+
+    def __post_init__(self, prefix):
+        if prefix is None:
+            self.prefix_expectlist = set()
+            self.prefix_expression = '""'
+        elif isinstance(prefix, str):
+            self.prefix_expectlist = {prefix}
+            self.prefix_expression = escape_hql_literal(prefix + "/")
+        else:
+            field, self.prefix_expectlist = prefix
+            self.prefix_expression = 'concat({}, "/")'.format(field)
+            # Reject unexpected prefixes. Mostly this guarantees we only ship what is expected
+            # When x is not in the expectlist NULL is returned.
+            # TODO: This feels awkward...
+            self.column_wrapper = lambda x: F.when(F.expr(field).isin(self.prefix_expectlist), x)
+
+    def column_wrapper(self, value: Column) -> Column:
+        """Wraps the final self.column value with additional logic
+
+        Default implementation simply returns the input. Specific use cases
+        replace this method on init if additional logic is necessary.
+        """
+        return value
 
     @staticmethod
     def validate_equiv_fields(fields: Sequence[Field]):
@@ -162,7 +205,9 @@ class MultiListField(Field):
         fields = cast(Sequence[MultiListField], fields)
 
         is_ok = True
-        if len(fields) != len({field.prefix for field in fields}):
+        num_prefixes = sum(len(field.prefix_expectlist) for field in fields)
+        num_unique = len(set.union(*(field.prefix_expectlist for field in fields)))
+        if num_prefixes != num_unique:
             logging.critical(
                 'All tables must have unique prefixes for multilist aliased to %s',
                 fields[0].alias)
@@ -171,17 +216,12 @@ class MultiListField(Field):
 
     @property
     def column(self) -> Column:
-        # Apply chosen multilist prefix.
-        if self.prefix is None:
-            # For historical reasons we have unprefixed data in the same
-            # field for a single model.
-            return super().column
-        else:
-            # F.expr is used as higher order functions aren't available through
-            # the pyspark api directly.
-            return F.expr('transform({}, x -> concat("{}/", x))'.format(
-                self.field, self.prefix
-            )).alias(self.alias)
+        # F.expr is used as higher order functions aren't available through
+        # the pyspark api directly.
+        values = F.expr('transform({}, x -> concat({}, x))'.format(
+            self.field, self.prefix_expression
+        ))
+        return self.column_wrapper(values).alias(self.alias)
 
     @staticmethod
     def merge(old_value: Column, new_value: Column) -> Column:
@@ -299,6 +339,21 @@ CONFIG = {
             update_kind=UPDATE_ALL,
             fields=[
                 MultiListField(field='drafttopic', alias='ores_articletopic', prefix='drafttopic')
+            ]
+        ),
+        Table(
+            table_name='discovery.mediawiki_revision_recommendation_create',
+            partition_spec_tmpl='@hourly',
+            join_on=JOIN_ON_WIKIID,
+            update_kind=UPDATE_CONTENT_ONLY,
+            fields=[
+                MultiListField(
+                    # The only information to share about recommendations is if
+                    # they exist, provide a constant expression as the field
+                    # instead of awkwardly storing the repeated value in the table.
+                    field='array("exists|1")',
+                    alias='ores_articletopic',
+                    prefix=('recommendation_type', {'link'})),
             ]
         ),
     ],
@@ -443,7 +498,10 @@ def prepare(
         df_current = (
             resolve_cirrus_index(df_current, df_nsmap)
             .where(table.index_is_allowed(F.col('elastic_index')))
-            .select(*shared_cols, *table.columns))
+            # Each row must have at least one valid field for export
+            .where(F.coalesce(*table.columns).isNotNull())
+            .select(*shared_cols, *table.columns)
+        )
 
         if df is None:
             df = df_current
@@ -569,8 +627,6 @@ def main(
         config = CONFIG[config]()
     if not validate_config(config):
         return 1
-
-    spark = SparkSession.builder.getOrCreate()
 
     df = prepare(
         spark=spark,

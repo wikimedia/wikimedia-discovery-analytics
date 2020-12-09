@@ -21,6 +21,8 @@ all_dag_ids = [
     'fulltext_head_queries_daily',
     'glent_weekly',
     'import_wikidata_ttl',
+    'mediawiki_revision_recommendation_create_init',
+    'mediawiki_revision_recommendation_create_hourly',
     'mjolnir',
     'ores_predictions_init',
     'ores_predictions_hourly',
@@ -30,6 +32,7 @@ all_dag_ids = [
     'search_satisfaction_daily',
     'transfer_to_es_hourly',
     'transfer_to_es_weekly',
+    'mediawiki_revision_recommendation_create_hourly',
 ]
 
 
@@ -101,7 +104,11 @@ def all_tasks():
     bag = DagBag()
     for dag_id in all_dag_ids:
         dag = bag.get_dag(dag_id)
-        assert dag is not None, dag_id
+        if dag is None:
+            # This is run while collecting tests, before running them.
+            # Failing here would bail the entire suite. There is a
+            # separate test that will check all_dag_ids and fail.
+            continue
         for task in dag.tasks:
             yield task
 

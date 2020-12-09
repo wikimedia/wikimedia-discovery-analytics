@@ -162,7 +162,7 @@ def rendered_task(task, mocker):
     mocker.patch.object(macros.hive, 'max_partition').return_value = b'20010115'
     # This will change the task, take a copy
     task = deepcopy(task)
-    ti = TaskInstance(task, datetime(year=2038, month=1, day=17))
+    ti = TaskInstance(task, datetime(year=2038, month=1, day=17, hour=3))
     context = ti.get_template_context()
     context['run_id'] = 'pytest_compare_against_fixtures'
     if task.dag_id in DAG_RUN_CONF:

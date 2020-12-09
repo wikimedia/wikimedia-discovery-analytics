@@ -1,0 +1,7 @@
+{
+    "mediawiki_revision_recommendation_create_hourly_conf": {
+        "table_event_recommendation": "event.mediawiki_revision_recommendation_create",
+        "table_discovery_recommendation": "discovery.mediawiki_revision_recommendation_create",
+        "rel_path_discovery_recommendation": "mediawiki_revision_recommendation_create"
+    }
+}

@@ -1,0 +1,21 @@
+[
+    "PYSPARK_PYTHON=python3.7",
+    "spark-submit",
+    "--master",
+    "yarn",
+    "--conf",
+    "spark.dynamicAllocation.maxExecutors=20",
+    "--conf",
+    "spark.yarn.maxAppAttempts=1",
+    "--py-files",
+    "/srv/deployment/wikimedia/discovery/analytics/spark/wmf_spark.py",
+    "--name",
+    "airflow-spark",
+    "--queue",
+    "root.default",
+    "/srv/deployment/wikimedia/discovery/analytics/spark/prepare_recommendation_create.py",
+    "--input-partition",
+    "event.mediawiki_revision_recommendation_create/year=2038/month=1/day=17/hour=3",
+    "--output-partition",
+    "discovery.mediawiki_revision_recommendation_create/year=2038/month=1/day=17/hour=3"
+]

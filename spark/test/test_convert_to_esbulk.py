@@ -178,8 +178,8 @@ def test_prepare_happy_path(
 
 
 @pytest.mark.parametrize('is_valid,msg,config', [
-    (False, "must define at least one table", []),
-    (True, "happy path", [convert_to_esbulk.Table(
+    (False, "must define at least one table", lambda: []),
+    (True, "happy path", lambda: [convert_to_esbulk.Table(
         table_name='pytest_table',
         partition_spec_tmpl='{table_name}/',
         join_on=convert_to_esbulk.JOIN_ON_WIKIID,
@@ -188,14 +188,14 @@ def test_prepare_happy_path(
             convert_to_esbulk.EqualsField(field='field', alias='alias')
         ]
     )]),
-    (False, "table must have fields", [convert_to_esbulk.Table(
+    (False, "table must have fields", lambda: [convert_to_esbulk.Table(
         table_name='pytest_table',
         partition_spec_tmpl='{table_name}/',
         join_on=convert_to_esbulk.JOIN_ON_WIKIID,
         update_kind=convert_to_esbulk.UPDATE_ALL,
         fields=[]
     )]),
-    (False, "update_kind must be valid", [convert_to_esbulk.Table(
+    (False, "update_kind must be valid", lambda: [convert_to_esbulk.Table(
         table_name='pytest_table',
         partition_spec_tmpl='{table_name}/',
         join_on=convert_to_esbulk.JOIN_ON_WIKIID,
@@ -204,7 +204,7 @@ def test_prepare_happy_path(
             convert_to_esbulk.EqualsField(field='field', alias='alias'),
         ]
     )]),
-    (False, "join_on must be valid", [convert_to_esbulk.Table(
+    (False, "join_on must be valid", lambda: [convert_to_esbulk.Table(
         table_name='pytest_table',
         partition_spec_tmpl='{table_name}/',
         join_on='does-not-exist',
@@ -213,7 +213,7 @@ def test_prepare_happy_path(
             convert_to_esbulk.EqualsField(field='field', alias='alias'),
         ]
     )]),
-    (True, "multilist allows unique prefixes", [convert_to_esbulk.Table(
+    (True, "multilist allows unique prefixes", lambda: [convert_to_esbulk.Table(
         table_name='pytest_table',
         partition_spec_tmpl='{table_name}/',
         join_on=convert_to_esbulk.JOIN_ON_WIKIID,
@@ -223,7 +223,7 @@ def test_prepare_happy_path(
             convert_to_esbulk.MultiListField(field='field', alias='alias', prefix='b'),
         ]
     )]),
-    (False, "multilist rejects duplicate prefixes", [convert_to_esbulk.Table(
+    (False, "multilist rejects duplicate prefixes", lambda: [convert_to_esbulk.Table(
         table_name='pytest_table',
         partition_spec_tmpl='{table_name}/',
         join_on=convert_to_esbulk.JOIN_ON_WIKIID,
@@ -233,7 +233,7 @@ def test_prepare_happy_path(
             convert_to_esbulk.MultiListField(field='field', alias='alias', prefix='dupe'),
         ]
     )]),
-    (True, "alias duplication limits are per-alias", [convert_to_esbulk.Table(
+    (True, "alias duplication limits are per-alias", lambda: [convert_to_esbulk.Table(
         table_name='pytest_table',
         partition_spec_tmpl='{table_name}/',
         join_on=convert_to_esbulk.JOIN_ON_WIKIID,
@@ -245,7 +245,10 @@ def test_prepare_happy_path(
     )]),
 ])
 def test_validate_config(is_valid, msg, config):
-    assert is_valid == convert_to_esbulk.validate_config(config), msg
+    # config is passed as a lambda because Table requires the pyspark jvm to be
+    # initialized, and that happens after all tests are located. It could be
+    # reworked to avoid escaping on creation, but this seems fine.
+    assert is_valid == convert_to_esbulk.validate_config(config()), msg
 
 
 def test_multilist_unprefixed(mocker, df_wikis, df_namespace_map, table_to_convert):
@@ -253,7 +256,7 @@ def test_multilist_unprefixed(mocker, df_wikis, df_namespace_map, table_to_conve
     mocked_tables = {
         'canonical_data.wikis': df_wikis,
         'mock_namespace_map_table': df_namespace_map,
-        'source_table': source_df.withColumn('foo', F.lit('a')),
+        'source_table': source_df.withColumn('foo', F.array(F.lit('a'))),
     }
 
     spark = mocker.MagicMock()
@@ -277,7 +280,7 @@ def test_multilist_unprefixed(mocker, df_wikis, df_namespace_map, table_to_conve
 
     rows = df_result.collect()
     assert len(rows) == 1, "one row in, one row out"
-    assert rows[0].bar == 'a', "Output should be unprefixed"
+    assert rows[0].bar == ['a'], "Output should be unprefixed"
 
 
 def test_multiple_multilist(mocker, df_wikis, df_namespace_map, table_to_convert):
@@ -329,6 +332,20 @@ def test_multiple_multilist(mocker, df_wikis, df_namespace_map, table_to_convert
         "Unique inputs were provided, all outputs should be unique as well"
     assert set(rows[0].bar) == {'a/z', 'a/y', 'b/y', 'b/x'}, \
         "Both sources should be represented in the result"
+
+
+def test_multilist_prefix_as_expression(spark):
+    field = convert_to_esbulk.MultiListField(
+        field='value_in',
+        alias='value_out',
+        prefix=('concat("z", "y")', ['zy']))
+
+    df = spark.range(1).withColumn('value_in', F.array(F.lit('ab')))
+    # If concat were seen as a string instead of an expression
+    # it wouldn't be found in the expect list, and we would get no result
+    rows = df.select(field.column).collect()
+    assert len(rows) == 1
+    assert rows[0].value_out == ['zy/ab']
 
 
 def test_multilist_field_as_expression(spark):

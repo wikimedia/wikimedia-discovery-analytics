@@ -106,6 +106,7 @@ with DAG(
             'query_clicks_hourly',
             'search_satisfaction_daily',
             # Contains non-private data, but no real need to keep forever
+            'mediawiki_revision_recommendation_create',
             'ores_articletopic',
             'ores_scores_export',
             'popularity_score',
