@@ -247,6 +247,10 @@ class HivePartitionWriter:
     def from_spec(cls, spec: str) -> HivePartitionWriter:
         return cls(HivePartition.from_spec(spec))
 
+    @property
+    def table_name(self) -> str:
+        return self.partition.table_name
+
     def make_compatible(self, df: DataFrame) -> DataFrame:
         """Align dataframe to the target schema
 

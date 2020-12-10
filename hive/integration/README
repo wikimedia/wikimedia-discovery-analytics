@@ -1,7 +1,7 @@
 == Time based partitioning ==
 
-By convention all date based partitioning is assigned to 2038-01-17T21:00:00.
-Using a far future date helps remind everyone this is test data, and having a
+By convention all date based partitioning is assigned to 2001-01-15T19:00:00.
+Using a historical date helps remind everyone this is test data, and having a
 constant date allows running test invocations of airflow tasks and bare scripts
 against an expected date.
 
@@ -17,14 +17,11 @@ where to find it.
 Files were created by running `show create table` in the analytics-hadoop cluster
 and lightly editing the outputs.
 
-=== populate_*.hql
+=== populate_*.json
 
-These are insert statements used to populate the various tables and facilitate
-integration testing. This works well for simple data without complex data types.
+Files processed by spark/populate_integration.py. These files specify a specific
+hive partition to populate and the rows to populate them with. Unspecified
+fields will be set to NULL. Unknown fields will fail the import. These are
+used for the integration testing environment to provide data to execute
+against.
 
-=== populate_*.py
-
-These are pyspark scripts meant to be executed to populate various tables. Pyspark
-is more convenient for inserting complex data types, and generating fake data for
-complex schemas. By convention any data not explicitly needed for processing is set
-to null.

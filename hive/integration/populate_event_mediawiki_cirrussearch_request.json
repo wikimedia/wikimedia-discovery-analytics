@@ -1,0 +1,23 @@
+{
+    "partition": "event.mediawiki_cirrussearch_request/datacenter=eqiad/year=2001/month=1/day=15/hour=19",
+    "rows": [
+        {
+            "search_id": "abc123",
+            "params": {
+                "search": "boats"
+            },
+            "source": "web",
+            "identity": "A",
+            "database": "testwiki",
+            "elastic_reqs": [
+                {
+                    "query": "boats",
+                    "query_type": "full_text",
+                    "namespaces": [0],
+                    "indices": ["testwiki_content"],
+                    "syntax": ["full_text", "full_text_simple_match", "simple_bag_of_words"]
+                }
+            ]
+        }
+    ]
+}

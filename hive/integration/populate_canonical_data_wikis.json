@@ -1,0 +1,38 @@
+{
+    "partition": "canonical_data.wikis/",
+    "rows": [
+        {
+            "database_code": "commonswiki",
+            "domain_name": "commons.wikimedia.org",
+            "database_group": "commons",
+            "language_code": "en",
+            "language_name": "English",
+            "status": "open",
+            "visibility": "public",
+            "editability": "public",
+            "english_name": "Wikimedia Commons"
+        },
+        {
+            "database_code": "enwiki",
+            "domain_name": "en.wikipedia.org",
+            "database_group": "wikipedia",
+            "language_code": "en",
+            "language_name": "English",
+            "status": "open",
+            "visibility": "public",
+            "editability": "public",
+            "english_name": "English Wikipedia"
+        },
+        {
+            "database_code": "testwiki",
+            "domain_name": "test.wikipedia.org",
+            "database_group": "test",
+            "language_code": "en",
+            "language_name": "English",
+            "status": "open",
+            "visibility": "public",
+            "editability": "public",
+            "english_name": "Test Wikipedia"
+        }
+    ]
+}

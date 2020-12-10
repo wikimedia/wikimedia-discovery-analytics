@@ -1,0 +1,50 @@
+{
+    "partition": "event.mediawiki_revision_score/datacenter=eqiad/year=2001/month=1/day=15/hour=19",
+    "rows": [
+        {
+            "database": "testwiki",
+            "page_id": 10,
+            "page_namespace": 0,
+            "scores": {
+                "articletopic": {
+                    "model_name": "articletopic",
+                    "prediction": ["Culture.Literature"],
+                    "probability": {
+                        "History and Society.Education": 0.001,
+                        "Culture.Literature": 0.998
+                    }
+                }
+            }
+        },
+        {
+            "database": "testwiki",
+            "page_id": 11,
+            "page_namespace": 0,
+            "scores": {
+                "articletopic": {
+                    "model_name": "articletopic",
+                    "prediction": ["History and Society.Education"],
+                    "probability": {
+                        "History and Society.Education": 0.998,
+                        "Culture.Literature": 0.001
+                    }
+                }
+            }
+        },
+        {
+            "database": "testwiki",
+            "page_id": 12,
+            "page_namespace": 1,
+            "scores": {
+                "drafttopic": {
+                    "model_name": "drafttopic",
+                    "prediction": ["History and Society.Education"],
+                    "probability": {
+                        "History and Society.Education": 0.998,
+                        "Culture.Literature": 0.001
+                    }
+                }
+            }
+        }
+    ]
+}
