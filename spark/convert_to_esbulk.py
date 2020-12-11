@@ -243,6 +243,7 @@ class Table:
     # registered partition spec templates. When key value is in
     # partition_spec_tmpl then this value will be used as the template.
     PARTITION_TMPL = {
+        '@hourly': '{table_name}/year={dt.year}/month={dt.month}/day={dt.day}/hour={dt.hour}',
         '@daily': '{table_name}/year={dt.year}/month={dt.month}/day={dt.day}',
     }
 
@@ -277,10 +278,10 @@ class Table:
 # complicated.  The actual config is wrapped into a lambda as creating it may
 # trigger hql escaping, which requires the spark jvm to have been initialized.
 CONFIG = {
-    'weekly': lambda: [
+    'hourly': lambda: [
         Table(
             table_name='discovery.ores_articletopic',
-            partition_spec_tmpl='@daily',
+            partition_spec_tmpl='@hourly',
             join_on=JOIN_ON_WIKIID,
             update_kind=UPDATE_ALL,
             fields=[
@@ -293,13 +294,15 @@ CONFIG = {
         ),
         Table(
             table_name='discovery.ores_drafttopic',
-            partition_spec_tmpl='@daily',
+            partition_spec_tmpl='@hourly',
             join_on=JOIN_ON_WIKIID,
             update_kind=UPDATE_ALL,
             fields=[
                 MultiListField(field='drafttopic', alias='ores_articletopic', prefix='drafttopic')
             ]
         ),
+    ],
+    'weekly': lambda: [
         Table(
             table_name='discovery.popularity_score',
             partition_spec_tmpl='@daily',

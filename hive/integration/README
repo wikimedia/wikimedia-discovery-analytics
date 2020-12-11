@@ -1,16 +1,16 @@
 == Time based partitioning ==
 
 By convention all date based partitioning is assigned to 2001-01-15T19:00:00.
-Using a historical date helps remind everyone this is test data, and having a
-constant date allows running test invocations of airflow tasks and bare scripts
-against an expected date.
+Using a historical date helps remind everyone this is test data. Having a
+constant date allows test invocations of airflow tasks and bare scripts against
+an expected date and time.
 
 == Kinds of files are found here
 
 === create_*.hql
 
 These are tables used within the integration testing environment as doubles for
-production tables.  These tables that either don't have a canonical hql (i.e.
+production tables. These are tables that either don't have a canonical hql (i.e.
 created by transforming a jsonschema in eventgate) or we simply didn't know
 where to find it.
 
@@ -24,4 +24,3 @@ hive partition to populate and the rows to populate them with. Unspecified
 fields will be set to NULL. Unknown fields will fail the import. These are
 used for the integration testing environment to provide data to execute
 against.
-

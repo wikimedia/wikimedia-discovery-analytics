@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 
 from airflow import DAG
+from airflow.models.baseoperator import BaseOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.sensors.external_task_sensor import ExternalTaskSensor
 
@@ -12,13 +13,19 @@ from wmf_airflow.template import REPO_PATH, DagConf
 
 dag_conf = DagConf('transfer_to_es_conf')
 
-PATH_OUT = dag_conf('base_output_path') + '/date={{ ds_nodash }}'
+PATH_OUT_WEEKLY = dag_conf('base_output_path') + \
+    '/date={{ ds_nodash }}/freq=weekly'
+PATH_OUT_HOURLY = dag_conf('base_output_path') + \
+    '/date={{ ds_nodash }}/freq=hourly/hour={{ execution_date.hour }}'
 
 # Default kwargs for all Operators
 default_args = {
     'owner': 'discovery-analytics',
-    'depends_on_past': False,
-    'start_date': datetime(2020, 1, 8),
+    # This DAG updates the state of the search engine. The sequence of updates is
+    # important for the final state to be correct. As such the previous run must
+    # always complete before the next.
+    'depends_on_past': True,
+    'start_date': datetime(2020, 1, 24),
     'email': ['discovery-alerts@lists.wikimedia.org'],
     'email_on_failure': True,
     'email_on_retry': False,
@@ -28,18 +35,76 @@ default_args = {
 }
 
 
+def convert(config_name: str, output_path: str) -> BaseOperator:
+    return SparkSubmitOperator(
+        task_id='convert_to_esbulk',
+        conf={
+            'spark.yarn.maxAppAttempts': '1',
+            'spark.dynamicAllocation.maxExecutors': '25',
+        },
+        spark_submit_env_vars={
+            'PYSPARK_PYTHON': 'python3.7',
+        },
+        py_files=REPO_PATH + '/spark/wmf_spark.py',
+        application=REPO_PATH + '/spark/convert_to_esbulk.py',
+        application_args=[
+            '--config', config_name,
+            '--namespace-map-table', dag_conf('table_namespace_map'),
+            '--output', output_path,
+            '--datetime', '{{ execution_date.strftime("%Y-%m-%dT%H:00") }}',
+        ])
+
+
+def upload(path: str) -> SwiftUploadOperator:
+    # Ship to production
+    return SwiftUploadOperator(
+        task_id='upload_to_swift',
+        swift_container=dag_conf('swift_container'),
+        source_directory=path,
+        swift_object_prefix='{{ ds_nodash }}',
+        swift_overwrite=True,
+        event_per_object=True)
+
+
+with DAG(
+    'transfer_to_es_hourly',
+    default_args=default_args,
+    # Five minutes past the hour every hour
+    schedule_interval='@hourly',
+    max_active_runs=2,
+    catchup=False,
+    template_undefined=jinja2.StrictUndefined,
+) as hourly_dag:
+    sensor_kwargs = dict(
+        timeout=60 * 60,  # 1 hour
+        retries=4,
+        email_on_retry=True)
+
+    # Similarly wait for ores prediction prepartition to run
+    ores_articletopic = ExternalTaskSensor(
+        task_id='wait_for_ores_predictions',
+        external_dag_id='ores_predictions_hourly',
+        external_task_id='complete',
+        **sensor_kwargs)
+
+    # Format inputs as elasticsearch bulk updates
+    convert_to_esbulk = convert('hourly', PATH_OUT_HOURLY)
+    upload_to_swift = upload(PATH_OUT_HOURLY)
+    complete = DummyOperator(task_id='complete')
+
+    ores_articletopic >> convert_to_esbulk \
+        >> upload_to_swift >> complete
+
+
 with DAG(
     'transfer_to_es_weekly',
     default_args=default_args,
     # Once a week at midnight on Sunday morning
     schedule_interval='0 0 * * 0',
-    # This DAG updates the state of the search engine.  We must never update
-    # it with older data than we have already shipped. The previous run must
-    # always complete (success or failure) before the next.
     max_active_runs=1,
     catchup=False,
     template_undefined=jinja2.StrictUndefined,
-) as dag:
+) as weekly_dag:
     # Wait for popularity to compute
     popularity_score = ExternalTaskSensor(
         task_id='wait_for_popularity_score',
@@ -54,46 +119,8 @@ with DAG(
         external_dag_id='popularity_score_weekly',
         external_task_id='complete')
 
-    # Similarly wait for ores prediction prepartition to run
-    ores_articletopic = ExternalTaskSensor(
-        task_id='wait_for_ores_predictions',
-        # Same sensor reasoning and config as above
-        timeout=60 * 60 * 24,  # 24 hours
-        retries=4,
-        email_on_retry=True,
-        # external task selection
-        external_dag_id='ores_predictions_weekly',
-        external_task_id='complete')
-
-    # Format inputs as elasticsearch bulk updates
-    convert_to_esbulk = SparkSubmitOperator(
-        task_id='convert_to_esbulk',
-        conf={
-            # Delegate retrys to airflow
-            'spark.yarn.maxAppAttempts': '1',
-            'spark.dynamicAllocation.maxExecutors': '25',
-        },
-        spark_submit_env_vars={
-            'PYSPARK_PYTHON': 'python3.7',
-        },
-        application=REPO_PATH + '/spark/convert_to_esbulk.py',
-        application_args=[
-            '--namespace-map-table', dag_conf('table_namespace_map'),
-            '--output', PATH_OUT,
-            '--datetime', '{{ ts }}',
-        ])
-
-    [popularity_score, ores_articletopic] >> convert_to_esbulk
-
-    # Ship to production
-    swift_upload = SwiftUploadOperator(
-        task_id='upload_to_swift',
-        swift_container=dag_conf('swift_container'),
-        source_directory=PATH_OUT,
-        swift_object_prefix='{{ ds_nodash }}',
-        swift_overwrite=True,
-        event_per_object=True)
-    convert_to_esbulk >> swift_upload
-
+    convert_to_esbulk = convert('weekly', PATH_OUT_WEEKLY)
+    upload_to_swift = upload(PATH_OUT_WEEKLY)
     complete = DummyOperator(task_id='complete')
-    swift_upload >> complete
+
+    popularity_score >> convert_to_esbulk >> upload_to_swift >> complete

@@ -1,0 +1,17 @@
+{
+    "partition": "discovery.wikibase_item/date=20010115",
+    "rows": [
+        {
+            "wikiid": "enwiki",
+            "page_id": 1,
+            "page_namespace": 0,
+            "wikibase_item": "Q1"
+        },
+        {
+            "wikiid": "eswiki",
+            "page_id": 2,
+            "page_namespace": 0,
+            "wikibase_item": "Q1"
+        }
+    ]
+}

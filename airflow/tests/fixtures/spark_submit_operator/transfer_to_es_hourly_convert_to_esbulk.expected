@@ -15,11 +15,11 @@
     "root.default",
     "/srv/deployment/wikimedia/discovery/analytics/spark/convert_to_esbulk.py",
     "--config",
-    "weekly",
+    "hourly",
     "--namespace-map-table",
     "discovery.cirrus_namespace_index_map",
     "--output",
-    "hdfs:///wmf/data/discovery/transfer_to_es/date=20380117/freq=weekly",
+    "hdfs:///wmf/data/discovery/transfer_to_es/date=20380117/freq=hourly/hour=0",
     "--datetime",
     "2038-01-17T00:00"
 ]

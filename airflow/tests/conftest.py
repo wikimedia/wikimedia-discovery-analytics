@@ -23,9 +23,12 @@ all_dag_ids = [
     'import_wikidata_ttl',
     'mjolnir',
     'ores_predictions_init',
-    'ores_predictions_weekly',
+    'ores_predictions_hourly',
+    'ores_predictions_daily',
+    'ores_predictions_wbitem',
     'popularity_score_weekly',
     'search_satisfaction_daily',
+    'transfer_to_es_hourly',
     'transfer_to_es_weekly',
 ]
 

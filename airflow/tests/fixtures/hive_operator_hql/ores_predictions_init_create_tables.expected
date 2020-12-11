@@ -47,6 +47,10 @@ STORED AS PARQUET
 LOCATION 'hdfs:///wmf/data/discovery/ores/scores_export_v2'
 ;
 
+-- table is changing its partitioning, move the old one out of the way
+-- to be manually deleted
+ALTAR TABLE discovery.wikibase_item RENAME TO discovery.wikibase_item_old;
+
 CREATE TABLE IF NOT EXISTS discovery.wikibase_item (
     `wikiid` string COMMENT 'MediaWiki database name',
     `page_id` int COMMENT 'MediaWiki page_id',
@@ -54,8 +58,7 @@ CREATE TABLE IF NOT EXISTS discovery.wikibase_item (
     `wikibase_item` string COMMENT 'wikibase_item page property from mediawiki database'
 )
 PARTITIONED BY (
-`year` int COMMENT 'Year collection starts at',
-`month` int COMMENT 'Month collection starts at',
-`day` int COMMENT 'Day collection starts at')
+    `date` string COMMENT 'airflow execution_date of populating task'
+)
 STORED AS PARQUET
-LOCATION 'hdfs:///wmf/data/discovery/ores/wikibase_item_v2'
+LOCATION 'hdfs:///wmf/data/discovery/ores/wikibase_item_v3'

@@ -7,6 +7,7 @@ from textwrap import dedent
 
 from airflow.contrib.operators.spark_submit_operator \
     import SparkSubmitOperator as WrongSparkSubmitOperator
+from airflow import macros
 from airflow.models import Pool
 from airflow.models.dagbag import DagBag
 from airflow.models.taskinstance import TaskInstance
@@ -61,6 +62,14 @@ def test_external_task_exists(task):
     assert task.external_dag_id in bag.dag_ids
     external_dag = bag.get_dag(task.external_dag_id)
     assert task.external_task_id in external_dag.task_ids
+    if task.execution_date_fn is None and task.execution_delta is None:
+        # It's hard to check when using custom execution times, but in the
+        # default case we can verify schedule compatability by their usage of
+        # equivalent string schedules.  If they used timedeltas for the
+        # schedule we would have to verify start_date compatability as well.
+        dag = bag.get_dag(task.dag_id)
+        assert dag.schedule_interval == external_dag.schedule_interval, \
+            "external task sensor has incompatible schedule"
 
 
 EMAIL_WHITELIST = {
@@ -148,6 +157,9 @@ DAG_RUN_CONF = {
 
 @pytest.fixture
 def rendered_task(task, mocker):
+    # This will try and talk to hive, can't let it. And yes, it really
+    # returns a binary string.
+    mocker.patch.object(macros.hive, 'max_partition').return_value = b'20010115'
     # This will change the task, take a copy
     task = deepcopy(task)
     ti = TaskInstance(task, datetime(year=2038, month=1, day=17))
@@ -225,22 +237,6 @@ def test_spark_submit_sizing(task, mocker):
     exec_cores = int(task._executor_cores if task._executor_cores is not None else '1')
     assert exec_cores <= exec_mem, \
         "executor_memory looks suspiciously low (less than 1G per executor)"
-
-
-@pytest.mark.parametrize('dag_ids', [
-    ['popularity_score_weekly', 'transfer_to_es_weekly', 'ores_predictions_weekly'],
-])
-def test_compatible_schedules(dag_ids):
-    dagbag = DagBag()
-    dags = [dagbag.get_dag(dag_id) for dag_id in dag_ids]
-
-    head = dags[0]
-    # To ensure schedule compatability dags must be using
-    # cron expressions. If they used timedeltas we would
-    # have to verify start_date compatability as well.
-    assert isinstance(head.schedule_interval, str)
-    for dag in dags[1:]:
-        assert head.schedule_interval == dag.schedule_interval
 
 
 def _sort_items_recursive(maybe_dict):

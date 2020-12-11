@@ -1,5 +1,5 @@
 {
-    "ores_predictions_weekly_conf": {
+    "ores_predictions_conf": {
         "table_mw_rev_score": "event.mediawiki_revision_score",
         "table_wikibase_item": "discovery.wikibase_item",
         "thresholds_prefix": "hdfs:///wmf/data/discovery/ores/thresholds",
@@ -9,6 +9,6 @@
         "rel_path_articletopic": "ores/articletopic_v2",
         "rel_path_drafttopic": "ores/drafttopic",
         "rel_path_scores_export": "ores/scores_export_v2",
-        "rel_path_wikibase_item": "ores/wikibase_item_v2"
+        "rel_path_wikibase_item": "ores/wikibase_item_v3"
     }
 }
