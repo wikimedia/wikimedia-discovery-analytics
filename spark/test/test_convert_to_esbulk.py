@@ -1,4 +1,5 @@
 import convert_to_esbulk
+from datetime import datetime
 from pyspark.sql import Row, functions as F, types as T
 import pytest
 
@@ -51,6 +52,7 @@ def table_to_convert(spark):
 
     table_def = convert_to_esbulk.Table(
         table_name='pytest_example_table',
+        partition_spec_tmpl='{table_name}/',
         join_on=convert_to_esbulk.JOIN_ON_PROJECT,
         update_kind=convert_to_esbulk.UPDATE_ALL,
         fields=[
@@ -154,7 +156,7 @@ def test_prepare_happy_path(
     df_result = convert_to_esbulk.prepare(
         spark=spark, config=[table_def],
         namespace_map_table=namespace_map_table,
-        partition_cond=F.lit(True))
+        dt=datetime(year=2038, month=1, day=19))
 
     # project resolved to wikiid and dropped. foo aliased to bar.
     # page_namespace transformed into elastic_index and dropped.
@@ -179,6 +181,7 @@ def test_prepare_happy_path(
     (False, "must define at least one table", []),
     (True, "happy path", [convert_to_esbulk.Table(
         table_name='pytest_table',
+        partition_spec_tmpl='{table_name}/',
         join_on=convert_to_esbulk.JOIN_ON_WIKIID,
         update_kind=convert_to_esbulk.UPDATE_ALL,
         fields=[
@@ -187,12 +190,14 @@ def test_prepare_happy_path(
     )]),
     (False, "table must have fields", [convert_to_esbulk.Table(
         table_name='pytest_table',
+        partition_spec_tmpl='{table_name}/',
         join_on=convert_to_esbulk.JOIN_ON_WIKIID,
         update_kind=convert_to_esbulk.UPDATE_ALL,
         fields=[]
     )]),
     (False, "update_kind must be valid", [convert_to_esbulk.Table(
         table_name='pytest_table',
+        partition_spec_tmpl='{table_name}/',
         join_on=convert_to_esbulk.JOIN_ON_WIKIID,
         update_kind='does-not-exist',
         fields=[
@@ -201,6 +206,7 @@ def test_prepare_happy_path(
     )]),
     (False, "join_on must be valid", [convert_to_esbulk.Table(
         table_name='pytest_table',
+        partition_spec_tmpl='{table_name}/',
         join_on='does-not-exist',
         update_kind=convert_to_esbulk.UPDATE_ALL,
         fields=[
@@ -209,6 +215,7 @@ def test_prepare_happy_path(
     )]),
     (True, "multilist allows unique prefixes", [convert_to_esbulk.Table(
         table_name='pytest_table',
+        partition_spec_tmpl='{table_name}/',
         join_on=convert_to_esbulk.JOIN_ON_WIKIID,
         update_kind=convert_to_esbulk.UPDATE_ALL,
         fields=[
@@ -218,6 +225,7 @@ def test_prepare_happy_path(
     )]),
     (False, "multilist rejects duplicate prefixes", [convert_to_esbulk.Table(
         table_name='pytest_table',
+        partition_spec_tmpl='{table_name}/',
         join_on=convert_to_esbulk.JOIN_ON_WIKIID,
         update_kind=convert_to_esbulk.UPDATE_ALL,
         fields=[
@@ -227,6 +235,7 @@ def test_prepare_happy_path(
     )]),
     (True, "alias duplication limits are per-alias", [convert_to_esbulk.Table(
         table_name='pytest_table',
+        partition_spec_tmpl='{table_name}/',
         join_on=convert_to_esbulk.JOIN_ON_WIKIID,
         update_kind=convert_to_esbulk.UPDATE_ALL,
         fields=[
@@ -253,6 +262,7 @@ def test_multilist_unprefixed(mocker, df_wikis, df_namespace_map, table_to_conve
     table_defs = [
         convert_to_esbulk.Table(
             table_name='source_table',
+            partition_spec_tmpl='{table_name}/',
             join_on=convert_to_esbulk.JOIN_ON_PROJECT,
             # content_only limits test to single row
             update_kind=convert_to_esbulk.UPDATE_CONTENT_ONLY,
@@ -263,7 +273,7 @@ def test_multilist_unprefixed(mocker, df_wikis, df_namespace_map, table_to_conve
     df_result = convert_to_esbulk.prepare(
         spark=spark, config=table_defs,
         namespace_map_table='mock_namespace_map_table',
-        partition_cond=F.lit(True))
+        dt=datetime(year=2038, month=1, day=19))
 
     rows = df_result.collect()
     assert len(rows) == 1, "one row in, one row out"
@@ -291,6 +301,7 @@ def test_multiple_multilist(mocker, df_wikis, df_namespace_map, table_to_convert
     table_defs = [
         convert_to_esbulk.Table(
             table_name='pytest_example_table_a',
+            partition_spec_tmpl='{table_name}/',
             join_on=convert_to_esbulk.JOIN_ON_PROJECT,
             # content_only limits test to single row
             update_kind=convert_to_esbulk.UPDATE_CONTENT_ONLY,
@@ -299,6 +310,7 @@ def test_multiple_multilist(mocker, df_wikis, df_namespace_map, table_to_convert
             ]),
         convert_to_esbulk.Table(
             table_name='pytest_example_table_b',
+            partition_spec_tmpl='{table_name}/',
             join_on=convert_to_esbulk.JOIN_ON_PROJECT,
             update_kind=convert_to_esbulk.UPDATE_CONTENT_ONLY,
             fields=[
@@ -309,7 +321,7 @@ def test_multiple_multilist(mocker, df_wikis, df_namespace_map, table_to_convert
     df_result = convert_to_esbulk.prepare(
         spark=spark, config=table_defs,
         namespace_map_table='mock_namespace_map_table',
-        partition_cond=F.lit(True))
+        dt=datetime(year=2038, month=1, day=19))
 
     rows = df_result.collect()
     assert len(rows) == 1, "Both tables should have been merged into single row"
@@ -317,3 +329,21 @@ def test_multiple_multilist(mocker, df_wikis, df_namespace_map, table_to_convert
         "Unique inputs were provided, all outputs should be unique as well"
     assert set(rows[0].bar) == {'a/z', 'a/y', 'b/y', 'b/x'}, \
         "Both sources should be represented in the result"
+
+
+def test_multilist_field_as_expression(spark):
+    field = convert_to_esbulk.MultiListField(
+        field='array("ab")',
+        alias='value_out',
+        prefix='constant')
+
+    df = spark.range(1)
+    rows = df.select(field.column).collect()
+    assert len(rows) == 1
+    assert rows[0].value_out == ['constant/ab']
+
+
+@pytest.mark.parametrize('config_name', list(convert_to_esbulk.CONFIG.keys()))
+def test_builtin_configs_are_valid(config_name):
+    config = convert_to_esbulk.CONFIG[config_name]()
+    assert convert_to_esbulk.validate_config(config) is True

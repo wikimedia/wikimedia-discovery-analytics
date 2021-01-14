@@ -80,7 +80,7 @@ with DAG(
         application_args=[
             '--namespace-map-table', dag_conf('table_namespace_map'),
             '--output', PATH_OUT,
-            '--date', '{{ ds }}',
+            '--datetime', '{{ ts }}',
         ])
 
     [popularity_score, ores_articletopic] >> convert_to_esbulk

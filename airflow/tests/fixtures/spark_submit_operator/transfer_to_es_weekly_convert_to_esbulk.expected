@@ -16,6 +16,6 @@
     "discovery.cirrus_namespace_index_map",
     "--output",
     "hdfs:///wmf/data/discovery/transfer_to_es/date=20380117",
-    "--date",
-    "2038-01-17"
+    "--datetime",
+    "2038-01-17T00:00:00+00:00"
 ]

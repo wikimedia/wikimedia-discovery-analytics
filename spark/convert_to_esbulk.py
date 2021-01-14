@@ -4,7 +4,7 @@ Configuration driven implementation of sourcing data from a
 a variety of tables in hive and writing out scripted elasticsearch
 updates.
 
-Source partitions must have a single column per wiki page, and include
+Source partitions must have a single row per wiki page and include
 the columns `page_id` and `page_namespace`. To identify the wiki they
 must include either the wiki database name as `wikiid` or the leading
 portion of the domain name (ex: `ar.wikipedia`) as `project`.
@@ -18,7 +18,7 @@ stored in elastic when deciding how/if the update should be applied.
 Final output is a series of gzip compressed text files formatted as bulk import
 lines (application/x-ndjson). Each file is guaranteed to contain updates for a
 single wiki. It may have updates for multiple indices assigned to that wiki.
-This funcionality is necessary as the full set of indices is spread across
+This functionality is necessary as the full set of indices is spread across
 multiple clusters, but each wiki in its entirety is found within a single
 cluster.
 """
@@ -41,19 +41,27 @@ import logging
 import math
 import random
 import sys
-from typing import cast, Callable, Mapping, MutableSequence, Optional, Sequence, Set, Tuple
+from typing import cast, Callable, Mapping, MutableSequence, Optional, Sequence, Set, Tuple, Union
+
+from wmf_spark import HivePartition
 
 
 def arg_parser() -> ArgumentParser:
-    def date(val: str) -> datetime:
-        return datetime.strptime(val, '%Y-%m-%d')
+    def dt(val: str) -> datetime:
+        # Only accept time precision in hours, as that is the minimum
+        # partitioning granularity we use, but use full iso-8601
+        # matching airflow `ts` formatting for sanity purposes.
+        return datetime.strptime(val, '%Y-%m-%dT%H:00:00+00:00')
 
     parser = ArgumentParser()
-    parser.add_argument('-o', '--output', dest='output', metavar='OUTPUT', help='Output to store results')
+    parser.add_argument('-c', '--config', dest='config', metavar='CONFIG', choices=CONFIG.keys(),
+                        help='Name of configuration to run')
+    parser.add_argument('-o', '--output', dest='output', metavar='OUTPUT',
+                        help='Output to store results')
     parser.add_argument('-l', '--limit-per-file', dest='limit_per_file', metavar='N', type=int,
                         default=200000, help='Maximum number of records per output file')
-    parser.add_argument('-d', '--date', dest='date', metavar='DATE', type=date,
-                        help='Date of input partitions in YYYY-MM-DD format')
+    parser.add_argument('-d', '--datetime', dest='dt', metavar='DATE', type=dt,
+                        help='Date of input partitions in YYYY-MM-DDTHH:MM format. ex: 2001-01-15T19:00')
     parser.add_argument('-n', '--namespace-map-table', dest='namespace_map_table',
                         help='Table mapping wikiid + namespace_id to an elasticsearch index')
     return parser
@@ -222,12 +230,21 @@ JOIN_ON: Mapping[str, Callable[[DataFrame, DataFrame], DataFrame]] = {
 class Table:
     # Fully qualified hive table to read from
     table_name: str
+    # Templated partition spec for loading data. Will receive named
+    # parameters of table_name: str and dt: datetime.
+    partition_spec_tmpl: str
     # Field in source table identifying the wiki, either `project` or `wikiid`
     join_on: str
     # String must be one of the keys to UPDATE_KINDS mapping
     update_kind: str
     # Definitions for the set of fields to source from this table
     fields: Sequence[Field]
+
+    # registered partition spec templates. When key value is in
+    # partition_spec_tmpl then this value will be used as the template.
+    PARTITION_TMPL = {
+        '@daily': '{table_name}/year={dt.year}/month={dt.month}/day={dt.day}',
+    }
 
     @property
     def handlers(self) -> Mapping[str, str]:
@@ -239,6 +256,14 @@ class Table:
         """Set of columns to source from this table"""
         return [field.column for field in self.fields]
 
+    def partition_spec(self, dt: datetime) -> str:
+        tmpl = self.partition_spec_tmpl
+        tmpl = self.PARTITION_TMPL.get(tmpl, tmpl)
+        return tmpl.format(table_name=self.table_name, dt=dt)
+
+    def partition(self, dt: datetime) -> HivePartition:
+        return HivePartition.from_spec(self.partition_spec(dt))
+
     def index_is_allowed(self, index_name: Column) -> Column:
         return UPDATE_KINDS[self.update_kind](index_name)
 
@@ -246,39 +271,46 @@ class Table:
         return JOIN_ON[self.join_on](df, df_wikis)
 
 
-# Each entry defines a table to load from hive and the fields to source from
-# this table. This could load from an external yaml or similar, but for now
-# this works and is less complicated.
-CONFIG = [
-    Table(
-        table_name='discovery.popularity_score',
-        join_on=JOIN_ON_PROJECT,
-        update_kind=UPDATE_CONTENT_ONLY,
-        fields=[
-            WithinPercentageField(field='score', alias='popularity_score', percentage=20)
-        ]
-    ),
-    Table(
-        table_name='discovery.ores_articletopic',
-        join_on=JOIN_ON_WIKIID,
-        update_kind=UPDATE_ALL,
-        fields=[
-            # When migrating from only articletopic in this field to accepting
-            # multiple models we kept articletopic unprefixed to avoid
-            # migrating in-place data. At some point the appropriate prefix
-            # should be populated from a dump and this should be prefixed.
-            MultiListField(field='articletopic', alias='ores_articletopic', prefix=None)
-        ]
-    ),
-    Table(
-        table_name='discovery.ores_drafttopic',
-        join_on='wikiid',
-        update_kind=UPDATE_ALL,
-        fields=[
-            MultiListField(field='drafttopic', alias='ores_articletopic', prefix='drafttopic')
-        ]
-    ),
-]
+# Each map entry defines a named list of tables to load from hive and the
+# fields to source from this table. This could load from an external yaml or
+# maybe even a provided config.py, but for now this works and is minimally
+# complicated.  The actual config is wrapped into a lambda as creating it may
+# trigger hql escaping, which requires the spark jvm to have been initialized.
+CONFIG = {
+    'weekly': lambda: [
+        Table(
+            table_name='discovery.ores_articletopic',
+            partition_spec_tmpl='@daily',
+            join_on=JOIN_ON_WIKIID,
+            update_kind=UPDATE_ALL,
+            fields=[
+                # When migrating from only articletopic in this field to accepting
+                # multiple models we kept articletopic unprefixed to avoid
+                # migrating in-place data. At some point the appropriate prefix
+                # should be populated from a dump and this should be prefixed.
+                MultiListField(field='articletopic', alias='ores_articletopic', prefix=None)
+            ]
+        ),
+        Table(
+            table_name='discovery.ores_drafttopic',
+            partition_spec_tmpl='@daily',
+            join_on=JOIN_ON_WIKIID,
+            update_kind=UPDATE_ALL,
+            fields=[
+                MultiListField(field='drafttopic', alias='ores_articletopic', prefix='drafttopic')
+            ]
+        ),
+        Table(
+            table_name='discovery.popularity_score',
+            partition_spec_tmpl='@daily',
+            join_on=JOIN_ON_PROJECT,
+            update_kind=UPDATE_CONTENT_ONLY,
+            fields=[
+                WithinPercentageField(field='score', alias='popularity_score', percentage=20)
+            ]
+        ),
+    ]
+}
 
 
 def validate_config(config: Sequence[Table]) -> bool:
@@ -313,8 +345,8 @@ def validate_config(config: Sequence[Table]) -> bool:
         logging.info('Validating fields aliased to %s', head.alias)
         # When Field.merge is invoked we only have a Field implementation
         # representing the current data source. For this to work sanely we
-        # must guarantee the values are produced in equivent ways, making
-        # them mergable
+        # must guarantee the values are produced in equivalent ways, making
+        # them mergable.
         if all(type(field) == type(head) for field in shared_alias_fields):
             is_ok &= head.validate_equiv_fields(shared_alias_fields)
         else:
@@ -385,7 +417,7 @@ def prepare_merged_cols(
 
 def prepare(
     spark: SparkSession, config: Sequence[Table],
-    namespace_map_table: str, partition_cond: Column
+    namespace_map_table: str, dt: datetime
 ) -> DataFrame:
     """Collect varied inputs into single dataframe"""
     df_wikis = (
@@ -400,7 +432,7 @@ def prepare(
     # Non-field columns that will exist on all dataframes
     shared_cols = {'wikiid', 'page_id', 'elastic_index'}
     for table in config:
-        df_current = spark.read.table(table.table_name).where(partition_cond)
+        df_current = table.partition(dt).read(spark)
         df_current = table.resolve_wikiid(df_current, df_wikis)
         # We must resolve the cirrussearch index name now, rather than once
         # the tables have been combined, to allow each table to control the set
@@ -438,7 +470,7 @@ def prepare(
 
 
 def unique_value_per_partition(
-        df: DataFrame, limit_per_partition: int, col_name: str
+    df: DataFrame, limit_per_partition: int, col_name: str
 ) -> RDD:
     """Force each partition to contain only one value for `col_name`
 
@@ -522,10 +554,16 @@ def document_data(document: Row, handlers: Mapping[str, str]) -> str:
 def main(
     output: str,
     limit_per_file: int,
-    date: datetime,
+    dt: datetime,
     namespace_map_table: str,
-    config: Sequence[Table] = CONFIG
+    config: Union[str, Sequence[Table]],
 ) -> int:
+    # Must be initialized before invoking CONFIG lambda
+    # as hql escaping needs the jvm.
+    spark = SparkSession.builder.getOrCreate()
+
+    if isinstance(config, str):
+        config = CONFIG[config]()
     if not validate_config(config):
         return 1
 
@@ -535,7 +573,7 @@ def main(
         spark=spark,
         config=config,
         namespace_map_table=namespace_map_table,
-        partition_cond=daily_partition(date))
+        dt=dt)
 
     # Assumes validate_config has ensured any overlaps in handler names
     # is reasonable and allowed to overwrite in arbitrary order.
@@ -545,8 +583,8 @@ def main(
         # Note that this returns an RDD, not a DataFrame
         unique_value_per_partition(df, limit_per_file, 'wikiid')
         .map(lambda row: document_data(row, field_handlers)) \
-        # Unfortunately saveAsTextFile doesn't have an overwrite option, so this varies
-        # other scripts in this repo.
+        # Unfortunately saveAsTextFile doesn't have an overwrite option, so
+        # this varies from other scripts in this repo.
         .saveAsTextFile(output, compressionCodecClass='org.apache.hadoop.io.compress.GzipCodec')
     )
     return 0
