@@ -1,8 +1,8 @@
 from datetime import datetime, timedelta
-from pyspark.sql import functions as F
+from pyspark.sql import Window, functions as F
 import pytest
 import wmf_spark
-from wmf_spark import DtPrecision, HivePartition, HivePartitionTimeRange, HivePartitionWriter
+from wmf_spark import DtPrecision, HivePartition, HivePartitionTimeRange, HivePartitionWriter, limit_top_n
 
 
 @pytest.mark.parametrize('spec,expect_table_name,expect_partitioning', [
@@ -153,3 +153,17 @@ def test_HivePartitionWriter_make_compatible(spark):
     test(df, expect_schema)
     # Case shouldn't matter
     test(df.withColumn('ID', F.col('id')), expect_schema)
+
+
+@pytest.mark.parametrize('expect,window', [
+    # Simple happy paths
+    ([0], lambda: Window.orderBy(F.col('id').asc())),
+    ([1], lambda: Window.orderBy(F.col('id').desc())),
+])
+def test_limit_top_n(spark, expect, window):
+    # Gives two rows with id=0 and id=1. Union duplicates them, which
+    # allows to ensure the top_n=1 requirement is respected when multiple
+    # rows have same sort value.
+    df = spark.range(2).union(spark.range(2))
+    result = limit_top_n(df, window(), 1).collect()
+    assert expect == [x.id for x in result]

@@ -23,13 +23,13 @@ from typing import Mapping, Tuple, Union
 
 
 def limit_top_n(df: DataFrame, window: WindowSpec, n: int) -> DataFrame:
-    """Limit each windowed partition to n values"""
-    assert '_rank' not in df.columns
+    """Limit each window to the top n values"""
+    assert '_row_num' not in df.columns
     return (
         df
-        .withColumn('_rank', F.dense_rank().over(window))
-        .where(F.col('_rank') < n + 1)  # rank is 1-indexed
-        .drop('_rank')
+        .withColumn('_row_num', F.row_number().over(window))
+        .where(F.col('_row_num') < n + 1)  # row_number is 1-indexed
+        .drop('_row_num')
     )
 
 
