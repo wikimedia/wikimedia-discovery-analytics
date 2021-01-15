@@ -33,7 +33,8 @@ from wmf_airflow.skein import SkeinOperator
 from wmf_airflow.spark_submit import SparkSubmitOperator
 from wmf_airflow.template import (
     HTTPS_PROXY, IVY_SETTINGS_PATH, MARIADB_CREDENTIALS_PATH,
-    MEDIAWIKI_ACTIVE_DC, MEDIAWIKI_CONFIG_PATH, REPO_PATH, REPO_HDFS_PATH)
+    MEDIAWIKI_ACTIVE_DC, MEDIAWIKI_CONFIG_PATH, REPO_PATH, REPO_HDFS_PATH,
+    YMD_PARTITION)
 
 
 def dag_conf(var: str) -> str:
@@ -42,8 +43,6 @@ def dag_conf(var: str) -> str:
 
 INPUT_TABLE = dag_conf('table_mw_rev_score')
 WIKIBASE_ITEM_TABLE = dag_conf('table_wikibase_item')
-
-TEMPLATE_YMD_PARTITION = '{{ macros.ds_format(ds, "%Y-%m-%d", "year=%Y/month=%m/day=%d") }}'
 
 # Default kwargs for all Operators
 default_args = {
@@ -153,7 +152,7 @@ def fetch_and_extract(
         propagate_args: List[str] = []
     else:
         propagate_args = [
-            '--wikibase-item-partition', WIKIBASE_ITEM_TABLE + '/' + TEMPLATE_YMD_PARTITION,
+            '--wikibase-item-partition', WIKIBASE_ITEM_TABLE + '/' + YMD_PARTITION,
             '--propagate-from', propagate_from_wiki,
         ]
 
@@ -175,7 +174,7 @@ def fetch_and_extract(
         application_args=propagate_args + [
             '--input-partition', INPUT_TABLE + '/@{{ ds }}/{{ macros.ds_add(ds, 7) }}',
             '--input-kind', 'mediawiki_revision_score',
-            '--output-partition', output_table + '/' + TEMPLATE_YMD_PARTITION,
+            '--output-partition', output_table + '/' + YMD_PARTITION,
             '--thresholds-path', 'thresholds.json',
             '--prediction', model,
         ],
@@ -220,7 +219,7 @@ with DAG(
     # predictions from enwiki to all the wikis
     extract_wikibase_items = mw_sql_to_hive(
         task_id='extract_wikibase_item',
-        output_partition=WIKIBASE_ITEM_TABLE + "/" + TEMPLATE_YMD_PARTITION,
+        output_partition=WIKIBASE_ITEM_TABLE + "/" + YMD_PARTITION,
         sql_query="""
             SELECT pp_page as page_id, page_namespace, pp_value as wikibase_item
             FROM page_props

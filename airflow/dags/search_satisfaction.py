@@ -17,7 +17,7 @@ from wmf_airflow.hdfs_cli import HdfsCliHook
 from wmf_airflow.hdfs_to_druid import HdfsToDruidOperator
 from wmf_airflow.hive_partition_range_sensor import HivePartitionRangeSensor
 from wmf_airflow.spark_submit import SparkSubmitOperator
-from wmf_airflow.template import MEDIAWIKI_ACTIVE_DC, REPO_PATH
+from wmf_airflow.template import MEDIAWIKI_ACTIVE_DC, REPO_PATH, YMD_PARTITION
 
 
 def dag_conf(key):
@@ -46,10 +46,9 @@ TEMP_DIR = 'hdfs://analytics-hadoop/tmp/{{ dag.dag_id }}_{{ ds }}'
 PRODUCTION_USERNAME = dag_conf('production_username')
 
 # Some reusable templated values
-TEMPLATE_YMD_PARTITION = '{{ macros.ds_format(ds, "%Y-%m-%d", "year=%Y/month=%m/day=%d") }}'
-TEMPLATE_YEAR = '{{ macros.ds_format(ds, "%Y-%m-%d", "%Y") }}'
-TEMPLATE_MONTH = '{{ macros.ds_format(ds, "%Y-%m-%d", "%m") }}'
-TEMPLATE_DAY = '{{ macros.ds_format(ds, "%Y-%m-%d", "%d") }}'
+TEMPLATE_YEAR = '{{ execution_date.year }}'
+TEMPLATE_MONTH = '{{ execution_date.month }}'
+TEMPLATE_DAY = '{{ execution_date.day }}'
 
 default_args = {
     'owner': 'discovery-analytics',
@@ -116,9 +115,9 @@ with DAG(
         py_files=REPO_PATH + '/spark/wmf_spark.py',
         application=REPO_PATH + '/spark/generate_daily_search_satisfaction.py',
         application_args=[
-            '--cirrus-partition', TABLE_SEARCH_LOGS + '/' + TEMPLATE_YMD_PARTITION,
-            '--satisfaction-partition', TABLE_SEARCH_EVENTS + '/' + TEMPLATE_YMD_PARTITION,
-            '--output-partition', TABLE_SEARCH_SATISFACTION + '/' + TEMPLATE_YMD_PARTITION
+            '--cirrus-partition', TABLE_SEARCH_LOGS + '/' + YMD_PARTITION,
+            '--satisfaction-partition', TABLE_SEARCH_EVENTS + '/' + YMD_PARTITION,
+            '--output-partition', TABLE_SEARCH_SATISFACTION + '/' + YMD_PARTITION
         ])
 
     # Reduces precision (for example, bucketing the number of total hits)
@@ -136,7 +135,7 @@ with DAG(
         py_files=REPO_PATH + '/spark/wmf_spark.py',
         application=REPO_PATH + '/spark/generate_daily_druid_search_satisfaction.py',
         application_args=[
-            '--source-partition', TABLE_SEARCH_SATISFACTION + '/' + TEMPLATE_YMD_PARTITION,
+            '--source-partition', TABLE_SEARCH_SATISFACTION + '/' + YMD_PARTITION,
             '--destination-directory', TEMP_DIR,
         ])
 

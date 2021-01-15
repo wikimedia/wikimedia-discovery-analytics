@@ -1,7 +1,7 @@
 """Common templated values used across DAGs
 
-This file serves as the source of truth for what must be defined in the
-wmf_conf Variable.
+This file primarily serves as the source of truth for what must be defined in
+the wmf_conf Variable.
 
 Typically these refer to resources deployed to the airflow host, or a fact of
 the attached networks. The values are expected to be constant across dags
@@ -40,3 +40,13 @@ ANALYTICS_REFINERY_PATH = wmf_conf('analytics_refinery_path')
 # are partitioned by the datacenter they come from. This marker indicates
 # which datacenter to expect events from.
 MEDIAWIKI_ACTIVE_DC = wmf_conf('mediawiki_active_datacenter')
+
+# execution date formatted as hive partition with year=/month=/day=/hour=
+YMDH_PARTITION = \
+    'year={{ execution_date.year }}/month={{ execution_date.month }}/' \
+    'day={{ execution_date.day }}/hour={{ execution_date.hour }}'
+
+# execution date formatted as hive partition with year=/month=/day=
+YMD_PARTITION = \
+    'year={{ execution_date.year }}/month={{ execution_date.month }}/' \
+    'day={{ execution_date.day }}'
