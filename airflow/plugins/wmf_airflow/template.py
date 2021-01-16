@@ -8,9 +8,36 @@ the attached networks. The values are expected to be constant across dags
 deployed to the same location.
 """
 
+from airflow.models.variable import Variable
 
-def wmf_conf(key: str) -> str:
-    return '{{ var.json.wmf_conf.%s }}' % key
+
+class DagConf:
+    """
+
+    Centralizes conventions around accessing variables stored
+    and deployed from /airflow/config/*.json
+    """
+    def __init__(self, var_name: str):
+        self.var_name = var_name
+
+    def __call__(self, item):
+        return '{{ var.json.%s.%s }}' % (self.var_name, item)
+
+    @property
+    def macro(self):
+        """Accessor suitable for use as template macro
+
+        Register in DAG:
+            dag_conf = DagConf('...')
+            ...
+            DAG(..., user_defined_macros=dict(dag_conf=dag_conf.macro))
+        Access in templates:
+            {{ dag_conf.my_table }}
+        """
+        return LazyJsonVariableAccessor(self.var_name)
+
+
+wmf_conf = DagConf('wmf_conf')
 
 
 # Local path to the root of this repository (wikimedia/discovery/analytics) on
@@ -50,3 +77,32 @@ YMDH_PARTITION = \
 YMD_PARTITION = \
     'year={{ execution_date.year }}/month={{ execution_date.month }}/' \
     'day={{ execution_date.day }}'
+
+
+class LazyJsonVariableAccessor:
+    """Lazy double of json dict stored in airflow Variable
+
+    This is quite similar to VariableJsonAccessor, the var.json impl, from
+    airflow.models.taskinstance.TaskInstance.get_template_context,
+    but provides more concise access to variables commonly accessed.
+
+    The DAG can be defined with a LazyJsonVariableAccessor in
+    user_defined_macros for it's config. This is implemented lazily
+    to avoid fetching the variable on all DAG evaluations.
+
+    With accessor:
+      {{ conf.my_table }}
+    Without accessor:
+      {{ var.json.my_dag_name_conf.my_table }}
+    """
+    def __init__(self, var_name: str):
+        self.var = None
+        self.var_name = var_name
+
+    def __getattr__(self, item):
+        if self.var is None:
+            self.var = Variable.get(self.var_name, deserialize_json=True)
+        try:
+            return self.var[item]
+        except KeyError:
+            raise AttributeError('Attribute not found in ' + self.var_name)

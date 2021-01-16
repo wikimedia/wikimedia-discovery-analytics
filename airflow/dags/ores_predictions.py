@@ -27,6 +27,7 @@ from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
 
+import jinja2
 from wmf_airflow.hdfs_cli import HdfsCliHook
 from wmf_airflow.hive_partition_range_sensor import HivePartitionRangeSensor
 from wmf_airflow.skein import SkeinOperator
@@ -34,12 +35,10 @@ from wmf_airflow.spark_submit import SparkSubmitOperator
 from wmf_airflow.template import (
     HTTPS_PROXY, IVY_SETTINGS_PATH, MARIADB_CREDENTIALS_PATH,
     MEDIAWIKI_ACTIVE_DC, MEDIAWIKI_CONFIG_PATH, REPO_PATH, REPO_HDFS_PATH,
-    YMD_PARTITION)
+    YMD_PARTITION, DagConf)
 
 
-def dag_conf(var: str) -> str:
-    return '{{ var.json.ores_predictions_weekly_conf.%s }}' % var
-
+dag_conf = DagConf('ores_predictions_weekly_conf')
 
 INPUT_TABLE = dag_conf('table_mw_rev_score')
 WIKIBASE_ITEM_TABLE = dag_conf('table_wikibase_item')
@@ -192,6 +191,7 @@ with DAG(
     # one running at a time.
     max_active_runs=1,
     catchup=False,
+    template_undefined=jinja2.StrictUndefined,
 ) as dag:
     wait_for_data = HivePartitionRangeSensor(
         task_id='wait_for_data',

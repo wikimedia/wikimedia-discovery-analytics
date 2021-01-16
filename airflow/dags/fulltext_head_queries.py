@@ -7,12 +7,10 @@ from airflow.utils.dates import days_ago
 
 import jinja2
 from wmf_airflow.spark_submit import SparkSubmitOperator
-from wmf_airflow.template import REPO_PATH
+from wmf_airflow.template import REPO_PATH, DagConf
 
 
-def dag_conf(key):
-    return '{{ var.json.fulltext_head_queries_conf.%s }}' % key
-
+dag_conf = DagConf('fulltext_head_queries_conf')
 
 # Default kwargs for all Operators
 default_args = {

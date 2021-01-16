@@ -6,6 +6,7 @@ from airflow import DAG
 from airflow.operators.bash_operator import BashOperator
 from airflow.operators.dummy_operator import DummyOperator
 
+import jinja2
 from wmf_airflow.template import REPO_PATH, ANALYTICS_REFINERY_PATH
 
 
@@ -61,6 +62,7 @@ with DAG(
     # We might end up with quite a few tasks, don't run them all at the
     # same time.
     concurrency=3,
+    template_undefined=jinja2.StrictUndefined,
 ) as dag:
     complete = DummyOperator(task_id='complete')
 

@@ -5,6 +5,7 @@ from airflow import DAG
 from airflow.hooks.hive_hooks import HiveMetastoreHook
 from airflow.operators.dummy_operator import DummyOperator
 
+import jinja2
 from wmf_airflow.mjolnir import MjolnirOperator
 from wmf_airflow.swift_upload import SwiftUploadOperator
 
@@ -357,7 +358,8 @@ with DAG(
     catchup=False,
     user_defined_filters={
         'hive_table_path': HiveTablePath(),
-    }
+    },
+    template_undefined=jinja2.StrictUndefined,
 ) as dag:
     clicks = query_clicks_ltr()
     clusters = norm_query(clicks)

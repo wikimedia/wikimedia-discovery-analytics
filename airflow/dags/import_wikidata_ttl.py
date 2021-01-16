@@ -10,15 +10,13 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 
+import jinja2
 from wmf_airflow.hdfs_cli import HdfsCliSensor
 from wmf_airflow.spark_submit import SparkSubmitOperator
-from wmf_airflow.template import REPO_PATH
+from wmf_airflow.template import REPO_PATH, DagConf
 
 
-def dag_conf(key):
-    """DAG specific configuration stored in airflow variable"""
-    return '{{ var.json.import_wikidata_ttl_conf.%s }}' % key
-
+dag_conf = DagConf('import_wikidata_ttl_conf')
 
 ARTIFACTS_DIR = REPO_PATH + "/artifacts"
 WDQS_SPARK_TOOLS = ARTIFACTS_DIR + '/rdf-spark-tools-latest-jar-with-dependencies.jar'
@@ -58,6 +56,7 @@ with DAG(
     # one running at a time.
     max_active_runs=1,
     catchup=False,
+    template_undefined=jinja2.StrictUndefined,
 ) as dag:
     # we have weekly runs and airflow schedules job just after the end of the period
     # an exec date on Fri Jun 5th actually means we run just after Thu Jun 12 23:59

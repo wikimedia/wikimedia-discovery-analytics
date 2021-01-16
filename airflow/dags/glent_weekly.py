@@ -13,12 +13,10 @@ from wmf_airflow.hdfs_cli import HdfsCliHook
 from wmf_airflow.hive_partition_range_sensor import HivePartitionRangeSensor
 from wmf_airflow.spark_submit import SparkSubmitOperator
 from wmf_airflow.swift_upload import SwiftUploadOperator
-from wmf_airflow.template import MEDIAWIKI_ACTIVE_DC, REPO_PATH
+from wmf_airflow.template import MEDIAWIKI_ACTIVE_DC, REPO_PATH, DagConf
 
 
-def dag_conf(key):
-    """DAG specific configuration stored in airflow variable"""
-    return '{{ var.json.glent_conf.%s }}' % key
+dag_conf = DagConf('glent_conf')
 
 
 def dag_conf_days_as_sec(key):

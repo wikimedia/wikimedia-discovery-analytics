@@ -4,15 +4,13 @@ from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.sensors.external_task_sensor import ExternalTaskSensor
 
+import jinja2
 from wmf_airflow.spark_submit import SparkSubmitOperator
 from wmf_airflow.swift_upload import SwiftUploadOperator
-from wmf_airflow.template import REPO_PATH
+from wmf_airflow.template import REPO_PATH, DagConf
 
 
-def dag_conf(key):
-    """DAG specific configuration stored in airflow variable"""
-    return '{{ var.json.transfer_to_es_conf.%s }}' % key
-
+dag_conf = DagConf('transfer_to_es_conf')
 
 PATH_OUT = dag_conf('base_output_path') + '/date={{ ds_nodash }}'
 
@@ -40,6 +38,7 @@ with DAG(
     # always complete (success or failure) before the next.
     max_active_runs=1,
     catchup=False,
+    template_undefined=jinja2.StrictUndefined,
 ) as dag:
     # Wait for popularity to compute
     popularity_score = ExternalTaskSensor(

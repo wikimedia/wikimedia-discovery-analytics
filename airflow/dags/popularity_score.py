@@ -4,6 +4,7 @@ from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.hive_operator import HiveOperator
 
+import jinja2
 from wmf_airflow.hive_partition_range_sensor import HivePartitionRangeSensor
 
 
@@ -72,6 +73,7 @@ with DAG(
     # one running at a time.
     max_active_runs=1,
     catchup=False,
+    template_undefined=jinja2.StrictUndefined,
 ) as dag:
     # Require hourly partitions to exist before running
     wait_for_pageview_hourly = HivePartitionRangeSensor(

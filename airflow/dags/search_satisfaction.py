@@ -13,17 +13,15 @@ from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
 from airflow.utils.trigger_rule import TriggerRule
 
+import jinja2
 from wmf_airflow.hdfs_cli import HdfsCliHook
 from wmf_airflow.hdfs_to_druid import HdfsToDruidOperator
 from wmf_airflow.hive_partition_range_sensor import HivePartitionRangeSensor
 from wmf_airflow.spark_submit import SparkSubmitOperator
-from wmf_airflow.template import MEDIAWIKI_ACTIVE_DC, REPO_PATH, YMD_PARTITION
+from wmf_airflow.template import MEDIAWIKI_ACTIVE_DC, REPO_PATH, YMD_PARTITION, DagConf
 
 
-def dag_conf(key):
-    """DAG specific configuration stored in airflow variable"""
-    return '{{ var.json.search_satisfaction_conf.%s }}' % (key,)
-
+dag_conf = DagConf('search_satisfaction_conf')
 
 # Input data
 TABLE_SEARCH_EVENTS = dag_conf('table_search_events')
@@ -40,15 +38,6 @@ DRUID_SPEC_TEMPLATE = REPO_PATH + dag_conf('druid_spec_template')
 
 # Base path for temporary files
 TEMP_DIR = 'hdfs://analytics-hadoop/tmp/{{ dag.dag_id }}_{{ ds }}'
-
-# Expected user airflow is executed as. If executed as a different user
-# druid imports will go to a test index.
-PRODUCTION_USERNAME = dag_conf('production_username')
-
-# Some reusable templated values
-TEMPLATE_YEAR = '{{ execution_date.year }}'
-TEMPLATE_MONTH = '{{ execution_date.month }}'
-TEMPLATE_DAY = '{{ execution_date.day }}'
 
 default_args = {
     'owner': 'discovery-analytics',
@@ -68,6 +57,7 @@ with DAG(
     schedule_interval='@daily',
     max_active_runs=3,
     catchup=True,
+    template_undefined=jinja2.StrictUndefined,
 ) as dag:
     # Wait for the events that come from browsers
     wait_for_events = HivePartitionRangeSensor(

@@ -6,13 +6,10 @@ from airflow.operators.dummy_operator import DummyOperator
 
 import jinja2
 from wmf_airflow.spark_submit import SparkSubmitOperator
-from wmf_airflow.template import HTTPS_PROXY, REPO_PATH
+from wmf_airflow.template import HTTPS_PROXY, REPO_PATH, DagConf
 
 
-def dag_conf(key):
-    """DAG specific configuration stored in airflow variable"""
-    return '{{ var.json.cirrus_namespace_map_daily_conf.%s }}' % key
-
+dag_conf = DagConf('cirrus_namespace_map_daily_conf')
 
 default_args = {
     'owner': 'discovery-analytics',

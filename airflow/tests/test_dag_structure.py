@@ -10,6 +10,7 @@ from airflow.models.taskinstance import TaskInstance
 from airflow.operators.bash_operator import BashOperator
 from airflow.sensors.external_task_sensor import ExternalTaskSensor
 
+import jinja2
 import pytest
 from wmf_airflow.spark_submit import SparkSubmitOperator
 
@@ -28,6 +29,10 @@ def test_dag_structure(dag_id):
     # All dags must have a 'complete' task to ease chaining
     # dags together.
     assert any(task.task_id == 'complete' for task in dag.tasks)
+    # All dags must be defined with StrictUndefined, to ensure we
+    # get warnings at test time for undefined values instead of
+    # empty values.
+    assert dag.template_undefined == jinja2.StrictUndefined
 
 
 @pytest.mark.parametrize('task', list(tasks(ExternalTaskSensor)))
