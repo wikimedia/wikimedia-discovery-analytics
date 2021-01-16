@@ -1,6 +1,8 @@
 import re
 from collections import OrderedDict
+from copy import deepcopy
 from datetime import datetime
+from textwrap import dedent
 
 from airflow.contrib.operators.spark_submit_operator \
     import SparkSubmitOperator as WrongSparkSubmitOperator
@@ -8,6 +10,7 @@ from airflow.models import Pool
 from airflow.models.dagbag import DagBag
 from airflow.models.taskinstance import TaskInstance
 from airflow.operators.bash_operator import BashOperator
+from airflow.operators.hive_operator import HiveOperator
 from airflow.sensors.external_task_sensor import ExternalTaskSensor
 
 import jinja2
@@ -126,8 +129,10 @@ DAG_RUN_CONF = {
 }
 
 
-@pytest.mark.parametrize('task', tasks(SparkSubmitOperator))
-def test_spark_submit_cli_args_against_fixture(task, fixture_factory, mocker):
+@pytest.fixture
+def rendered_task(task, mocker):
+    # This will change the task, take a copy
+    task = deepcopy(task)
     ti = TaskInstance(task, datetime(year=2038, month=1, day=17))
     context = ti.get_template_context()
     context['run_id'] = 'pytest_compare_against_fixtures'
@@ -135,7 +140,22 @@ def test_spark_submit_cli_args_against_fixture(task, fixture_factory, mocker):
         context['dag_run'] = mocker.MagicMock()
         context['dag_run'].conf = DAG_RUN_CONF[task.dag_id]
     ti.render_templates(context=context)
+    return task
 
+
+@pytest.mark.parametrize('task', tasks(HiveOperator))
+def test_hive_operator_rendered_hql(task, rendered_task, fixture_factory, mocker):
+    if task.hql == rendered_task.hql:
+        pytest.skip("hql is not templated")
+        return
+    fixture = '{}_{}'.format(task.dag_id, task.task_id)
+    comparer = fixture_factory('hive_operator_hql', fixture, serde='str')
+    comparer(dedent(rendered_task.hql))
+
+
+@pytest.mark.parametrize('task', tasks(SparkSubmitOperator))
+def test_spark_submit_cli_args_against_fixture(rendered_task, fixture_factory, mocker):
+    task = rendered_task
     # The conf dict comes out in random order...sort for stable cli command output
     # Must come after rendering templates, as they may replace or re-order the dict.
     if task._conf is not None:

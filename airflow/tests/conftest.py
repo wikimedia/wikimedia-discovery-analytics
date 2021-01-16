@@ -1,7 +1,9 @@
 from datetime import datetime
+from dataclasses import dataclass
 from glob import glob
 import json
 import os
+from typing import Any, Callable, TextIO
 
 from airflow.models.dag import DAG
 from airflow.models.dagbag import DagBag
@@ -52,26 +54,42 @@ def configure_airflow_variables(airflow_variables_dir):
         import_helper(path)
 
 
-def on_disk_fixture(path):
+@dataclass
+class FixtureSerDe:
+    encode: Callable[[TextIO, Any], None]
+    decode: Callable[[TextIO], Any]
+
+
+def on_disk_fixture(path, serde: FixtureSerDe):
     def compare(other):
         if os.path.exists(path):
             with open(path, 'r') as f:
-                expect = json.load(f)
+                expect = serde.decode(f)
             assert expect == other
         elif os.environ.get('REBUILD_FIXTURES') == 'yes':
             with open(path, 'w') as f:
-                json.dump(other, f, indent=4, sort_keys=True)
+                serde.encode(f, other)
             pytest.skip("Rebuilt fixture")
         else:
             raise Exception('No fixture [{}] and REBUILD_FIXTURES != yes'.format(path))
     return compare
 
 
+on_disk_fixture.serde = {
+    'json': FixtureSerDe(
+        encode=lambda f, val: json.dump(val, f, indent=4, sort_keys=True),
+        decode=lambda f: json.load(f)),
+    'str': FixtureSerDe(
+        encode=lambda f, val: f.write(val),
+        decode=lambda f: f.read())
+}
+
+
 @pytest.fixture(scope='session')
 def fixture_factory(fixture_dir):
-    def factory(group, fixture_id):
+    def factory(group, fixture_id, serde='json'):
         path = os.path.join(fixture_dir, group, fixture_id + '.expected')
-        return on_disk_fixture(path)
+        return on_disk_fixture(path, on_disk_fixture.serde[serde])
     return factory
 
 

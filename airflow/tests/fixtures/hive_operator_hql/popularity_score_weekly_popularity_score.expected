@@ -1,0 +1,40 @@
+
+INSERT OVERWRITE TABLE discovery.popularity_score
+    PARTITION(
+        agg_days=7,
+        year=2038,
+        month=1,
+        day=17)
+    SELECT
+        hourly.project,
+        hourly.page_id,
+        hourly.namespace_id as page_namespace,
+        SUM(hourly.view_count) / agg.view_count AS score
+    FROM
+        wmf.pageview_hourly hourly
+    JOIN (
+        SELECT
+            project,
+            SUM(view_count) AS view_count
+        FROM
+            wmf.pageview_hourly
+        WHERE
+            page_id IS NOT NULL
+            AND TO_DATE(CONCAT_WS('-',
+                    CAST(year AS string), CAST(month AS string),
+                    CAST(day AS string)))
+                BETWEEN TO_DATE('2038-01-17') AND DATE_ADD(TO_DATE('2038-01-17'), 7)
+        GROUP BY
+            project
+        ) agg on hourly.project = agg.project
+    WHERE
+        hourly.page_id IS NOT NULL
+        AND TO_DATE(CONCAT_WS('-',
+                CAST(year AS string), CAST(month AS string),
+                CAST(day AS string)))
+            BETWEEN TO_DATE('2038-01-17') AND DATE_ADD(TO_DATE('2038-01-17'), 7)
+    GROUP BY
+        hourly.project,
+        hourly.page_id,
+        hourly.namespace_id,
+        agg.view_count
