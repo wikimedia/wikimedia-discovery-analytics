@@ -4,6 +4,11 @@
         "table_wikibase_item": "discovery.wikibase_item",
         "thresholds_prefix": "hdfs:///wmf/data/discovery/ores/thresholds",
         "table_articletopic": "discovery.ores_articletopic",
-        "table_drafttopic": "discovery.ores_drafttopic"
+        "table_drafttopic": "discovery.ores_drafttopic",
+        "table_scores_export": "discovery.ores_scores_export",
+        "rel_path_articletopic": "ores/articletopic_v2",
+        "rel_path_drafttopic": "ores/drafttopic",
+        "rel_path_scores_export": "ores/scores_export_v2",
+        "rel_path_wikibase_item": "ores/wikibase_item_v2"
     }
 }

@@ -2,6 +2,7 @@ import re
 from collections import OrderedDict
 from copy import deepcopy
 from datetime import datetime
+import os
 from textwrap import dedent
 
 from airflow.contrib.operators.spark_submit_operator \
@@ -19,6 +20,21 @@ from wmf_airflow.spark_submit import SparkSubmitOperator
 
 from conftest import all_dag_ids, all_tasks, tasks
 
+bag = DagBag()
+
+
+@pytest.mark.parametrize('dag_id', [
+    dag_id for dag_id in bag.dag_ids if dag_id not in all_dag_ids
+])
+def test_unregistered_dag_is_example_dag(dag_id):
+    dag = bag.get_dag(dag_id)
+    dag_dir = os.path.basename(os.path.dirname(dag.filepath))
+    # Note that dag_dir is typically the empty string for dags
+    # in AIRFLOW_HOME/dags. We could have that simpler check,
+    # but this seems more explicit even if the error message
+    # is less obvious.
+    assert dag_dir == 'example_dags', dag.dag_id
+
 
 @pytest.mark.parametrize('task', tasks(WrongSparkSubmitOperator))
 def test_use_spark_submit_from_our_plugin(task):
@@ -28,7 +44,8 @@ def test_use_spark_submit_from_our_plugin(task):
 @pytest.mark.parametrize('dag_id', all_dag_ids)
 def test_dag_structure(dag_id):
     # Dag must exist
-    dag = DagBag().get_dag(dag_id)
+    dag = bag.get_dag(dag_id)
+    assert dag is not None, 'expected dag to exist: ' + dag_id
     # All dags must have a 'complete' task to ease chaining
     # dags together.
     assert any(task.task_id == 'complete' for task in dag.tasks)

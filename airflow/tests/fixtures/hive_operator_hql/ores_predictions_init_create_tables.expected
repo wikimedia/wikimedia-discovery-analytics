@@ -1,0 +1,61 @@
+
+CREATE TABLE IF NOT EXISTS discovery.ores_articletopic (
+    `wikiid` string COMMENT 'MediaWiki database name',
+    `page_id` int COMMENT 'MediaWiki page_id',
+    `page_namespace` int COMMENT 'MediaWiki namespace page_id belongs to',
+    `articletopic` array<string> COMMENT 'ores articletopic predictions formatted as name|int_score for elasticsearch ingestion'
+)
+PARTITIONED BY (
+`year` int COMMENT 'Year collection starts at',
+`month` int COMMENT 'Month collection starts at',
+`day` int COMMENT 'Day collection starts at')
+STORED AS PARQUET
+LOCATION 'hdfs:///wmf/data/discovery/ores/articletopic_v2'
+;
+
+CREATE TABLE IF NOT EXISTS discovery.ores_drafttopic (
+    `wikiid` string COMMENT 'MediaWiki database name',
+    `page_id` int COMMENT 'MediaWiki page_id',
+    `page_namespace` int COMMENT 'MediaWiki namespace page_id belongs to',
+    `drafttopic` array<string> COMMENT 'ores draftopic predictions formatted as name|int_score for elasticsearch ingestion'
+)
+PARTITIONED BY (
+`year` int COMMENT 'Year collection starts at',
+`month` int COMMENT 'Month collection starts at',
+`day` int COMMENT 'Day collection starts at')
+STORED AS PARQUET
+LOCATION 'hdfs:///wmf/data/discovery/ores/drafttopic'
+;
+
+-- Not used directly from dag, populated by spark/ores_bulk_ingest.py.
+-- Contains raw predictions exported by ores prior to thresholding
+-- and propagation.
+CREATE TABLE IF NOT EXISTS discovery.ores_scores_export (
+    `page_id` int COMMENT 'MediaWiki page_id',
+    `page_namespace` int COMMENT 'MediaWiki namespace page_id belongs to',
+    `probability` map<string,float> COMMENT 'predicted classification as key, confidence as value'
+)
+PARTITIONED BY (
+    `wikiid` string COMMENT 'MediaWiki database name',
+    `model` string COMMENT 'ORES model that produced predictions',
+
+`year` int COMMENT 'Year collection starts at',
+`month` int COMMENT 'Month collection starts at',
+`day` int COMMENT 'Day collection starts at'
+)
+STORED AS PARQUET
+LOCATION 'hdfs:///wmf/data/discovery/ores/scores_export_v2'
+;
+
+CREATE TABLE IF NOT EXISTS discovery.wikibase_item (
+    `wikiid` string COMMENT 'MediaWiki database name',
+    `page_id` int COMMENT 'MediaWiki page_id',
+    `page_namespace` int COMMENT 'MediaWiki namespace page_id belongs to',
+    `wikibase_item` string COMMENT 'wikibase_item page property from mediawiki database'
+)
+PARTITIONED BY (
+`year` int COMMENT 'Year collection starts at',
+`month` int COMMENT 'Month collection starts at',
+`day` int COMMENT 'Day collection starts at')
+STORED AS PARQUET
+LOCATION 'hdfs:///wmf/data/discovery/ores/wikibase_item_v2'

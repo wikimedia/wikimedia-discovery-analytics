@@ -26,6 +26,7 @@ from typing import List, Optional
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
+from airflow.operators.hive_operator import HiveOperator
 
 import jinja2
 from wmf_airflow.hdfs_cli import HdfsCliHook
@@ -35,7 +36,7 @@ from wmf_airflow.spark_submit import SparkSubmitOperator
 from wmf_airflow.template import (
     HTTPS_PROXY, IVY_SETTINGS_PATH, MARIADB_CREDENTIALS_PATH,
     MEDIAWIKI_ACTIVE_DC, MEDIAWIKI_CONFIG_PATH, REPO_PATH, REPO_HDFS_PATH,
-    YMD_PARTITION, DagConf)
+    YMD_PARTITION, DagConf, wmf_conf)
 
 
 dag_conf = DagConf('ores_predictions_weekly_conf')
@@ -182,6 +183,93 @@ def fetch_and_extract(
     upstream >> fetch_prediction_thresholds >> extract_predictions >> downstream
 
 
+# Manually triggered dag to initialize deployment
+with DAG(
+    'ores_predictions_init',
+    default_args=default_args,
+    schedule_interval='@once',
+    user_defined_macros={
+        'dag_conf': dag_conf.macro,
+        'wmf_conf': wmf_conf.macro,
+        'col_wikiid': "`wikiid` string COMMENT 'MediaWiki database name'",
+        'col_page_id': "`page_id` int COMMENT 'MediaWiki page_id'",
+        'col_page_namespace': "`page_namespace` int"
+                              " COMMENT 'MediaWiki namespace page_id belongs to'",
+        'cols_ymd': """
+            `year` int COMMENT 'Year collection starts at',
+            `month` int COMMENT 'Month collection starts at',
+            `day` int COMMENT 'Day collection starts at'""",
+    },
+    template_undefined=jinja2.StrictUndefined,
+) as init_dag:
+    complete = DummyOperator(task_id='complete')
+
+    HiveOperator(
+        task_id='create_tables',
+        hql="""
+            CREATE TABLE IF NOT EXISTS {{ dag_conf.table_articletopic }} (
+                {{ col_wikiid }},
+                {{ col_page_id }},
+                {{ col_page_namespace }},
+                `articletopic` array<string> COMMENT 'ores articletopic predictions formatted as name|int_score for elasticsearch ingestion'
+            )
+            PARTITIONED BY ({{ cols_ymd }})
+            STORED AS PARQUET
+            LOCATION '{{ wmf_conf.data_path }}/{{ dag_conf.rel_path_articletopic }}'
+            ;
+
+            CREATE TABLE IF NOT EXISTS {{ dag_conf.table_drafttopic }} (
+                {{ col_wikiid }},
+                {{ col_page_id }},
+                {{ col_page_namespace }},
+                `drafttopic` array<string> COMMENT 'ores draftopic predictions formatted as name|int_score for elasticsearch ingestion'
+            )
+            PARTITIONED BY ({{ cols_ymd }})
+            STORED AS PARQUET
+            LOCATION '{{ wmf_conf.data_path }}/{{ dag_conf.rel_path_drafttopic }}'
+            ;
+
+            -- Not used directly from dag, populated by spark/ores_bulk_ingest.py.
+            -- Contains raw predictions exported by ores prior to thresholding
+            -- and propagation.
+            CREATE TABLE IF NOT EXISTS {{ dag_conf.table_scores_export }} (
+                {{ col_page_id }},
+                {{ col_page_namespace }},
+                `probability` map<string,float> COMMENT 'predicted classification as key, confidence as value'
+            )
+            PARTITIONED BY (
+                {{ col_wikiid }},
+                `model` string COMMENT 'ORES model that produced predictions',
+                {{ cols_ymd }}
+            )
+            STORED AS PARQUET
+            LOCATION '{{ wmf_conf.data_path }}/{{ dag_conf.rel_path_scores_export }}'
+            ;
+
+            CREATE TABLE IF NOT EXISTS {{ dag_conf.table_wikibase_item }} (
+                {{ col_wikiid }},
+                {{ col_page_id }},
+                {{ col_page_namespace }},
+                `wikibase_item` string COMMENT 'wikibase_item page property from mediawiki database'
+            )
+            PARTITIONED BY ({{ cols_ymd }})
+            STORED AS PARQUET
+            LOCATION '{{ wmf_conf.data_path }}/{{ dag_conf.rel_path_wikibase_item }}'
+        """  # noqa
+    ) >> complete
+
+    # Ensure the location we want to write thresholds to exists.
+    PythonOperator(
+        task_id='create_threshold_dir',
+        python_callable=HdfsCliHook.mkdir,
+        op_kwargs={
+            'path': dag_conf('thresholds_prefix'),
+            'parents': True
+        },
+        provide_context=False
+    ) >> complete
+
+
 with DAG(
     'ores_predictions_weekly',
     default_args=default_args,
@@ -227,24 +315,12 @@ with DAG(
             WHERE pp_propname="wikibase_item"
         """)
 
-    # Ensure the location we want to write thresholds to exists.
-    # This should be a no-op on all but the first execution
-    ensure_threshold_dir_exists = PythonOperator(
-        task_id='ensure_threshold_dir_exists',
-        python_callable=HdfsCliHook.mkdir,
-        op_kwargs={
-            'path': dag_conf('thresholds_prefix'),
-            'parents': True
-        },
-        provide_context=False)
-
-    fork_per_model = DummyOperator(task_id='fork_per_model')
     complete = DummyOperator(task_id='complete')
+    fork_per_model = DummyOperator(task_id='fork_per_model')
 
     [
         extract_wikibase_items,
         wait_for_data,
-        ensure_threshold_dir_exists,
     ] >> fork_per_model
 
     fetch_and_extract(

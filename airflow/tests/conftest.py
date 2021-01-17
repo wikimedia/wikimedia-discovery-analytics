@@ -12,9 +12,9 @@ from airflow.models.variable import Variable
 import jinja2
 import pytest
 
-# Failing to import a dag doesn't fail pytest, so enumerate
-# the expected dags so tests fail if they don't import. This
-# also helps to ignore airflow's default test dag.
+# Failing to import a dag doesn't fail pytest. Enumerate
+# the expected dags so tests fail if they don't import.
+# Unlisted non-example dags will fail the test suite.
 all_dag_ids = [
     'cirrus_namespace_map_daily',
     'drop_old_data_daily',
@@ -22,6 +22,7 @@ all_dag_ids = [
     'glent_weekly',
     'import_wikidata_ttl',
     'mjolnir',
+    'ores_predictions_init',
     'ores_predictions_weekly',
     'popularity_score_weekly',
     'search_satisfaction_daily',
