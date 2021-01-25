@@ -329,7 +329,7 @@ CONFIG = {
                 # multiple models we kept articletopic unprefixed to avoid
                 # migrating in-place data. At some point the appropriate prefix
                 # should be populated from a dump and this should be prefixed.
-                MultiListField(field='articletopic', alias='ores_articletopic', prefix=None)
+                MultiListField(field='articletopic', alias='ores_articletopics', prefix=None)
             ]
         ),
         Table(
@@ -338,7 +338,7 @@ CONFIG = {
             join_on=JOIN_ON_WIKIID,
             update_kind=UPDATE_ALL,
             fields=[
-                MultiListField(field='drafttopic', alias='ores_articletopic', prefix='drafttopic')
+                MultiListField(field='drafttopic', alias='ores_articletopics', prefix='drafttopic')
             ]
         ),
         Table(
@@ -352,7 +352,7 @@ CONFIG = {
                     # they exist, provide a constant expression as the field
                     # instead of awkwardly storing the repeated value in the table.
                     field='array("exists|1")',
-                    alias='ores_articletopic',
+                    alias='ores_articletopics',
                     prefix=('recommendation_type', {'link'})),
             ]
         ),
