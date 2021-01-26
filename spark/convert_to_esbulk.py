@@ -368,7 +368,7 @@ CONFIG = {
                     # instead of awkwardly storing the repeated value in the table.
                     field='array("exists|1")',
                     alias='ores_articletopics',
-                    prefix=('recommendation_type', {'link'})),
+                    prefix=('concat("recommendation.", recommendation_type)', {'recommendation.link'})),
             ]
         ),
     ],
