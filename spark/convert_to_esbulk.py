@@ -329,7 +329,22 @@ CONFIG = {
                 # multiple models we kept articletopic unprefixed to avoid
                 # migrating in-place data. At some point the appropriate prefix
                 # should be populated from a dump and this should be prefixed.
-                MultiListField(field='articletopic', alias='ores_articletopics', prefix=None)
+                MultiListField(field='articletopic', alias='ores_articletopics', prefix=None),
+            ]
+        ),
+        Table(
+            table_name='discovery.ores_articletopic',
+            partition_spec_tmpl='@hourly',
+            join_on=JOIN_ON_WIKIID,
+            update_kind=UPDATE_ALL,
+            fields=[
+                # Same as above, but this time *with* the prefix. Once a dump
+                # has been run and loaded into this prefix the prod use case
+                # can transition to the prefixed variant and the above can be dropped.
+                #
+                # This must be a separate Table object from above as we don't yet
+                # support multiple fields with the same alias in a single table.
+                MultiListField(field='articletopic', alias='ores_articletopics', prefix='articletopic'),
             ]
         ),
         Table(
