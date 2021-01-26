@@ -342,7 +342,7 @@ with DAG(
         external_dag_id='ores_predictions_daily',
         external_task_id='complete',
         # dt is a pendulum.datetime
-        execution_date_fn=lambda dt: dt.at(0))
+        execution_date_fn=lambda dt: dt.at(hour=0, minute=0, second=0))
 
     wait_for_hourly_data = NamedHivePartitionSensor(
         task_id='wait_for_hourly_data',

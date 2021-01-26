@@ -16,6 +16,7 @@ from airflow.operators.hive_operator import HiveOperator
 from airflow.sensors.external_task_sensor import ExternalTaskSensor
 
 import jinja2
+import pendulum
 import pytest
 from wmf_airflow.spark_submit import SparkSubmitOperator
 
@@ -70,6 +71,17 @@ def test_external_task_exists(task):
         dag = bag.get_dag(task.dag_id)
         assert dag.schedule_interval == external_dag.schedule_interval, \
             "external task sensor has incompatible schedule"
+
+
+@pytest.mark.parametrize('task', [
+    t for t in tasks(ExternalTaskSensor) if t.execution_date_fn is not None
+])
+def test_external_task_execution_date_fn(task):
+    # Simple test that we can pass a datetime and the function "works".
+    # If anything complex is happening there separate tests should
+    # be implemented.
+    retval = task.execution_date_fn(pendulum.datetime.now())
+    assert isinstance(retval, pendulum.datetime)
 
 
 EMAIL_WHITELIST = {
