@@ -252,7 +252,7 @@ with DAG(
 
             -- table is changing its partitioning, move the old one out of the way
             -- to be manually deleted
-            ALTAR TABLE {{ dag_conf.table_wikibase_item }} RENAME TO {{ dag_conf.table_wikibase_item }}_old;
+            ALTER TABLE {{ dag_conf.table_wikibase_item }} RENAME TO {{ dag_conf.table_wikibase_item }}_old;
 
             CREATE TABLE IF NOT EXISTS {{ dag_conf.table_wikibase_item }} (
                 {{ col_wikiid }},

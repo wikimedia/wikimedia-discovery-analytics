@@ -49,7 +49,7 @@ LOCATION 'hdfs:///wmf/data/discovery/ores/scores_export_v2'
 
 -- table is changing its partitioning, move the old one out of the way
 -- to be manually deleted
-ALTAR TABLE discovery.wikibase_item RENAME TO discovery.wikibase_item_old;
+ALTER TABLE discovery.wikibase_item RENAME TO discovery.wikibase_item_old;
 
 CREATE TABLE IF NOT EXISTS discovery.wikibase_item (
     `wikiid` string COMMENT 'MediaWiki database name',
