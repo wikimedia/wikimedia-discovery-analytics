@@ -15,12 +15,15 @@
     "--name",
     "airflow-spark",
     "--class",
-    "org.wikidata.query.rdf.spark.EntityRevisionMapGenerator",
+    "org.wikidata.query.rdf.spark.WikibaseRDFDumpConverter",
     "--queue",
     "root.default",
     "/srv/deployment/wikimedia/discovery/analytics/artifacts/rdf-spark-tools-latest-jar-with-dependencies.jar",
-    "--input-table",
-    "discovery.wikibase_rdf/date=20210222/wiki=wikidata",
-    "--output-path",
-    "hdfs://analytics-hadoop/wmf/data/discovery/wdqs/entity_revision_map/20210222/rev_map.csv"
+    "--input-path",
+    "hdfs://analytics-hadoop/wmf/data/raw/commons/dumps/mediainfo-ttl/20210221/wikidata-20210221-mediainfo.ttl.bz2,",
+    "--output-table",
+    "discovery.wikibase_rdf/date=20210221/wiki=commons",
+    "--skolemize",
+    "--site",
+    "commons"
 ]

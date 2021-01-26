@@ -32,6 +32,7 @@ all_dag_ids = [
     'import_wikidata_ttl',
     'mediawiki_revision_recommendation_create_init',
     'mediawiki_revision_recommendation_create_hourly',
+    'import_commons_ttl',
     'mjolnir',
     'ores_predictions_v3_init',
     'ores_predictions_hourly',
@@ -42,6 +43,7 @@ all_dag_ids = [
     'transfer_to_es_hourly',
     'transfer_to_es_weekly',
     'mediawiki_revision_recommendation_create_hourly',
+    'import_ttl_init',
 ]
 
 

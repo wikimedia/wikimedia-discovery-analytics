@@ -1,0 +1,10 @@
+{
+  "import_ttl_conf": {
+    "rdf_data_table": "discovery.wikibase_rdf",
+    "rdf_data_location": "wikidata/rdf/",
+    "all_ttl_dump_dir": "hdfs://analytics-hadoop/wmf/data/raw/wikidata/dumps/all_ttl",
+    "lexeme_ttl_dump_dir": "hdfs://analytics-hadoop/wmf/data/raw/wikidata/dumps/lexemes_ttl",
+    "entity_revision_map": "hdfs://analytics-hadoop/wmf/data/discovery/wdqs/entity_revision_map",
+    "commons_dump_dir": "hdfs://analytics-hadoop/wmf/data/raw/commons/dumps/mediainfo-ttl"
+  }
+}

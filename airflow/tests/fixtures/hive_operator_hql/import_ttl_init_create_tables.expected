@@ -1,0 +1,13 @@
+
+CREATE TABLE IF NOT EXISTS discovery.wikibase_rdf (
+  `context` string,
+  `subject` string,
+  `predicate` string,
+  `object` string
+)
+PARTITIONED BY (
+    `date` string,
+    `wiki` string
+)
+STORED AS PARQUET
+LOCATION 'hdfs:///wmf/data/discovery/wikidata/rdf/'
