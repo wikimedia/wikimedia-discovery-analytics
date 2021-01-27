@@ -72,7 +72,7 @@ with DAG(
     # Five minutes past the hour every hour
     schedule_interval='@hourly',
     max_active_runs=2,
-    catchup=False,
+    catchup=True,
     template_undefined=jinja2.StrictUndefined,
 ) as hourly_dag:
     sensor_kwargs = dict(
