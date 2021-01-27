@@ -46,13 +46,14 @@ from typing import cast, Callable, Mapping, MutableSequence, Optional, Sequence,
 from wmf_spark import HivePartition
 
 
-def arg_parser() -> ArgumentParser:
-    def dt(val: str) -> datetime:
-        # Only accept time precision in hours, as that is the minimum
-        # partitioning granularity we use, but use full iso-8601
-        # matching airflow `ts` formatting for sanity purposes.
-        return datetime.strptime(val, '%Y-%m-%dT%H:00:00+00:00')
+def str_to_dt(val: str) -> datetime:
+    # Only accept time precision in hours, as that is the minimum
+    # partitioning granularity we use, but use full iso-8601
+    # matching airflow `ts` formatting for sanity purposes.
+    return datetime.strptime(val, '%Y-%m-%dT%H:00:00+00:00')
 
+
+def arg_parser() -> ArgumentParser:
     parser = ArgumentParser()
     parser.add_argument('-c', '--config', dest='config', metavar='CONFIG', choices=CONFIG.keys(),
                         help='Name of configuration to run')
@@ -60,7 +61,7 @@ def arg_parser() -> ArgumentParser:
                         help='Output to store results')
     parser.add_argument('-l', '--limit-per-file', dest='limit_per_file', metavar='N', type=int,
                         default=200000, help='Maximum number of records per output file')
-    parser.add_argument('-d', '--datetime', dest='dt', metavar='DATE', type=dt,
+    parser.add_argument('-d', '--datetime', dest='dt', metavar='DATE', type=str_to_dt,
                         help='Date of input partitions in YYYY-MM-DDTHH:MM format. ex: 2001-01-15T19:00')
     parser.add_argument('-n', '--namespace-map-table', dest='namespace_map_table',
                         help='Table mapping wikiid + namespace_id to an elasticsearch index')

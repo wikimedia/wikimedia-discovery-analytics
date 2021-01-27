@@ -51,7 +51,7 @@ def convert(config_name: str, output_path: str) -> BaseOperator:
             '--config', config_name,
             '--namespace-map-table', dag_conf('table_namespace_map'),
             '--output', output_path,
-            '--datetime', '{{ execution_date.strftime("%Y-%m-%dT%H:00") }}',
+            '--datetime', '{{ execution_date }}'
         ])
 
 

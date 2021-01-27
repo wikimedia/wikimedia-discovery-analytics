@@ -364,3 +364,17 @@ def test_multilist_field_as_expression(spark):
 def test_builtin_configs_are_valid(config_name):
     config = convert_to_esbulk.CONFIG[config_name]()
     assert convert_to_esbulk.validate_config(config) is True
+
+
+@pytest.mark.parametrize('expect, dt_str', [
+    (datetime(2021, 1, 1), '2021-01-01T00:00:00+00:00'),
+    (datetime(2038, 1, 17, 3), '2038-01-17T03:00:00+00:00'),
+    # no partial hours allowed
+    (None, '2021-01-01T00:10:00+00:00'),
+    (None, '2021-01-01T00:00:10+00:00'),
+])
+def test_str_to_dt(expect, dt_str):
+    try:
+        assert convert_to_esbulk.str_to_dt(dt_str) == expect
+    except ValueError:
+        assert expect is None
