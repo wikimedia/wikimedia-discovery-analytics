@@ -120,7 +120,10 @@ def mw_sql_to_hive(
 
 
 def thresholds_path(model: str) -> str:
-    return dag_conf('thresholds_prefix') + '/' + model + '_{{ ds_nodash }}.json'
+    # Due to how airflow schedules tasks at the end of a period, to get the daily thresholds
+    # for today we use yesterdays date.
+    yesterday = "{{ macros.ds_format(macros.ds_add(ds, -1), '%Y-%m-%d', '%Y%m%d') }}"
+    return dag_conf('thresholds_prefix') + '/' + model + '_' + yesterday + '.json'
 
 
 def fetch_thresholds(model: str):
