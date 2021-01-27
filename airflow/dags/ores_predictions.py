@@ -341,8 +341,9 @@ with DAG(
         task_id='wait_for_thresholds',
         external_dag_id='ores_predictions_daily',
         external_task_id='complete',
-        # dt is a pendulum.datetime
-        execution_date_fn=lambda dt: dt.at(hour=0, minute=0, second=0))
+        # dt is a pendulum.datetime. We need the task for yesterday, because
+        # today's task runs at the *end* of the day.
+        execution_date_fn=lambda dt: dt.subtract(days=1).at(hour=0, minute=0, second=0))
 
     wait_for_hourly_data = NamedHivePartitionSensor(
         task_id='wait_for_hourly_data',
