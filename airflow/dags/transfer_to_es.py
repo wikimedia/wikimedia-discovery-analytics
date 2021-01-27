@@ -25,7 +25,7 @@ default_args = {
     # important for the final state to be correct. As such the previous run must
     # always complete before the next.
     'depends_on_past': True,
-    'start_date': datetime(2020, 1, 24),
+    'start_date': datetime(2021, 1, 24),
     'email': ['discovery-alerts@lists.wikimedia.org'],
     'email_on_failure': True,
     'email_on_retry': False,
