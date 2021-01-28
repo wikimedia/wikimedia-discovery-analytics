@@ -38,7 +38,7 @@ from wmf_airflow.spark_submit import SparkSubmitOperator
 from wmf_airflow.template import (
     HTTPS_PROXY, IVY_SETTINGS_PATH, MARIADB_CREDENTIALS_PATH,
     MEDIAWIKI_ACTIVE_DC, MEDIAWIKI_CONFIG_PATH, REPO_PATH, REPO_HDFS_PATH,
-    YMD_PARTITION, YMDH_PARTITION, DagConf, wmf_conf)
+    YMDH_PARTITION, DagConf, wmf_conf)
 
 
 dag_conf = DagConf('ores_predictions_conf')
@@ -183,7 +183,7 @@ def extract_predictions(
         application_args=propagate_args + [
             '--input-partition', INPUT_TABLE + '/@{{ ds }}/{{ macros.ds_add(ds, 7) }}',
             '--input-kind', 'mediawiki_revision_score',
-            '--output-partition', output_table + '/' + YMD_PARTITION,
+            '--output-partition', output_table + '/' + YMDH_PARTITION,
             '--thresholds-path', 'thresholds.json',
             '--prediction', model,
         ],

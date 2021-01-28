@@ -25,7 +25,7 @@
     "--input-kind",
     "mediawiki_revision_score",
     "--output-partition",
-    "discovery.ores_articletopic/year=2038/month=1/day=17",
+    "discovery.ores_articletopic/year=2038/month=1/day=17/hour=3",
     "--thresholds-path",
     "thresholds.json",
     "--prediction",
