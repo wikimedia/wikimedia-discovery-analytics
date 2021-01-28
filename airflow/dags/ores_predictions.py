@@ -120,6 +120,10 @@ def mw_sql_to_hive(
 
 
 def thresholds_path(model: str) -> str:
+    return dag_conf('thresholds_prefix') + '/' + model + '_{{ ds_nodash }}.json'
+
+
+def yesterday_thresholds_path(model: str) -> str:
     # Due to how airflow schedules tasks at the end of a period, to get the daily thresholds
     # for today we use yesterdays date.
     yesterday = "{{ macros.ds_format(macros.ds_add(ds, -1), '%Y-%m-%d', '%Y%m%d') }}"
@@ -173,7 +177,7 @@ def extract_predictions(
         spark_submit_env_vars={
             'PYSPARK_PYTHON': 'python3.7',
         },
-        files=thresholds_path(model) + '#thresholds.json',
+        files=yesterday_thresholds_path(model) + '#thresholds.json',
         py_files=REPO_PATH + '/spark/wmf_spark.py',
         application=REPO_PATH + '/spark/prepare_mw_rev_score.py',
         application_args=propagate_args + [
