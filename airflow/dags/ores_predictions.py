@@ -326,7 +326,9 @@ with DAG(
     'ores_predictions_daily',
     default_args=dict(
         default_args,
-        start_date=datetime(2021, 1, 24)
+        # Must start 1 day before ores_predictions_hourly, as that
+        # means the job runs at the beginning of the day hourly starts.
+        start_date=datetime(2021, 1, 23)
     ),
     schedule_interval='@daily',
     max_active_runs=1,
