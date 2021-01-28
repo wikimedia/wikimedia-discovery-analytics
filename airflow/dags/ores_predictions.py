@@ -192,7 +192,7 @@ def extract_predictions(
 
 # Manually triggered dag to initialize deployment
 with DAG(
-    'ores_predictions_init',
+    'ores_predictions_v2_init',
     default_args=dict(
         default_args,
         # Start any time after being deployed and enabled
@@ -206,6 +206,7 @@ with DAG(
         'col_page_id': "`page_id` int COMMENT 'MediaWiki page_id'",
         'col_page_namespace': "`page_namespace` int"
                               " COMMENT 'MediaWiki namespace page_id belongs to'",
+        'col_hour': "`hour` int COMMENT 'Hour collection starts at'",
         'cols_ymd': """
             `year` int COMMENT 'Year collection starts at',
             `month` int COMMENT 'Month collection starts at',
@@ -218,24 +219,37 @@ with DAG(
     HiveOperator(
         task_id='create_tables',
         hql="""
+            -- table is changing its partitioning, move the old one out of the way
+            -- to be manually deleted
+            ALTER TABLE {{ dag_conf.table_articletopic }} RENAME TO {{ dag_conf.table_articletopic }}_old;
+
             CREATE TABLE IF NOT EXISTS {{ dag_conf.table_articletopic }} (
                 {{ col_wikiid }},
                 {{ col_page_id }},
                 {{ col_page_namespace }},
                 `articletopic` array<string> COMMENT 'ores articletopic predictions formatted as name|int_score for elasticsearch ingestion'
             )
-            PARTITIONED BY ({{ cols_ymd }})
+            PARTITIONED BY (
+                {{ cols_ymd }},
+                {{ col_hour }}
+            )
             STORED AS PARQUET
             LOCATION '{{ wmf_conf.data_path }}/{{ dag_conf.rel_path_articletopic }}'
             ;
 
+            -- table is changing its partitioning, move the old one out of the way
+            -- to be manually deleted
+            ALTER TABLE {{ dag_conf.table_drafttopic }} RENAME TO {{ dag_conf.table_drafttopic }}_old;
             CREATE TABLE IF NOT EXISTS {{ dag_conf.table_drafttopic }} (
                 {{ col_wikiid }},
                 {{ col_page_id }},
                 {{ col_page_namespace }},
                 `drafttopic` array<string> COMMENT 'ores draftopic predictions formatted as name|int_score for elasticsearch ingestion'
             )
-            PARTITIONED BY ({{ cols_ymd }})
+            PARTITIONED BY (
+                {{ cols_ymd }},
+                {{ col_hour }}
+            )
             STORED AS PARQUET
             LOCATION '{{ wmf_conf.data_path }}/{{ dag_conf.rel_path_drafttopic }}'
             ;
@@ -256,10 +270,6 @@ with DAG(
             STORED AS PARQUET
             LOCATION '{{ wmf_conf.data_path }}/{{ dag_conf.rel_path_scores_export }}'
             ;
-
-            -- table is changing its partitioning, move the old one out of the way
-            -- to be manually deleted
-            ALTER TABLE {{ dag_conf.table_wikibase_item }} RENAME TO {{ dag_conf.table_wikibase_item }}_old;
 
             CREATE TABLE IF NOT EXISTS {{ dag_conf.table_wikibase_item }} (
                 {{ col_wikiid }},

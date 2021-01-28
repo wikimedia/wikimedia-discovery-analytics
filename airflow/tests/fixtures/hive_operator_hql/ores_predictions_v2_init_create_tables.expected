@@ -1,4 +1,8 @@
 
+-- table is changing its partitioning, move the old one out of the way
+-- to be manually deleted
+ALTER TABLE discovery.ores_articletopic RENAME TO discovery.ores_articletopic_old;
+
 CREATE TABLE IF NOT EXISTS discovery.ores_articletopic (
     `wikiid` string COMMENT 'MediaWiki database name',
     `page_id` int COMMENT 'MediaWiki page_id',
@@ -6,13 +10,19 @@ CREATE TABLE IF NOT EXISTS discovery.ores_articletopic (
     `articletopic` array<string> COMMENT 'ores articletopic predictions formatted as name|int_score for elasticsearch ingestion'
 )
 PARTITIONED BY (
+
 `year` int COMMENT 'Year collection starts at',
 `month` int COMMENT 'Month collection starts at',
-`day` int COMMENT 'Day collection starts at')
+`day` int COMMENT 'Day collection starts at',
+    `hour` int COMMENT 'Hour collection starts at'
+)
 STORED AS PARQUET
 LOCATION 'hdfs:///wmf/data/discovery/ores/articletopic_v2'
 ;
 
+-- table is changing its partitioning, move the old one out of the way
+-- to be manually deleted
+ALTER TABLE discovery.ores_drafttopic RENAME TO discovery.ores_drafttopic_old;
 CREATE TABLE IF NOT EXISTS discovery.ores_drafttopic (
     `wikiid` string COMMENT 'MediaWiki database name',
     `page_id` int COMMENT 'MediaWiki page_id',
@@ -20,9 +30,12 @@ CREATE TABLE IF NOT EXISTS discovery.ores_drafttopic (
     `drafttopic` array<string> COMMENT 'ores draftopic predictions formatted as name|int_score for elasticsearch ingestion'
 )
 PARTITIONED BY (
+
 `year` int COMMENT 'Year collection starts at',
 `month` int COMMENT 'Month collection starts at',
-`day` int COMMENT 'Day collection starts at')
+`day` int COMMENT 'Day collection starts at',
+    `hour` int COMMENT 'Hour collection starts at'
+)
 STORED AS PARQUET
 LOCATION 'hdfs:///wmf/data/discovery/ores/drafttopic'
 ;
@@ -46,10 +59,6 @@ PARTITIONED BY (
 STORED AS PARQUET
 LOCATION 'hdfs:///wmf/data/discovery/ores/scores_export_v2'
 ;
-
--- table is changing its partitioning, move the old one out of the way
--- to be manually deleted
-ALTER TABLE discovery.wikibase_item RENAME TO discovery.wikibase_item_old;
 
 CREATE TABLE IF NOT EXISTS discovery.wikibase_item (
     `wikiid` string COMMENT 'MediaWiki database name',
