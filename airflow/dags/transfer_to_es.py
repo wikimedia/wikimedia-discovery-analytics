@@ -76,7 +76,7 @@ with DAG(
     template_undefined=jinja2.StrictUndefined,
 ) as hourly_dag:
     sensor_kwargs = dict(
-        timeout=60 * 60,  # 1 hour
+        timeout=timedelta(hours=3).total_seconds(),
         retries=4,
         email_on_retry=True)
 
