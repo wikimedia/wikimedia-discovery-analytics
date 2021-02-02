@@ -36,19 +36,13 @@ all_dag_ids = [
 ]
 
 
-@pytest.fixture(scope='session')
-def fixture_dir():
-    return os.path.join(os.path.dirname(__file__), 'fixtures')
-
-
-@pytest.fixture(scope='session')
-def airflow_variables_dir():
-    return os.path.realpath(
-        os.path.join(os.path.dirname(__file__), '../config'))
+fixture_dir = os.path.join(os.path.dirname(__file__), 'fixtures')
+airflow_variables_dir = os.path.realpath(
+    os.path.join(os.path.dirname(__file__), '../config'))
 
 
 @pytest.fixture(scope='session', autouse=True)
-def configure_airflow_variables(airflow_variables_dir):
+def configure_airflow_variables():
     """Global airflow variable configuration for tests.
 
     This configuration is written to the airflow database, and as
@@ -93,7 +87,7 @@ on_disk_fixture.serde = {
 
 
 @pytest.fixture(scope='session')
-def fixture_factory(fixture_dir):
+def fixture_factory():
     def factory(group, fixture_id, serde='json'):
         path = os.path.join(fixture_dir, group, fixture_id + '.expected')
         return on_disk_fixture(path, on_disk_fixture.serde[serde])

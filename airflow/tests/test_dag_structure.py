@@ -2,6 +2,8 @@ import re
 from collections import OrderedDict
 from copy import deepcopy
 from datetime import datetime
+from glob import glob
+import json
 import os
 from textwrap import dedent
 
@@ -20,7 +22,7 @@ import pendulum
 import pytest
 from wmf_airflow.spark_submit import SparkSubmitOperator
 
-from conftest import all_dag_ids, all_tasks, tasks
+from conftest import airflow_variables_dir, all_dag_ids, all_tasks, tasks
 
 bag = DagBag()
 
@@ -249,6 +251,14 @@ def test_spark_submit_sizing(task, mocker):
     exec_cores = int(task._executor_cores if task._executor_cores is not None else '1')
     assert exec_cores <= exec_mem, \
         "executor_memory looks suspiciously low (less than 1G per executor)"
+
+
+@pytest.mark.parametrize('path', glob(os.path.join(airflow_variables_dir, '*.json')))
+def test_airflow_config_is_valid_json(path):
+    with open(path, 'rt') as f:
+        variables = json.load(f)
+    assert isinstance(variables, dict), "json file must contain a dict"
+    assert len(variables) > 0, "json file must define at least one variable"
 
 
 def _sort_items_recursive(maybe_dict):
