@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS discovery.ores_articletopic (
     `articletopic` array<string> COMMENT 'ores articletopic predictions formatted as name|int_score for elasticsearch ingestion'
 )
 PARTITIONED BY (
+    `source` string COMMENT 'Name of process staging this partition,
 
 `year` int COMMENT 'Year collection starts at',
 `month` int COMMENT 'Month collection starts at',
@@ -17,7 +18,7 @@ PARTITIONED BY (
     `hour` int COMMENT 'Hour collection starts at'
 )
 STORED AS PARQUET
-LOCATION 'hdfs:///wmf/data/discovery/ores/articletopic_v2'
+LOCATION 'hdfs:///wmf/data/discovery/ores/articletopic'
 ;
 
 -- table is changing its partitioning, move the old one out of the way
@@ -30,6 +31,7 @@ CREATE TABLE IF NOT EXISTS discovery.ores_drafttopic (
     `drafttopic` array<string> COMMENT 'ores draftopic predictions formatted as name|int_score for elasticsearch ingestion'
 )
 PARTITIONED BY (
+    `source` string COMMENT 'Name of process staging this partition,
 
 `year` int COMMENT 'Year collection starts at',
 `month` int COMMENT 'Month collection starts at',

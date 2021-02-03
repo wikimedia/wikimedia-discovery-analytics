@@ -378,3 +378,19 @@ def test_str_to_dt(expect, dt_str):
         assert convert_to_esbulk.str_to_dt(dt_str) == expect
     except ValueError:
         assert expect is None
+
+
+@pytest.mark.parametrize('expect,tmpl', [
+    ('table/year=2038/month=1/day=17', '@daily'),
+    ('table/year=2038/month=1/day=17/a=b', '@daily/a=b'),
+    ('table/year=2038/month=1/day=17/hour=3/a=b/c=d', '@hourly/a=b/c=d'),
+])
+def test_partition_spec_templating(expect, tmpl):
+    table = convert_to_esbulk.Table(
+        table_name='table',
+        partition_spec_tmpl=tmpl,
+        join_on=convert_to_esbulk.JOIN_ON_WIKIID,
+        update_kind=convert_to_esbulk.UPDATE_ALL,
+        fields=[],
+    )
+    assert table.partition_spec(datetime(2038, 1, 17, 3)) == expect

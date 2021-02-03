@@ -153,6 +153,7 @@ def fetch_thresholds(model: str):
 def extract_predictions(
     model: str,
     output_table: str,
+    source: str,
     propagate_from_wiki: Optional[str],
 ):
     if propagate_from_wiki is None:
@@ -164,6 +165,11 @@ def extract_predictions(
             + '/date={{ macros.hive.max_partition(dag_conf.table_wikibase_item).decode("utf8") }}',
             '--propagate-from', propagate_from_wiki,
         ]
+
+    output_partition = '{table}/{ymdh}/source={source}'.format(
+        table=output_table,
+        ymdh=YMDH_PARTITION,
+        source=source)
 
     # Extract the data from mediawiki event logs and put into
     # a format suitable for shipping to elasticsearch.
@@ -181,9 +187,9 @@ def extract_predictions(
         py_files=REPO_PATH + '/spark/wmf_spark.py',
         application=REPO_PATH + '/spark/prepare_mw_rev_score.py',
         application_args=propagate_args + [
-            '--input-partition', INPUT_TABLE + '/@{{ ds }}/{{ macros.ds_add(ds, 7) }}',
+            '--input-partition', INPUT_TABLE + '/{{ ds }}/{{ macros.ds_add(ds, 7) }}',
             '--input-kind', 'mediawiki_revision_score',
-            '--output-partition', output_table + '/' + YMDH_PARTITION,
+            '--output-partition', output_partition,
             '--thresholds-path', 'thresholds.json',
             '--prediction', model,
         ],
@@ -192,7 +198,7 @@ def extract_predictions(
 
 # Manually triggered dag to initialize deployment
 with DAG(
-    'ores_predictions_v2_init',
+    'ores_predictions_v3_init',
     default_args=dict(
         default_args,
         # Start any time after being deployed and enabled
@@ -207,6 +213,7 @@ with DAG(
         'col_page_namespace': "`page_namespace` int"
                               " COMMENT 'MediaWiki namespace page_id belongs to'",
         'col_hour': "`hour` int COMMENT 'Hour collection starts at'",
+        'col_source': "`source` string COMMENT 'Name of process staging this partition",
         'cols_ymd': """
             `year` int COMMENT 'Year collection starts at',
             `month` int COMMENT 'Month collection starts at',
@@ -230,6 +237,7 @@ with DAG(
                 `articletopic` array<string> COMMENT 'ores articletopic predictions formatted as name|int_score for elasticsearch ingestion'
             )
             PARTITIONED BY (
+                {{ col_source }},
                 {{ cols_ymd }},
                 {{ col_hour }}
             )
@@ -247,6 +255,7 @@ with DAG(
                 `drafttopic` array<string> COMMENT 'ores draftopic predictions formatted as name|int_score for elasticsearch ingestion'
             )
             PARTITIONED BY (
+                {{ col_source }},
                 {{ cols_ymd }},
                 {{ col_hour }}
             )
@@ -380,12 +389,14 @@ with DAG(
     extract_articletopic = extract_predictions(
         model='articletopic',
         output_table=dag_conf('table_articletopic'),
-        propagate_from_wiki='enwiki')
+        propagate_from_wiki='enwiki',
+        source=hourly_dag.dag_id)
 
     extract_drafttopic = extract_predictions(
         model='drafttopic',
         output_table=dag_conf('table_drafttopic'),
-        propagate_from_wiki=None)
+        propagate_from_wiki=None,
+        source=hourly_dag.dag_id)
 
     # list >> list doesn't get the magic, have to have two invocations
     wait_for_thresholds >> [

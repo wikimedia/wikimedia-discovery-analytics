@@ -300,7 +300,10 @@ class Table:
 
     def partition_spec(self, dt: datetime) -> str:
         tmpl = self.partition_spec_tmpl
-        tmpl = self.PARTITION_TMPL.get(tmpl, tmpl)
+        if tmpl.startswith('@'):
+            pieces = tmpl.split('/', 2)
+            tmpl_prefix = self.PARTITION_TMPL[pieces[0]]
+            tmpl = '/'.join([tmpl_prefix] + pieces[1:])
         return tmpl.format(table_name=self.table_name, dt=dt)
 
     def partition(self, dt: datetime) -> HivePartition:
@@ -318,11 +321,11 @@ class Table:
 # maybe even a provided config.py, but for now this works and is minimally
 # complicated.  The actual config is wrapped into a lambda as creating it may
 # trigger hql escaping, which requires the spark jvm to have been initialized.
-CONFIG = {
+CONFIG: Mapping[str, Callable[[], Sequence[Table]]] = {
     'hourly': lambda: [
         Table(
             table_name='discovery.ores_articletopic',
-            partition_spec_tmpl='@hourly',
+            partition_spec_tmpl='@hourly/source=ores_predictions_hourly',
             join_on=JOIN_ON_WIKIID,
             update_kind=UPDATE_ALL,
             fields=[
@@ -335,7 +338,7 @@ CONFIG = {
         ),
         Table(
             table_name='discovery.ores_articletopic',
-            partition_spec_tmpl='@hourly',
+            partition_spec_tmpl='@hourly/source=ores_predictions_hourly',
             join_on=JOIN_ON_WIKIID,
             update_kind=UPDATE_ALL,
             fields=[
@@ -350,7 +353,7 @@ CONFIG = {
         ),
         Table(
             table_name='discovery.ores_drafttopic',
-            partition_spec_tmpl='@hourly',
+            partition_spec_tmpl='@hourly/source=ores_predictions_hourly',
             join_on=JOIN_ON_WIKIID,
             update_kind=UPDATE_ALL,
             fields=[
@@ -383,6 +386,16 @@ CONFIG = {
                 WithinPercentageField(field='score', alias='popularity_score', percentage=20)
             ]
         ),
+    ],
+    'ores_bulk_ingest': lambda: [
+        Table(
+            table_name=t.table_name,
+            partition_spec_tmpl='@hourly/source=ores_bulk_ingest',
+            join_on=t.join_on,
+            update_kind=t.update_kind,
+            fields=t.fields)
+        for t in CONFIG['hourly']()
+        if t.table_name.startswith('discovery.ores_')
     ]
 }
 
