@@ -87,12 +87,21 @@ with DAG(
         external_task_id='complete',
         **sensor_kwargs)
 
+    recommendation = ExternalTaskSensor(
+        task_id='wait_for_recommendations',
+        external_dag_id='mediawiki_revision_recommendation_create_hourly',
+        external_task_id='complete',
+        **sensor_kwargs)
+
     # Format inputs as elasticsearch bulk updates
     convert_to_esbulk = convert('hourly', PATH_OUT_HOURLY)
     upload_to_swift = upload(PATH_OUT_HOURLY)
     complete = DummyOperator(task_id='complete')
 
-    ores_articletopic >> convert_to_esbulk >> upload_to_swift >> complete
+    [
+        ores_articletopic,
+        recommendation,
+    ] >> convert_to_esbulk >> upload_to_swift >> complete
 
 
 with DAG(
