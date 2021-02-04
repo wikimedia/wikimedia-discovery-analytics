@@ -42,7 +42,7 @@ TEMP_DIR = 'hdfs://analytics-hadoop/tmp/{{ dag.dag_id }}_{{ ds }}'
 default_args = {
     'owner': 'discovery-analytics',
     'depends_on_past': False,
-    'start_date': datetime(2020, 7, 11),
+    'start_date': datetime(2021, 1, 26),
     'email': ['ebernhardson@wikimedia.org'],
     'email_on_failure': True,
     'email_on_retry': False,
@@ -125,7 +125,7 @@ with DAG(
         py_files=REPO_PATH + '/spark/wmf_spark.py',
         application=REPO_PATH + '/spark/generate_daily_druid_search_satisfaction.py',
         application_args=[
-            '--source-partition', TABLE_SEARCH_SATISFACTION + '/' + YMD_PARTITION,
+            '--source-partition', TABLE_SEARCH_SATISFACTION + '/',
             '--destination-directory', TEMP_DIR,
         ])
 
