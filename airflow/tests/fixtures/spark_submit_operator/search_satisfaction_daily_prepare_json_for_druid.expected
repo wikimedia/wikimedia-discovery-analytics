@@ -15,7 +15,7 @@
     "root.default",
     "/srv/deployment/wikimedia/discovery/analytics/spark/generate_daily_druid_search_satisfaction.py",
     "--source-partition",
-    "discovery.search_satisfaction_daily/year=2038/month=1/day=17",
+    "discovery.search_satisfaction_daily/",
     "--destination-directory",
     "hdfs://analytics-hadoop/tmp/search_satisfaction_daily_2038-01-17"
 ]
