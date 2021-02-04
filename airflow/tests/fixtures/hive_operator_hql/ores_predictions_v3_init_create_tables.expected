@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS discovery.ores_articletopic (
     `articletopic` array<string> COMMENT 'ores articletopic predictions formatted as name|int_score for elasticsearch ingestion'
 )
 PARTITIONED BY (
-    `source` string COMMENT 'Name of process staging this partition,
+    `source` string COMMENT 'Name of process staging this partition',
 
 `year` int COMMENT 'Year collection starts at',
 `month` int COMMENT 'Month collection starts at',
@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS discovery.ores_drafttopic (
     `drafttopic` array<string> COMMENT 'ores draftopic predictions formatted as name|int_score for elasticsearch ingestion'
 )
 PARTITIONED BY (
-    `source` string COMMENT 'Name of process staging this partition,
+    `source` string COMMENT 'Name of process staging this partition',
 
 `year` int COMMENT 'Year collection starts at',
 `month` int COMMENT 'Month collection starts at',

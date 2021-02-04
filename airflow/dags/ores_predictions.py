@@ -213,7 +213,7 @@ with DAG(
         'col_page_namespace': "`page_namespace` int"
                               " COMMENT 'MediaWiki namespace page_id belongs to'",
         'col_hour': "`hour` int COMMENT 'Hour collection starts at'",
-        'col_source': "`source` string COMMENT 'Name of process staging this partition",
+        'col_source': "`source` string COMMENT 'Name of process staging this partition'",
         'cols_ymd': """
             `year` int COMMENT 'Year collection starts at',
             `month` int COMMENT 'Month collection starts at',

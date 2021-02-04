@@ -2,6 +2,7 @@ from datetime import datetime
 from dataclasses import dataclass
 from glob import glob
 import json
+import logging
 import os
 from typing import Any, Callable, TextIO
 
@@ -11,6 +12,11 @@ from airflow.models.variable import Variable
 
 import jinja2
 import pytest
+
+import findspark
+findspark.init()  # must happen before importing pyspark
+from pyspark.sql import SparkSession  # noqa
+
 
 # Failing to import a dag doesn't fail pytest. Enumerate
 # the expected dags so tests fail if they don't import.
@@ -141,3 +147,37 @@ def dag():
         template_undefined=jinja2.StrictUndefined,
         default_args={'start_date': datetime.now()}
     )
+
+
+def quiet_log4j():
+    logger = logging.getLogger('py4j')
+    logger.setLevel(logging.WARN)
+
+
+@pytest.fixture(scope="session")
+def spark():
+    """Fixture for creating a spark context.
+
+    Args:
+        request: pytest.FixtureRequest object
+
+    Returns:
+        SparkContext for tests
+    """
+
+    quiet_log4j()
+
+    builder = (
+        SparkSession.builder
+        .master("local[2]")
+        .appName("pytest-pyspark-local-testing")
+        # By default spark will shuffle to 200 partitions, which is
+        # way too many for our small test cases. This cuts execution
+        # time of the tests in half.
+        .config('spark.sql.shuffle.partitions', 4)
+    )
+    if 'XDG_CACHE_HOME' in os.environ:
+        builder.config('spark.jars.ivy', os.path.join(os.environ['XDG_CACHE_HOME'], 'ivy2'))
+
+    with builder.getOrCreate() as spark:
+        yield spark

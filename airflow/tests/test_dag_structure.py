@@ -187,12 +187,27 @@ def rendered_task(task, mocker):
 
 
 @pytest.mark.parametrize('task', tasks(HiveOperator))
-def test_hive_operator_rendered_hql(task, rendered_task, fixture_factory, mocker):
+def test_hive_operator_rendered_hql(task, rendered_task, fixture_factory, mocker, spark):
     if task.hql == rendered_task.hql:
         pytest.skip("hql is not templated")
         return
     fixture = '{}_{}'.format(task.dag_id, task.task_id)
     comparer = fixture_factory('hive_operator_hql', fixture, serde='str')
+    # We can't simply use spark.sql(...) to verify syntax, as that would also
+    # check that tables exist and have correct columns, a bit more than we are
+    # setup to check.
+    # Instead reach in and use the catalyst parser on its own without
+    # running the analysis step that spark.sql(...) would invoke.
+    # SessionState is internal to spark and has no interface stability
+    # guarantees.
+    jSqlParser = spark._jsparkSession.sessionState().sqlParser()
+    # While splitting on ; isn't technically correct, it's correct-enough for
+    # our use case. The spark parser explicitly only parses single statements
+    # and bringing hive jars into the test suite seemed much too painful.
+    for stmt in rendered_task.hql.split(';'):
+        # bad content will throw pyspak.sql.utils.ParseException
+        jSqlParser.parsePlan(stmt)
+
     comparer(dedent(rendered_task.hql))
 
 
