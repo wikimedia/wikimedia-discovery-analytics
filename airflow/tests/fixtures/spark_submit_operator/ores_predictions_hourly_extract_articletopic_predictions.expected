@@ -21,7 +21,7 @@
     "--propagate-from",
     "enwiki",
     "--input-partition",
-    "event.mediawiki_revision_score/2038-01-17/2038-01-24",
+    "event.mediawiki_revision_score/@2038-01-17/2038-01-24",
     "--input-kind",
     "mediawiki_revision_score",
     "--output-partition",

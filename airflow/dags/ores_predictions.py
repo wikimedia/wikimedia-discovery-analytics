@@ -187,7 +187,7 @@ def extract_predictions(
         py_files=REPO_PATH + '/spark/wmf_spark.py',
         application=REPO_PATH + '/spark/prepare_mw_rev_score.py',
         application_args=propagate_args + [
-            '--input-partition', INPUT_TABLE + '/{{ ds }}/{{ macros.ds_add(ds, 7) }}',
+            '--input-partition', INPUT_TABLE + '/@{{ ds }}/{{ macros.ds_add(ds, 7) }}',
             '--input-kind', 'mediawiki_revision_score',
             '--output-partition', output_partition,
             '--thresholds-path', 'thresholds.json',
