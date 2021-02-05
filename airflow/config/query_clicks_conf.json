@@ -1,0 +1,12 @@
+{
+    "query_clicks_conf": {
+        "table_hourly": "discovery.query_clicks_hourly",
+        "table_daily": "discovery.query_clicks_daily",
+        "table_webrequest": "wmf.webrequest",
+        "table_namespace_map": "wmf_raw.mediawiki_project_namespace_map",
+        "table_cirrus_requests": "event.mediawiki_cirrussearch_request",
+        "rel_path_hourly": "query_clicks/hourly",
+        "rel_path_daily": "query_clicks/daily",
+        "session_timeout_sec": 1800
+    }
+}

@@ -51,6 +51,9 @@ all_dag_ids = [
     'process_sparql_query_hourly',
     'wdqs_streaming_updater_reconcile_hourly',
     'wcqs_streaming_updater_reconcile_hourly',
+    'query_clicks_init',
+    'query_clicks_hourly',
+    'query_clicks_daily',
 ]
 
 

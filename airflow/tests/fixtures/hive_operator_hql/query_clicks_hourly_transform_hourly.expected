@@ -1,77 +1,16 @@
--- Joins full text search request logs against web request logs to generate
--- a table that represents the full text search results presented to individual
--- users along with which results they clicked. This data is useful both for
--- generating metrics about how the search engine is performing, as well as
---
--- Paremeters:
---     refinery_jar_version
---                       -- Version of the refinery jar to import for UDFs
---     analytics_artifacts_directory
---                       -- The artifact directory where to find
---                          jar files to import for UDFs
---     source_cirrus_table
---                       -- Fully qualified table name to source CirrusSearch
---                          requests from
---     source_webrequest_table
---                       -- Fully qualified table name to source webrequest
---                          data from
---     source_namespace_map_table
---                       -- Fully qualified table name to source the map from
---                          webrequest projects to cirrus dbname
---     source_namespace_map_snapshot_id
---                       -- Id of the snapshot (partition) of the source_namespace_map_table
---                          to query.
---     destination_table -- Fully qualified table name to store the
---                          computed click data in.
---     yaer              -- year of partition to compute
---     month             -- month of partition to compute
---     day               -- day of partition to compute
---     hour              -- hour of partition to compute
---
---
---
--- Usage:
---     hive -f query_clicks_hourly.hql                                            \
---          -d refinery_jar_version=0.91                                          \
---          -d artifacts_directory=/wmf/refinery/current/artifacts                \
---          -d source_cirrus_table=event.mediawiki_cirrussearch_request           \
---          -d source_webrequest_table=wmf.webrequest                             \
---          -d source_namespace_map_table=wmf_raw.mediawiki_project_namespace_map \
---          -d source_namespace_map_snapshot_id=2019-04                           \
---          -d destination_table=${USER}.query_clicks_hourly                      \
---          -d year=2019                                                          \
---          -d month=5                                                            \
---          -d day=29                                                             \
---          -d hour=0
---
-
 
 -- Be explicit about the compression format to use
 SET parquet.compression = SNAPPY;
 
 -- Sometimes mappers get killed for using slightly more than the 1G default. Lets try 1.5G
-SET mapreduce.map.memory.mb=1500;
+SET mapreduce.map.memory.mb=2000;
 
---ADD JAR ${analytics_artifacts_directory}/org/wikimedia/analytics/refinery/refinery-hive-${refinery_jar_version}.jar;
+-- TODO: Test release version, why are we on a snapshot? We should use a release so
+-- it can be stored in artifacts/ and pulled from archiva like normal jars.
 ADD JAR hdfs://analytics-hadoop/user/ebernhardson/refinery-hive-0.0.91-SNAPSHOT.jar;
+
 CREATE TEMPORARY FUNCTION get_pageview_info AS 'org.wikimedia.analytics.refinery.hive.GetPageviewInfoUDF';
 CREATE TEMPORARY FUNCTION get_main_search_request AS 'org.wikimedia.analytics.refinery.hive.GetMainSearchRequestUDF';
-
--- Generate row_timestamp, start_timestamp and end_timestamp variables to allow
--- requesting the specified year/month/day/hour, and the following hour, from the
--- webrequest table. As long as all functions used are deterministic the hive
--- query planner will appropriately choose only 2 hourly partitions from the webrequest
--- table.
--- The second hour of webrequest is needed so searches that happen towards the end
--- of an hour and have clicks in the begining of the next hour are still associated.
-SET hivevar:start_date = CONCAT_WS('-', CAST(${year} AS string), CAST(${month} AS string), CAST(${day} AS string));
-SET hivevar:start_time = CONCAT_WS(':', CAST(${hour} AS string), '00', '00');
-SET hivevar:start_timestamp = TO_UNIX_TIMESTAMP(CONCAT(${start_date}, ' ', ${start_time}));
-SET hivevar:end_timestamp = (${start_timestamp} + 7199);
-
-SET hivevar:row_date = CONCAT_WS('-', CAST(year AS string), CAST(month AS string), CAST(day AS string));
-SET hivevar:row_time = CONCAT_WS(':', CAST(hour AS string), '00', '00');
-SET hivevar:row_timestamp = TO_UNIX_TIMESTAMP(CONCAT(${row_date}, ' ', ${row_time}));
 
 -- Collect web requests to pages that have a searchToken in
 -- the referer. These should all be clicks from Special:Search
@@ -87,9 +26,9 @@ WITH web_req AS (
         -- is search_req.hits might not be exactly the same, so that will have to be handled
         -- individually by consumers of this data.
         COLLECT_LIST(NAMED_STRUCT(
-            # pageid in webreq changed from int to bigint nov 2020, cast back
-            # to int and delay updating downstream as the largest page_id today
-            # is ~100M.
+            -- pageid in webreq changed from int to bigint nov 2020, cast back
+            -- to int and delay updating downstream as the largest page_id today
+            -- is ~100M.
             'pageid', CAST(page_id as int),
             -- For some reason hive refuses to read a table with a timestamp field in
             -- the array<struct<...>>. Normalize to unix timestamps instead.
@@ -98,11 +37,24 @@ WITH web_req AS (
             'referer', referer
         )) AS clicks
     FROM
-        ${source_webrequest_table}
+        wmf.webrequest
     WHERE
-        -- See comments above when creating *_timestamp vairables
-        ${row_timestamp} >= ${start_timestamp}
-        AND ${row_timestamp} <= ${end_timestamp}
+        -- The second hour of webrequest is needed so searches that happen towards the end
+        -- of an hour and have clicks in the begining of the next hour are still associated.
+
+            TO_UNIX_TIMESTAMP(CONCAT(
+                CONCAT_WS('-', CAST(year AS string), CAST(month AS string), CAST(day AS string)),
+                ' ',
+                CONCAT_WS(':', CAST(hour AS string), '00', '00')
+            ))
+         >= 1640995200
+        AND 
+            TO_UNIX_TIMESTAMP(CONCAT(
+                CONCAT_WS('-', CAST(year AS string), CAST(month AS string), CAST(day AS string)),
+                ' ',
+                CONCAT_WS(':', CAST(hour AS string), '00', '00')
+            ))
+         <= 1641002340
         AND webrequest_source = 'text'
         -- Users clicking navigational elements will match the search token,
         -- but it won't be a pageview with page_id
@@ -124,16 +76,16 @@ namespace_map AS (
         dbname,
         get_pageview_info(hostname, '', '')['project'] AS project
     FROM
-        ${source_namespace_map_table}
+        wmf_raw.mediawiki_project_namespace_map
     WHERE
-        snapshot = "${source_namespace_map_snapshot_id}"
+        snapshot = '20010115'
 ),
 
 -- Collect full text search requests against Special:Search.
 search_req AS (
     SELECT
         csrs.elasticsearch_requests[SIZE(csrs.elasticsearch_requests)-1].query AS query,
-        -- This would return a bigint, but we know we shouldn't ever seen anything
+        -- This would return a bigint, but we know we shouldnt ever seen anything
         -- that even fills an int.
         csrs.http.client_ip,
         namespace_map.project,
@@ -143,13 +95,16 @@ search_req AS (
         csrs.meta.dt,
         get_main_search_request(csrs.`database`, csrs.elasticsearch_requests).hits AS hits
     FROM
-        ${source_cirrus_table} csrs
+        event.mediawiki_cirrussearch_request csrs
     JOIN
         namespace_map
     ON
         namespace_map.dbname = csrs.`database`
     WHERE
-        year = ${year} AND month = ${month} AND day = ${day} AND hour = ${hour}
+        year = 2022
+        AND month = 1
+        AND day = 1
+        AND hour = 0
         -- We only want requests from the web, because their clicks are recorded
         -- in webrequests
         AND csrs.source = 'web'
@@ -166,7 +121,7 @@ search_req AS (
                 -- the top level alias.
                 csrs.`database` == 'commonswiki'
                 AND get_main_search_request(csrs.`database`, csrs.elasticsearch_requests).indices[0] == 'commonswiki'
-                -- Since we don't have _content to filter non-content queries, restrict to the default
+                -- Since we dont have _content to filter non-content queries, restrict to the default
                 -- selected namespaces. Also hive doesn't have an array_equals function...
                 AND size(get_main_search_request(csrs.`database`, csrs.elasticsearch_requests).namespaces) == 6
                 AND array_contains(get_main_search_request(csrs.`database`, csrs.elasticsearch_requests).namespaces, CAST(0 AS BIGINT))
@@ -221,8 +176,13 @@ search_req_old AS (
 )
 
 INSERT OVERWRITE TABLE
-    ${destination_table}
-PARTITION(year=${year},month=${month},day=${day},hour=${hour})
+    discovery.query_clicks_hourly
+PARTITION(
+    year=2022,
+    month=1,
+    day=1,
+    hour=0
+)
 -- Join our search request data against clicks in web_request.
 SELECT
     -- Order here must match the create_table statement
@@ -246,4 +206,3 @@ ON
     web_req.search_token = search_req_old.request_set_token
     AND web_req.project = search_req_old.project
 ;
-

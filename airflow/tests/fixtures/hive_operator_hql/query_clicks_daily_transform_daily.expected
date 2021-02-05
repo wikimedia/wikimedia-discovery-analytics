@@ -1,30 +1,9 @@
--- The hourly data for query_clicks is quite small, and we never need the
--- data at single hour resolution. Save some work reading all the data by
--- collapsing the 24 hourly partitions into a single daily partition.
---
--- Parameters:
---     source_table      -- Fully qualified table name to source data from
---     destination_table -- Fully qualified table name to write data to
---     session_timeout   -- Number of seconds with a search after which a search
---                          session restarts.
---     year              -- Year of partition to compute
---     month             -- Month of partition to compute
---     day               -- Day of partition to compute
---
--- Usage:
---     hive -f query_clicks_daily.hql \
---          -d source_table=discovery.query_clicks_hourly \
---          -d destination_table=${USER}.query_clicks_daily \
---          -d session_timeout=1800 \
---          -d year=2016 \
---          -d month=12 \
---          -d day=4
---
+
 -- Be explicit about the compression format to use
 SET parquet.compression = SNAPPY;
 
 -- Measures the time between search requests, marking a new session whenever an
--- identity has spent more than ${session_timeout} seconds between searches.
+-- identity has spent more than 1800 seconds between searches.
 -- See https://www.dataiku.com/learn/guide/code/reshaping_data/sessionization.html
 -- for more details
 WITH sessionized AS (
@@ -45,21 +24,23 @@ WITH sessionized AS (
                 *,
                 -- Records a 1 each time the time difference between current and previous search
                 -- by this identity is larger than the session timeout.
-                `timestamp` - LAG(`timestamp`) OVER (PARTITION BY identity ORDER BY `timestamp`) >= ${session_timeout} AS new_session
+                `timestamp` - LAG(`timestamp`) OVER (PARTITION BY identity ORDER BY `timestamp`) >= 1800 AS new_session
             FROM (
                 SELECT
                     *,
                     COUNT(1) OVER (PARTITION BY identity) AS rows_by_identity,
                     COUNT(1) OVER (PARTITION BY ip) AS q_by_ip_day
                 FROM
-                    ${source_table}
+                    discovery.query_clicks_hourly
                 WHERE
-                    year = ${year} AND month=${month} AND day=${day}
+                    year = 2022
+                    AND month = 1
+                    AND day = 1
             ) x
             WHERE
                 -- We have some identities that make hundreds of thousands of queries a day.
                 -- The later sum(new_session) over (...) expression chokes on those identities,
-                -- essentially summing each possible set of rows. We don't really need that data
+                -- essentially summing each possible set of rows. We dont really need that data
                 -- for ML purposes, so filter it early.
                 rows_by_identity < 1000
         ) y
@@ -67,8 +48,11 @@ WITH sessionized AS (
 )
 
 INSERT OVERWRITE TABLE
-    ${destination_table}
-PARTITION(year=${year},month=${month},day=${day})
+    discovery.query_clicks_daily
+PARTITION(
+    year = 2022,
+    month = 1,
+    day = 1)
 SELECT
     -- Order here must match the create_table statement
     sessionized.query,

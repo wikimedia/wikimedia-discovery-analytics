@@ -181,7 +181,8 @@ def test_hive_operator_rendered_hql(task, rendered_task, fixture_factory, mocker
     # and bringing hive jars into the test suite seemed much too painful.
     for stmt in rendered_task.hql.split(';'):
         # bad content will throw pyspak.sql.utils.ParseException
-        jSqlParser.parsePlan(stmt)
+        if len(stmt.strip()):
+            jSqlParser.parsePlan(stmt)
 
     comparer(dedent(rendered_task.hql))
 
