@@ -316,6 +316,12 @@ class Table:
         return JOIN_ON[self.join_on](df, df_wikis)
 
 
+# Constants for fields in elasticsearch
+WEIGHTED_TAGS = 'weighted_tags'
+ORES_ARTICLETOPICS = 'ores_articletopics'
+POPULARITY_SCORE = 'popularity_score'
+
+
 # Each map entry defines a named list of tables to load from hive and the
 # fields to source from this table. This could load from an external yaml or
 # maybe even a provided config.py, but for now this works and is minimally
@@ -333,7 +339,7 @@ CONFIG: Mapping[str, Callable[[], Sequence[Table]]] = {
                 # multiple models we kept articletopic unprefixed to avoid
                 # migrating in-place data. At some point the appropriate prefix
                 # should be populated from a dump and this should be prefixed.
-                MultiListField(field='articletopic', alias='ores_articletopics', prefix=None),
+                MultiListField(field='articletopic', alias=ORES_ARTICLETOPICS, prefix=None),
             ]
         ),
         Table(
@@ -348,7 +354,8 @@ CONFIG: Mapping[str, Callable[[], Sequence[Table]]] = {
                 #
                 # This must be a separate Table object from above as we don't yet
                 # support multiple fields with the same alias in a single table.
-                MultiListField(field='articletopic', alias='ores_articletopics', prefix='articletopic'),
+                MultiListField(field='articletopic', alias=ORES_ARTICLETOPICS, prefix='articletopic'),
+                MultiListField(field='articletopic', alias=WEIGHTED_TAGS, prefix='classification.ores.articletopic'),
             ]
         ),
         Table(
@@ -357,7 +364,8 @@ CONFIG: Mapping[str, Callable[[], Sequence[Table]]] = {
             join_on=JOIN_ON_WIKIID,
             update_kind=UPDATE_ALL,
             fields=[
-                MultiListField(field='drafttopic', alias='ores_articletopics', prefix='drafttopic')
+                MultiListField(field='drafttopic', alias=ORES_ARTICLETOPICS, prefix='drafttopic'),
+                MultiListField(field='drafttopic', alias=WEIGHTED_TAGS, prefix='classification.ores.drafttopic')
             ]
         ),
         Table(
@@ -371,7 +379,14 @@ CONFIG: Mapping[str, Callable[[], Sequence[Table]]] = {
                     # they exist, provide a constant expression as the field
                     # instead of awkwardly storing the repeated value in the table.
                     field='array("exists|1")',
-                    alias='ores_articletopics',
+                    alias=ORES_ARTICLETOPICS,
+                    prefix=('concat("recommendation.", recommendation_type)', {'recommendation.link'})),
+                MultiListField(
+                    # The only information to share about recommendations is if
+                    # they exist, provide a constant expression as the field
+                    # instead of awkwardly storing the repeated value in the table.
+                    field='array("exists|1")',
+                    alias=WEIGHTED_TAGS,
                     prefix=('concat("recommendation.", recommendation_type)', {'recommendation.link'})),
             ]
         ),
@@ -383,7 +398,7 @@ CONFIG: Mapping[str, Callable[[], Sequence[Table]]] = {
             join_on=JOIN_ON_PROJECT,
             update_kind=UPDATE_CONTENT_ONLY,
             fields=[
-                WithinPercentageField(field='score', alias='popularity_score', percentage=20)
+                WithinPercentageField(field='score', alias=POPULARITY_SCORE, percentage=20)
             ]
         ),
     ],

@@ -309,7 +309,8 @@ def test_multiple_multilist(mocker, df_wikis, df_namespace_map, table_to_convert
             # content_only limits test to single row
             update_kind=convert_to_esbulk.UPDATE_CONTENT_ONLY,
             fields=[
-                convert_to_esbulk.MultiListField(field='foo', alias='bar', prefix='a')
+                convert_to_esbulk.MultiListField(field='foo', alias='bar', prefix='a'),
+                convert_to_esbulk.MultiListField(field='foo', alias='extra', prefix='q'),
             ]),
         convert_to_esbulk.Table(
             table_name='pytest_example_table_b',
@@ -332,6 +333,8 @@ def test_multiple_multilist(mocker, df_wikis, df_namespace_map, table_to_convert
         "Unique inputs were provided, all outputs should be unique as well"
     assert set(rows[0].bar) == {'a/z', 'a/y', 'b/y', 'b/x'}, \
         "Both sources should be represented in the result"
+    assert set(rows[0].extra) == {'q/z', 'q/y'}, \
+        "The same field can be written to multiple outputs"
 
 
 def test_multilist_prefix_as_expression(spark):
