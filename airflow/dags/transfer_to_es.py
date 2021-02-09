@@ -1,23 +1,13 @@
 from datetime import datetime, timedelta
 
-from airflow.models.baseoperator import BaseOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.sensors.external_task_sensor import ExternalTaskSensor
 
 from wmf_airflow import DAG
-from wmf_airflow.spark_submit import SparkSubmitOperator
-from wmf_airflow.swift_upload import SwiftUploadOperator
-from wmf_airflow.template import REPO_PATH, DagConf
+from wmf_airflow.transfer_to_es import convert_and_upload
 
 
-dag_conf = DagConf('transfer_to_es_conf')
-
-PATH_OUT_WEEKLY = dag_conf('base_output_path') + \
-    '/date={{ ds_nodash }}/freq=weekly'
-PATH_OUT_HOURLY = dag_conf('base_output_path') + \
-    '/date={{ ds_nodash }}/freq=hourly/hour={{ execution_date.hour }}'
-
-# Default kwargs for all Operators.
+# Default kwargs for all Operators
 default_args = {
     # This DAG updates the state of the search engine. The sequence of updates is
     # important for the final state to be correct. As such the previous run must
@@ -27,35 +17,10 @@ default_args = {
 }
 
 
-def convert(config_name: str, output_path: str) -> BaseOperator:
-    return SparkSubmitOperator(
-        task_id='convert_to_esbulk',
-        conf={
-            'spark.yarn.maxAppAttempts': '1',
-            'spark.dynamicAllocation.maxExecutors': '25',
-        },
-        spark_submit_env_vars={
-            'PYSPARK_PYTHON': 'python3.7',
-        },
-        py_files=REPO_PATH + '/spark/wmf_spark.py',
-        application=REPO_PATH + '/spark/convert_to_esbulk.py',
-        application_args=[
-            '--config', config_name,
-            '--namespace-map-table', dag_conf('table_namespace_map'),
-            '--output', output_path,
-            '--datetime', '{{ execution_date }}'
-        ])
-
-
-def upload(path: str) -> SwiftUploadOperator:
-    # Ship to production
-    return SwiftUploadOperator(
-        task_id='upload_to_swift',
-        swift_container=dag_conf('swift_container'),
-        source_directory=path,
-        swift_object_prefix='{{ ds_nodash }}',
-        swift_overwrite=True,
-        event_per_object=True)
+sensor_kwargs = dict(
+    timeout=timedelta(hours=3).total_seconds(),
+    retries=4,
+    email_on_retry=True)
 
 
 with DAG(
@@ -66,33 +31,26 @@ with DAG(
     max_active_runs=2,
     catchup=True,
 ) as hourly_dag:
-    sensor_kwargs = dict(
-        timeout=timedelta(hours=3).total_seconds(),
-        retries=4,
-        email_on_retry=True)
+    sensors = [
+        ExternalTaskSensor(
+            task_id='wait_for_ores_predictions',
+            external_dag_id='ores_predictions_hourly',
+            external_task_id='complete',
+            **sensor_kwargs
+        ),
+        ExternalTaskSensor(
+            task_id='wait_for_recommendations',
+            external_dag_id='mediawiki_revision_recommendation_create_hourly',
+            external_task_id='complete',
+            **sensor_kwargs
+        ),
+    ]
 
-    # Similarly wait for ores prediction prepartition to run
-    ores_articletopic = ExternalTaskSensor(
-        task_id='wait_for_ores_predictions',
-        external_dag_id='ores_predictions_hourly',
-        external_task_id='complete',
-        **sensor_kwargs)
+    convert, upload = convert_and_upload(
+        'hourly',
+        'freq=hourly/hour={{ execution_date.hour }}')
 
-    recommendation = ExternalTaskSensor(
-        task_id='wait_for_recommendations',
-        external_dag_id='mediawiki_revision_recommendation_create_hourly',
-        external_task_id='complete',
-        **sensor_kwargs)
-
-    # Format inputs as elasticsearch bulk updates
-    convert_to_esbulk = convert('hourly', PATH_OUT_HOURLY)
-    upload_to_swift = upload(PATH_OUT_HOURLY)
-    complete = DummyOperator(task_id='complete')
-
-    [
-        ores_articletopic,
-        recommendation,
-    ] >> convert_to_esbulk >> upload_to_swift >> complete
+    sensors >> convert >> upload >> DummyOperator(task_id='complete')
 
 
 with DAG(
@@ -104,21 +62,16 @@ with DAG(
     catchup=True,
 ) as weekly_dag:
     # Wait for popularity to compute
-    popularity_score = ExternalTaskSensor(
-        task_id='wait_for_popularity_score',
-        # We send a failure email once a day when the expected
-        # data is not found. Since this is a weekly job we
-        # wait up to 4 days for the data to show up before
-        # giving up and waiting for next scheduled run.
-        timeout=60 * 60 * 24,  # 24 hours
-        retries=4,
-        email_on_retry=True,
-        # external task selection
-        external_dag_id='popularity_score_weekly',
-        external_task_id='complete')
+    sensors = [
+        ExternalTaskSensor(
+            task_id='wait_for_popularity_score',
+            external_dag_id='popularity_score_weekly',
+            external_task_id='complete',
+            **sensor_kwargs
+        )
+    ]
 
-    convert_to_esbulk = convert('weekly', PATH_OUT_WEEKLY)
-    upload_to_swift = upload(PATH_OUT_WEEKLY)
-    complete = DummyOperator(task_id='complete')
-
-    popularity_score >> convert_to_esbulk >> upload_to_swift >> complete
+    # TODO: Move this into popularity_score dag? We only really need this
+    # structure when waiting on multiple dags.
+    convert, upload = convert_and_upload('weekly', 'freq=weekly')
+    sensors >> convert >> upload >> DummyOperator(task_id='complete')
