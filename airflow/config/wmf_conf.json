@@ -8,6 +8,6 @@
         "analytics_refinery_path": "/srv/deployment/analytics/refinery",
         "mediawiki_active_datacenter": "eqiad",
         "data_path": "hdfs:///wmf/data/discovery",
-        "venv_path": "hdfs:///wmf/discovery/spark_venv/2021-02-23T17.12.53-10afb4b"
+        "venv_path": "hdfs:///wmf/discovery/spark_venv/2021-02-23T18.27.24-c2190da"
     }
 }

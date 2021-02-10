@@ -22,7 +22,7 @@ DAG to pick up.
 """
 from datetime import datetime
 import os
-from typing import List, Optional
+from typing import List, Optional, Sequence
 
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
@@ -37,7 +37,8 @@ from wmf_airflow.spark_submit import SparkSubmitOperator
 from wmf_airflow.template import (
     HTTPS_PROXY, IVY_SETTINGS_PATH, MARIADB_CREDENTIALS_PATH,
     MEDIAWIKI_ACTIVE_DC, MEDIAWIKI_CONFIG_PATH, REPO_PATH,
-    YMDH_PARTITION, DagConf)
+    YMD_PARTITION, YMDH_PARTITION, DagConf)
+from wmf_airflow.transfer_to_es import convert_and_upload
 
 
 dag_conf = DagConf('ores_predictions_conf')
@@ -137,8 +138,55 @@ def fetch_thresholds(model: str):
         })
 
 
+def bulk_partition_spec(model: str, wiki: Optional[str]):
+    if wiki is None:
+        # Reads are all wikis at once
+        tmpl = '{table}/model={model}/{ymd}'
+    else:
+        # Writes are per-wiki
+        tmpl = '{table}/wikiid={wiki}/model={model}/{ymd}'
+    return tmpl.format(
+        table='{{ dag_conf.table_scores_export }}',
+        wiki=wiki,
+        model=model,
+        ymd=YMD_PARTITION)
+
+
+def bulk_ingest(
+    wiki: str,
+    model: str,
+    namespaces: Sequence[int]
+):
+    return SparkSubmitOperator(
+        task_id='ores_bulk_ingest_{}_for_{}'.format(model, wiki),
+        name='airflow: ores_bulk_ingest {} for {}'.format(model, wiki),
+        archives='{{ wmf_conf.venv_path }}/ores_bulk_ingest.venv.zip#venv',
+        conf={
+            'spark.yarn.maxAppAttempts': '1',
+            'spark.dynamicAllocation.maxExecutors': '20',
+            # Use the venv shipped in archives.
+            'spark.pyspark.python': 'venv/bin/python3.7',
+        },
+        spark_submit_env_vars={
+            'PYSPARK_PYTHON': 'python3.7',
+        },
+        files=yesterday_thresholds_path(model) + '#thresholds.json',
+        py_files=REPO_PATH + '/spark/wmf_spark.py',
+        env_vars={
+            'HTTPS_PROXY': HTTPS_PROXY
+        },
+        application=REPO_PATH + '/spark/ores_bulk_ingest.py',
+        application_args=[
+            '--mediawiki-dbname', wiki,
+            '--output-partition', bulk_partition_spec(model, wiki),
+            '--ores-model', model,
+            '--namespaces'] + [str(x) for x in namespaces]
+    )
+
+
 def extract_predictions(
     model: str,
+    input_kind: str,
     output_table: str,
     source: str,
     propagate_from_wiki: Optional[str],
@@ -152,6 +200,13 @@ def extract_predictions(
             + '/date={{ macros.hive.max_partition(dag_conf.table_wikibase_item).decode("utf8") }}',
             '--propagate-from', propagate_from_wiki,
         ]
+
+    if input_kind == 'mediawiki_revision_score':
+        input_partition = INPUT_TABLE + '/@{{ ds }}/{{ macros.ds_add(ds, 7) }}'
+    elif input_kind == 'ores_bulk_ingest':
+        input_partition = bulk_partition_spec(model, None)
+    else:
+        raise ValueError('Unknown input_kind: ' + input_kind)
 
     output_partition = '{table}/{ymdh}/source={source}'.format(
         table=output_table,
@@ -174,8 +229,8 @@ def extract_predictions(
         py_files=REPO_PATH + '/spark/wmf_spark.py',
         application=REPO_PATH + '/spark/prepare_mw_rev_score.py',
         application_args=propagate_args + [
-            '--input-partition', INPUT_TABLE + '/@{{ ds }}/{{ macros.ds_add(ds, 7) }}',
-            '--input-kind', 'mediawiki_revision_score',
+            '--input-partition', input_partition,
+            '--input-kind', input_kind,
             '--output-partition', output_partition,
             '--thresholds-path', 'thresholds.json',
             '--prediction', model,
@@ -369,12 +424,14 @@ with DAG(
 
     extract_articletopic = extract_predictions(
         model='articletopic',
+        input_kind='mediawiki_revision_score',
         output_table=dag_conf('table_articletopic'),
         propagate_from_wiki='enwiki',
         source=hourly_dag.dag_id)
 
     extract_drafttopic = extract_predictions(
         model='drafttopic',
+        input_kind='mediawiki_revision_score',
         output_table=dag_conf('table_drafttopic'),
         propagate_from_wiki=None,
         source=hourly_dag.dag_id)
@@ -388,3 +445,67 @@ with DAG(
         extract_articletopic,
         extract_drafttopic,
     ] >> DummyOperator(task_id='complete')
+
+
+with DAG(
+    'ores_predictions_bulk_ingest',
+    default_args={
+        'start_date': datetime(2021, 1, 1)
+    },
+    # Manually triggered
+    schedule_interval=None,
+    # This is a full dump and reload of data, running more than one in parallel
+    # would be silly.
+    max_active_runs=1,
+    user_defined_macros={
+        'dag_conf': dag_conf.macro,
+    },
+) as bulk_dag:
+    wait_for_thresholds = ExternalTaskSensor(
+        task_id='wait_for_thresholds',
+        external_dag_id='ores_predictions_daily',
+        external_task_id='complete',
+        # dt is a pendulum.datetime. We need the task for yesterday, because
+        # today's task runs at the *end* of the day.
+        execution_date_fn=lambda dt: dt.subtract(days=1).at(hour=0, minute=0, second=0))
+
+    # The ORES api's only allow two connections from a given IP and then start
+    # rejecting requests. This means our dump, proxying through a single host,
+    # has to run a single task a time. To keep things simple we use a
+    # straight-line dag to force sequential execution.
+    last_task = wait_for_thresholds
+
+    model = 'articletopic'
+    namespaces = [0]
+    for wiki in ('arwiki', 'cswiki', 'enwiki', 'kowiki', 'testwiki', 'viwiki'):
+        last_task = last_task >> bulk_ingest(wiki, model, namespaces)
+
+    # TODO: Unclear what the proper set of namespaces is. This is the set of namespaces
+    # seen in drafttopic events for january 2021.
+    model = 'drafttopic'
+    namespaces = [0, 1, 2, 3, 4, 5, 6, 7, 10, 11, 14, 15, 100, 118, 119, 711, 828]
+    for wiki in ('enwiki',):
+        last_task = last_task >> bulk_ingest(wiki, model, namespaces)
+
+    extract = [
+        extract_predictions(
+            model='articletopic',
+            input_kind='ores_bulk_ingest',
+            output_table=dag_conf('table_articletopic'),
+            propagate_from_wiki='enwiki',
+            source=bulk_dag.dag_id
+        ),
+        extract_predictions(
+            model='drafttopic',
+            input_kind='ores_bulk_ingest',
+            output_table=dag_conf('table_drafttopic'),
+            propagate_from_wiki=None,
+            source=bulk_dag.dag_id
+        ),
+    ]
+
+    convert, upload = convert_and_upload(
+        'ores_bulk_ingest',
+        'freq=bulk')
+
+    last_task >> extract >> convert >> upload >> DummyOperator(task_id='complete')

@@ -37,6 +37,7 @@ all_dag_ids = [
     'ores_predictions_hourly',
     'ores_predictions_daily',
     'ores_predictions_wbitem',
+    'ores_predictions_bulk_ingest',
     'popularity_score_weekly',
     'search_satisfaction_daily',
     'transfer_to_es_hourly',

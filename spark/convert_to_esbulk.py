@@ -405,7 +405,7 @@ CONFIG: Mapping[str, Callable[[], Sequence[Table]]] = {
     'ores_bulk_ingest': lambda: [
         Table(
             table_name=t.table_name,
-            partition_spec_tmpl='@hourly/source=ores_bulk_ingest',
+            partition_spec_tmpl='@hourly/source=ores_predictions_bulk_ingest',
             join_on=t.join_on,
             update_kind=t.update_kind,
             fields=t.fields)

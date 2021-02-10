@@ -25,15 +25,25 @@ PIP="${VENV}/bin/pip"
 # https://bugs.debian.org/cgi-bin/bugreport.cgi?att=1;bug=776026;filename=wheel_reproducible.patch;msg=5
 export SOURCE_DATE_EPOCH=315576060
 
+header() {
+    echo
+    echo '--------------'
+    echo
+    echo $*
+    echo
+    echo '--------------'
+    echo
+}
+
 echo "Looking for environments in ${BASE}/environments/*"
-for ENV_DIR in ${BASE}/environments/*; do
+for ENV_DIR in ${1:-${BASE}/environments/*}; do
     ENV_NAME="$(basename "$ENV_DIR")"
     REQUIREMENTS="${ENV_DIR}/requirements.txt"
     REQUIREMENTS_FROZEN="${ENV_DIR}/requirements-frozen.txt"
     if [ ! -f "${REQUIREMENTS}" ]; then
-        echo "No python packaging needed for $ENV_NAME"
+        header "No python packaging needed for $ENV_NAME"
     else
-        echo "Building python packaging for $ENV_NAME"
+        header "Building python packaging for $ENV_NAME"
         rm -rf "${BUILD}"
         mkdir -p "${VENV}"
         virtualenv --python "${PYTHON_PATH:-python3.7}" "${VENV}"
