@@ -110,7 +110,7 @@ with DAG(
     # Once a week at midnight on Sunday morning
     schedule_interval='0 0 * * 0',
     max_active_runs=1,
-    catchup=False,
+    catchup=True,
     template_undefined=jinja2.StrictUndefined,
 ) as weekly_dag:
     # Wait for popularity to compute

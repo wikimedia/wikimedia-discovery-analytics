@@ -58,6 +58,8 @@ with DAG(
     default_args=default_args,
     schedule_interval='@daily',
     max_active_runs=2,
+    # Always deletes items older than X days, rather than based on execution
+    # date. catching up missed runs would do nothing.
     catchup=False,
     # We might end up with quite a few tasks, don't run them all at the
     # same time.

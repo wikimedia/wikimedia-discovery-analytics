@@ -72,7 +72,7 @@ with DAG(
     # As a weekly job there should never really be more than
     # one running at a time.
     max_active_runs=1,
-    catchup=False,
+    catchup=True,
     template_undefined=jinja2.StrictUndefined,
 ) as dag:
     # Require hourly partitions to exist before running

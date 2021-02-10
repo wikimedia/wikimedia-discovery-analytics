@@ -355,6 +355,8 @@ with DAG(
     'mjolnir',
     default_args=default_args,
     schedule_interval=timedelta(days=7),
+    # If we don't run for a given week there is no use in re-running it,
+    # the process always reads the full query_clicks history.
     catchup=False,
     user_defined_filters={
         'hive_table_path': HiveTablePath(),
