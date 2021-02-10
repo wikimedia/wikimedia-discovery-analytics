@@ -23,16 +23,6 @@
 -- Be explicit about the compression format to use
 SET parquet.compression = SNAPPY;
 
--- Enable result file merging
-set hive.merge.mapfiles=true;
-set hive.merge.mapredfiles=true;
--- Merge if files are < 128MB
-set hive.merge.smallfiles.avgsize=134217728;
-set hive.merge.size.per.task=134217728;
--- Target size 256MB per file
-set mapred.max.split.size=268435456;
-set mapred.min.split.size=268435456;
-
 -- Measures the time between search requests, marking a new session whenever an
 -- identity has spent more than ${session_timeout} seconds between searches.
 -- See https://www.dataiku.com/learn/guide/code/reshaping_data/sessionization.html
