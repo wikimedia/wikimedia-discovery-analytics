@@ -49,13 +49,13 @@ WITH sessionized AS (
             *,
             -- Sums the new session markers (each either 1 or 0) from the begining up to the current
             -- row, giving the number of new sessions that have occured prior to this row..
-            SUM(CAST(new_session AS int)) OVER (PARTITION BY identity ORDER BY timestamp) AS session_num
+            SUM(CAST(new_session AS int)) OVER (PARTITION BY identity ORDER BY `timestamp`) AS session_num
         FROM (
             SELECT
                 *,
                 -- Records a 1 each time the time difference between current and previous search
                 -- by this identity is larger than the session timeout.
-                timestamp - LAG(timestamp) OVER (PARTITION BY identity ORDER BY timestamp) >= ${session_timeout} AS new_session
+                `timestamp` - LAG(`timestamp`) OVER (PARTITION BY identity ORDER BY `timestamp`) >= ${session_timeout} AS new_session
             FROM (
                 SELECT
                     *,
@@ -83,7 +83,7 @@ SELECT
     -- Order here must match the create_table statement
     sessionized.query,
     sessionized.q_by_ip_day,
-    sessionized.timestamp,
+    sessionized.`timestamp`,
     sessionized.wikiid,
     sessionized.project,
     sessionized.hits,

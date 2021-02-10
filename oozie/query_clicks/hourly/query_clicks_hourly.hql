@@ -193,7 +193,7 @@ search_req_old AS (
         query,
         client_ip as ip,
         identity,
-        unix_timestamp(dt, "yyyy-MM-dd'T'HH:mm:ss'Z'") AS timestamp,
+        unix_timestamp(dt, "yyyy-MM-dd'T'HH:mm:ss'Z'") AS `timestamp`,
         wikiid,
         project,
         -- Sorts ascending based on first struct property
@@ -229,7 +229,7 @@ SELECT
     search_req_old.query,
     search_req_old.ip,
     search_req_old.identity,
-    search_req_old.timestamp,
+    search_req_old.`timestamp`,
     search_req_old.wikiid,
     search_req_old.project,
     search_req_old.hits,
