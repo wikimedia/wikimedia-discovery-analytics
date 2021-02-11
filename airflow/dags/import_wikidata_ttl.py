@@ -11,6 +11,7 @@ from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 
 import jinja2
+import pendulum
 from wmf_airflow.hdfs_cli import HdfsCliSensor
 from wmf_airflow.spark_submit import SparkSubmitOperator
 from wmf_airflow.template import REPO_PATH, DagConf
@@ -56,13 +57,16 @@ with DAG(
     # one running at a time.
     max_active_runs=1,
     catchup=False,
+    user_defined_macros={
+        'p': pendulum,
+    },
     template_undefined=jinja2.StrictUndefined,
 ) as dag:
     # we have weekly runs and airflow schedules job just after the end of the period
     # an exec date on Fri Jun 5th actually means we run just after Thu Jun 12 23:59
     # but we want to wait for the dumps generated on Mon Jun 8 (thus the ds_add(ds, 3))
-    all_ttl_ds = "{{ macros.ds_format(macros.ds_add(ds, 3), '%Y-%m-%d', '%Y%m%d') }}"
-    lexemes_ttl_ds = "{{ macros.ds_format(macros.ds_add(ds, 0), '%Y-%m-%d', '%Y%m%d') }}"
+    all_ttl_ds = "{{ execution_date.next(day_of_week=p.WEDNESDAY).format('%Y%m%d') }}"
+    lexemes_ttl_ds = "{{ execution_date.format('%Y%m%d') }}"
     path = "%s/%s/_IMPORTED" % (ALL_TTL_DUMP_DIR, all_ttl_ds)
     rdf_table_and_partition = '%s/date=%s' % (RDF_DATA_TABLE, all_ttl_ds)
 
