@@ -20,7 +20,7 @@
     "root.default",
     "/srv/deployment/wikimedia/discovery/analytics/artifacts/rdf-spark-tools-latest-jar-with-dependencies.jar",
     "--input-table",
-    "discovery.wikidata_rdf/date=20380120",
+    "discovery.wikidata_rdf/date=20380118",
     "--output-path",
-    "hdfs://analytics-hadoop/wmf/data/discovery/wdqs/entity_revision_map/20380120/rev_map.csv"
+    "hdfs://analytics-hadoop/wmf/data/discovery/wdqs/entity_revision_map/20380118/rev_map.csv"
 ]

@@ -64,9 +64,9 @@ with DAG(
 ) as dag:
     # we have weekly runs and airflow schedules job just after the end of the period
     # an exec date on Fri Jun 5th actually means we run just after Thu Jun 12 23:59
-    # but we want to wait for the dumps generated on Mon Jun 8 (thus the ds_add(ds, 3))
-    all_ttl_ds = "{{ execution_date.next(day_of_week=p.WEDNESDAY).format('%Y%m%d') }}"
-    lexemes_ttl_ds = "{{ execution_date.format('%Y%m%d') }}"
+    # but we want to wait for the dumps generated on Mon Jun 8
+    all_ttl_ds = "{{ execution_date.next(day_of_week=p.MONDAY).format('%Y%m%d') }}"
+    lexemes_ttl_ds = "{{ ds_nodash }}"
     path = "%s/%s/_IMPORTED" % (ALL_TTL_DUMP_DIR, all_ttl_ds)
     rdf_table_and_partition = '%s/date=%s' % (RDF_DATA_TABLE, all_ttl_ds)
 

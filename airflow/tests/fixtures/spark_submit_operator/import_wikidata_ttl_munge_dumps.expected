@@ -20,8 +20,8 @@
     "root.default",
     "/srv/deployment/wikimedia/discovery/analytics/artifacts/rdf-spark-tools-latest-jar-with-dependencies.jar",
     "--input-path",
-    "hdfs://analytics-hadoop/wmf/data/raw/wikidata/dumps/all_ttl/20380120/wikidata-20380120-all-BETA.ttl.bz2,hdfs://analytics-hadoop/wmf/data/raw/wikidata/dumps/lexemes_ttl/20380117/wikidata-20380117-lexemes-BETA.ttl.bz2",
+    "hdfs://analytics-hadoop/wmf/data/raw/wikidata/dumps/all_ttl/20380118/wikidata-20380118-all-BETA.ttl.bz2,hdfs://analytics-hadoop/wmf/data/raw/wikidata/dumps/lexemes_ttl/20380117/wikidata-20380117-lexemes-BETA.ttl.bz2",
     "--output-table",
-    "discovery.wikidata_rdf/date=20380120",
+    "discovery.wikidata_rdf/date=20380118",
     "--skolemize"
 ]
