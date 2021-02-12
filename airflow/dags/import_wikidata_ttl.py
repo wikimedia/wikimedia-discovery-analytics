@@ -56,7 +56,7 @@ with DAG(
     # As a weekly job there should never really be more than
     # one running at a time.
     max_active_runs=1,
-    catchup=False,
+    catchup=True,
     user_defined_macros={
         'p': pendulum,
     },

@@ -76,7 +76,7 @@ with DAG(
     # Allow a second job to start even if the previous is still
     # processing retrys
     max_active_runs=2,
-    catchup=False,
+    catchup=True,
     # Error when templating uses undefined values
     template_undefined=jinja2.StrictUndefined,
 ) as dag:

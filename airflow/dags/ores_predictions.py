@@ -316,6 +316,9 @@ with DAG(
     ),
     schedule_interval='0 0 * * 0',
     max_active_runs=1,
+    # Nothing references exact date=, they use hive.max_partition. If
+    # we miss a week there is no benefit to putting new data in a
+    # previously dated partition.
     catchup=False,
     template_undefined=jinja2.StrictUndefined,
 ) as dag_wbitem:
