@@ -15,6 +15,8 @@ hdfs + json would add additional unnecessary complication for consumers.
 from argparse import ArgumentParser
 import logging
 import requests
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 from pyspark.sql import DataFrame, SparkSession, functions as F, types as T
 import sys
 from typing import Sequence, Tuple
@@ -42,8 +44,16 @@ def filter_wikiid_to_domain_name_map(df: DataFrame) -> DataFrame:
     )
 
 
+def establish_session():
+    http = requests.Session()
+    retries = Retry(total=5)
+    http.mount('http://', HTTPAdapter(max_retries=retries))
+    http.mount('https://', HTTPAdapter(max_retries=retries))
+    return http
+
+
 def fetch_namespaces(
-    domain_name: str, session=requests.Session()
+    domain_name: str, session=establish_session()
 ) -> Sequence[Tuple[int, str]]:
     """Fetch the cirrus namespace map from wiki hosted at provided domain
 
