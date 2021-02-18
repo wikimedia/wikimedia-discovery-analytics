@@ -1,6 +1,5 @@
 import re
 from collections import OrderedDict
-from copy import deepcopy
 from datetime import datetime
 from glob import glob
 import json
@@ -9,7 +8,6 @@ from textwrap import dedent
 
 from airflow.contrib.operators.spark_submit_operator \
     import SparkSubmitOperator as WrongSparkSubmitOperator
-from airflow import macros
 from airflow.models import Pool
 from airflow.models.dagbag import DagBag
 from airflow.models.taskinstance import TaskInstance
@@ -158,32 +156,6 @@ def test_spark_submit_sets_python_version(task):
     # things. spark.pyspark.driver.python can still be configured to change the
     # executable used on the driver.
     assert 'PYSPARK_DRIVER_PYTHON' not in task._spark_submit_env_vars
-
-
-# Some dags depend on dag_run.conf having values. Provide
-# them when needed for generic fixture based testing.
-DAG_RUN_CONF = {
-    'top_fulltext_queries_for_wiki': {
-        'wiki': 'pytestwiki',
-    },
-}
-
-
-@pytest.fixture
-def rendered_task(task, mocker):
-    # This will try and talk to hive, can't let it. And yes, it really
-    # returns a binary string.
-    mocker.patch.object(macros.hive, 'max_partition').return_value = b'20010115'
-    # This will change the task, take a copy
-    task = deepcopy(task)
-    ti = TaskInstance(task, datetime(year=2038, month=1, day=17, hour=3))
-    context = ti.get_template_context()
-    context['run_id'] = 'pytest_compare_against_fixtures'
-    if task.dag_id in DAG_RUN_CONF:
-        context['dag_run'] = mocker.MagicMock()
-        context['dag_run'].conf = DAG_RUN_CONF[task.dag_id]
-    ti.render_templates(context=context)
-    return task
 
 
 @pytest.mark.parametrize('task', tasks(HiveOperator))

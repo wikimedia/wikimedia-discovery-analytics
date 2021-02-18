@@ -1,6 +1,3 @@
-from datetime import datetime
-
-from airflow.models.taskinstance import TaskInstance
 import pytest
 
 from wmf_airflow.skein import SkeinOperator
@@ -17,10 +14,8 @@ def test_operator_can_create_hook():
 
 
 @pytest.mark.parametrize('task', list(tasks((SkeinOperator, SwiftUploadOperator))))
-def test_skein_spec_against_fixtures(fixture_factory, task):
-    ti = TaskInstance(task, datetime(year=2038, month=1, day=17))
-    ti.render_templates()
-
+def test_skein_spec_against_fixtures(fixture_factory, rendered_task):
+    task = rendered_task
     spec = task._make_hook()._build_spec(task._application)
     fixture = '{}-{}'.format(task.dag_id, task.task_id)
     comparer = fixture_factory('skein_operator_spec', fixture)

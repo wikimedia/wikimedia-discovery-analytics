@@ -1,3 +1,4 @@
+from copy import deepcopy
 from datetime import datetime
 from dataclasses import dataclass
 from glob import glob
@@ -6,8 +7,10 @@ import logging
 import os
 from typing import Any, Callable, TextIO
 
+from airflow import macros
 from airflow.models.dag import DAG
 from airflow.models.dagbag import DagBag
+from airflow.models.taskinstance import TaskInstance
 from airflow.models.variable import Variable
 
 import jinja2
@@ -181,3 +184,29 @@ def spark():
 
     with builder.getOrCreate() as spark:
         yield spark
+
+
+# Some dags depend on dag_run.conf having values. Provide
+# them when needed for generic fixture based testing.
+DAG_RUN_CONF = {
+    'top_fulltext_queries_for_wiki': {
+        'wiki': 'pytestwiki',
+    },
+}
+
+
+@pytest.fixture
+def rendered_task(task, mocker):
+    # This will try and talk to hive, can't let it. And yes, it really
+    # returns a binary string.
+    mocker.patch.object(macros.hive, 'max_partition').return_value = b'20010115'
+    # This will change the task, take a copy
+    task = deepcopy(task)
+    ti = TaskInstance(task, datetime(year=2038, month=1, day=17, hour=3))
+    context = ti.get_template_context()
+    context['run_id'] = 'pytest_compare_against_fixtures'
+    if task.dag_id in DAG_RUN_CONF:
+        context['dag_run'] = mocker.MagicMock()
+        context['dag_run'].conf = DAG_RUN_CONF[task.dag_id]
+    ti.render_templates(context=context)
+    return task
