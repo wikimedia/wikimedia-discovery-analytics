@@ -1,0 +1,81 @@
+{
+  "index_patterns": ["joined_queries-*"],
+  "settings": {
+    "analysis": {
+      "normalizer": {
+        "keywords_normalizer": {
+          "type": "custom",
+          "char_filter": [],
+          "filter": [
+            "lowercase",
+            "asciifolding",
+            "trim"
+          ]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "_doc": {
+      "properties": {
+        "dt": {
+          "type": "date"
+        },
+        "first_page": {
+          "type": "boolean"
+        },
+        "hits_returned": {
+          "type": "long"
+        },
+        "hits_top1": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "normalizer": "keywords_normalizer"
+            }
+          }
+        },
+        "hits_top10": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "normalizer": "keywords_normalizer"
+            }
+          }
+        },
+        "hits_top3": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "normalizer": "keywords_normalizer"
+            }
+          }
+        },
+        "hits_total": {
+          "type": "long"
+        },
+        "is_bot": {
+          "type": "boolean"
+        },
+        "query": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "normalizer": "keywords_normalizer"
+            }
+          }
+        },
+        "syntax": {
+          "type": "keyword"
+        },
+        "wiki": {
+          "type": "keyword"
+        }
+      }
+    }
+  }
+}

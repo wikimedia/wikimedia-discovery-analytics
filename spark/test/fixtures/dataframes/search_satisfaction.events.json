@@ -1,0 +1,143 @@
+{
+  "rows": [
+    [
+      "2021-02-09T09:33:10Z",
+      {
+        "action": "searchResultPage",
+        "source": "fulltext",
+        "hitsReturned": 30,
+        "query": "example query",
+        "searchToken": "8271"
+      },
+      {
+        "is_bot": false
+      },
+      "enwiki"
+    ],
+    [
+      "2021-02-09T09:33:10Z",
+      {
+        "action": "searchResultPage",
+        "source": "fulltext",
+        "hitsReturned": 30,
+        "query": "example query",
+        "searchToken": "8271"
+      },
+      {
+        "is_bot": false
+      },
+      "enwiki"
+    ],
+    [
+      "2021-01-09T09:33:10Z",
+      {
+        "action": "searchResultPage",
+        "source": "fulltext",
+        "hitsReturned": 0,
+        "query": "example query 2",
+        "searchToken": "121"
+      },
+      {
+        "is_bot": false
+      },
+      "enwiki"
+    ],
+    [
+      "2021-01-09T09:33:10Z",
+      {
+        "action": "click",
+        "source": "fulltext",
+        "hitsReturned": 0,
+        "query": "example query 2",
+        "searchToken": "111"
+      },
+      {
+        "is_bot": false
+      },
+      "enwiki"
+    ]
+  ],
+  "schema": {
+    "type": "struct",
+    "fields": [
+      {
+        "name": "dt",
+        "type": "string",
+        "nullable":false,
+        "metadata": {
+        }
+      },
+      {
+        "name": "event",
+        "type": {
+          "type": "struct",
+          "fields": [
+            {
+              "name": "action",
+              "type": "string",
+              "nullable":false,
+              "metadata": {
+              }
+            },
+            {
+              "name": "source",
+              "type": "string",
+              "nullable":false,
+              "metadata": {
+              }
+            },
+            {
+              "name": "hitsReturned",
+              "type": "long",
+              "nullable":false,
+              "metadata": {
+              }
+            },
+            {
+              "name": "query",
+              "type": "string",
+              "nullable":false,
+              "metadata": {
+              }
+            },
+            {
+              "name": "searchToken",
+              "type": "string",
+              "nullable":false,
+              "metadata": {
+              }
+            }
+          ]
+        },
+        "nullable":false,
+        "metadata": {
+        }
+      },
+      {
+        "name": "useragent",
+        "type": {
+          "type": "struct",
+          "fields": [
+            {
+              "name": "is_bot",
+              "type": "boolean",
+              "nullable":false,
+              "metadata": {
+              }
+            }
+          ]
+        },
+        "nullable":false,
+        "metadata": {
+        }
+      },
+      {
+        "name": "wiki",
+        "type": "string",
+        "nullable":false,
+        "metadata": {
+        }
+      }
+    ]
+  }
+}

@@ -12,3 +12,5 @@ __pycache__
 # Created by scap scripts
 venv
 venv.zip
+.idea/
+target/

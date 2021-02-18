@@ -1,3 +1,6 @@
 Here be scripts to process analytics and extract usable things into ElasticSearch.
 
+If you're changing the version of elasticsearch-hadoop, please remember to run ./mvnw install to materialize the
+dependency in archiva for git fat to work.
+
 See https://wikitech.wikimedia.org/wiki/Discovery/Analytics for deployment information.
