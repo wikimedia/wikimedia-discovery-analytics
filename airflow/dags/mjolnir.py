@@ -1,11 +1,10 @@
 from datetime import datetime, timedelta
 from typing import NewType
 
-from airflow import DAG
 from airflow.hooks.hive_hooks import HiveMetastoreHook
 from airflow.operators.dummy_operator import DummyOperator
 
-import jinja2
+from wmf_airflow import DAG
 from wmf_airflow.mjolnir import MjolnirOperator
 from wmf_airflow.swift_upload import SwiftUploadOperator
 
@@ -57,24 +56,6 @@ KAFKA_CLI_ARGS = {
         'kafka-jumbo1003.eqiad.wmnet:9092']),
     'topic-request': 'mjolnir.msearch-prod-request',
     'topic-response': 'mjolnir.msearch-prod-response',
-}
-
-# Default kwargs for all Operators
-default_args = {
-    'owner': 'discovery-analytics',
-    'depends_on_past': False,
-    'start_date': datetime(2020, 1, 8),
-    'email': ['discovery-alerts@lists.wikimedia.org'],
-    'email_on_failure': True,
-    'email_on_retry': False,
-    # Probably should be lower for prod
-    'retries': 9,
-    # TODO: This should vary for prod vs test
-    'retry_delay': timedelta(minutes=1),
-    'provide_context': True,
-
-    # Defaults used by MjolnirOperator
-    'deploys': deploys,
 }
 
 # Types for each of the output formats. Perhaps there should be separate
@@ -353,7 +334,11 @@ class HiveTablePath:
 
 with DAG(
     'mjolnir',
-    default_args=default_args,
+    default_args={
+        'start_date': datetime(2020, 1, 8),
+        # Defaults used by MjolnirOperator
+        'deploys': deploys,
+    },
     schedule_interval=timedelta(days=7),
     # If we don't run for a given week there is no use in re-running it,
     # the process always reads the full query_clicks history.
@@ -361,7 +346,6 @@ with DAG(
     user_defined_filters={
         'hive_table_path': HiveTablePath(),
     },
-    template_undefined=jinja2.StrictUndefined,
 ) as dag:
     clicks = query_clicks_ltr()
     clusters = norm_query(clicks)

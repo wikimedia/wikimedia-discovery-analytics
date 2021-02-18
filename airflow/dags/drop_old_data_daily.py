@@ -1,12 +1,11 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 import shlex
 from typing import Optional
 
-from airflow import DAG
 from airflow.operators.bash_operator import BashOperator
 from airflow.operators.dummy_operator import DummyOperator
 
-import jinja2
+from wmf_airflow import DAG
 from wmf_airflow.template import REPO_PATH, ANALYTICS_REFINERY_PATH
 
 
@@ -40,22 +39,11 @@ def refinery_drop_hive_partitions(
     return BashOperator(bash_command=bash_command, *args, **kwargs)
 
 
-# Default kwargs for all Operators
-default_args = {
-    'owner': 'discovery-analytics',
-    'depends_on_past': False,
-    'start_date': datetime(2020, 7, 22),
-    'email': ['discovery-alerts@lists.wikimedia.org'],
-    'email_on_failure': True,
-    'email_on_retry': False,
-    'retries': 5,
-    'retry_delay': timedelta(minutes=5),
-    'provide_context': True,
-}
-
 with DAG(
     'drop_old_data_daily',
-    default_args=default_args,
+    default_args={
+        'start_date': datetime(2020, 7, 22),
+    },
     schedule_interval='@daily',
     max_active_runs=2,
     # Always deletes items older than X days, rather than based on execution
@@ -64,7 +52,6 @@ with DAG(
     # We might end up with quite a few tasks, don't run them all at the
     # same time.
     concurrency=3,
-    template_undefined=jinja2.StrictUndefined,
 ) as dag:
     complete = DummyOperator(task_id='complete')
 

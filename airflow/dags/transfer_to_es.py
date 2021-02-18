@@ -1,11 +1,10 @@
 from datetime import datetime, timedelta
 
-from airflow import DAG
 from airflow.models.baseoperator import BaseOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.sensors.external_task_sensor import ExternalTaskSensor
 
-import jinja2
+from wmf_airflow import DAG
 from wmf_airflow.spark_submit import SparkSubmitOperator
 from wmf_airflow.swift_upload import SwiftUploadOperator
 from wmf_airflow.template import REPO_PATH, DagConf
@@ -18,20 +17,13 @@ PATH_OUT_WEEKLY = dag_conf('base_output_path') + \
 PATH_OUT_HOURLY = dag_conf('base_output_path') + \
     '/date={{ ds_nodash }}/freq=hourly/hour={{ execution_date.hour }}'
 
-# Default kwargs for all Operators
+# Default kwargs for all Operators.
 default_args = {
-    'owner': 'discovery-analytics',
     # This DAG updates the state of the search engine. The sequence of updates is
     # important for the final state to be correct. As such the previous run must
     # always complete before the next.
     'depends_on_past': True,
     'start_date': datetime(2021, 1, 24),
-    'email': ['discovery-alerts@lists.wikimedia.org'],
-    'email_on_failure': True,
-    'email_on_retry': False,
-    'retries': 5,
-    'retry_delay': timedelta(minutes=5),
-    'provide_context': True,
 }
 
 
@@ -73,7 +65,6 @@ with DAG(
     schedule_interval='@hourly',
     max_active_runs=2,
     catchup=True,
-    template_undefined=jinja2.StrictUndefined,
 ) as hourly_dag:
     sensor_kwargs = dict(
         timeout=timedelta(hours=3).total_seconds(),
@@ -111,7 +102,6 @@ with DAG(
     schedule_interval='0 0 * * 0',
     max_active_runs=1,
     catchup=True,
-    template_undefined=jinja2.StrictUndefined,
 ) as weekly_dag:
     # Wait for popularity to compute
     popularity_score = ExternalTaskSensor(

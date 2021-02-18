@@ -1,41 +1,26 @@
 """Generate daily head queries report for all wikis"""
-from datetime import timedelta
-
-from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.utils.dates import days_ago
 
-import jinja2
+from wmf_airflow import DAG
 from wmf_airflow.spark_submit import SparkSubmitOperator
 from wmf_airflow.template import REPO_PATH, DagConf
 
 
 dag_conf = DagConf('fulltext_head_queries_conf')
 
-# Default kwargs for all Operators
-default_args = {
-    'owner': 'discovery-analytics',
-    'depends_on_past': False,
-    # No schedule, but airflow still requires start_date to be a valid datetime
-    'start_date': days_ago(2),
-    'email': ['discovery-alerts@lists.wikimedia.org'],
-    'email_on_failure': True,
-    'email_on_retry': False,
-    'retries': 5,
-    'retry_delay': timedelta(minutes=5),
-    'provide_context': True,
-}
-
 
 with DAG(
     'fulltext_head_queries_daily',
-    default_args=default_args,
+    default_args={
+        # No schedule, but airflow still requires start_date to be a valid datetime
+        'start_date': days_ago(2),
+    },
     # min hour day month dow
     schedule_interval='38 0 * * *',
     max_active_runs=1,
     # single report covers all data, backfill/catchup wouldn't make sense
     catchup=False,
-    template_undefined=jinja2.StrictUndefined,
 ) as dag:
     output_partition_spec = dag_conf('output_table') + '/date={{ ds_nodash }}'
 

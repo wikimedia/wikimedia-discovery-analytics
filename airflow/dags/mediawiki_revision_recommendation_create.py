@@ -4,17 +4,16 @@ Ingests mediawiki/recommendation/create events from hive tables and writes the
 set of pages that need their "recommendation exists" flag enabled to a staging
 table to be picked up by the transfer_to_es dag.
 """
-from datetime import datetime, timedelta
+from datetime import datetime
 
-from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.hive_operator import HiveOperator
 from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
-import jinja2
 
+from wmf_airflow import DAG
 from wmf_airflow.spark_submit import SparkSubmitOperator
 from wmf_airflow.template import \
-    MEDIAWIKI_ACTIVE_DC, REPO_PATH, YMDH_PARTITION, DagConf, wmf_conf
+    MEDIAWIKI_ACTIVE_DC, REPO_PATH, YMDH_PARTITION, DagConf
 
 
 dag_conf = DagConf('mediawiki_revision_recommendation_create_hourly_conf')
@@ -23,29 +22,15 @@ INPUT_TABLE = dag_conf('table_event_recommendation')
 OUTPUT_TABLE = dag_conf('table_discovery_recommendation')
 
 
-# Default kwargs for all Operators
-default_args = {
-    'owner': 'discovery-analytics',
-    'depends_on_past': False,
-    'start_date': datetime(2020, 1, 8),
-    'email': ['discovery-alerts@lists.wikimedia.org'],
-    'email_on_failure': True,
-    'email_on_retry': False,
-    'retries': 5,
-    'retry_delay': timedelta(minutes=5),
-    'provide_context': True,
-}
-
-
 with DAG(
     'mediawiki_revision_recommendation_create_init',
-    default_args=default_args,
+    default_args={
+        'start_date': datetime(2020, 1, 8),
+    },
     schedule_interval='@once',
     user_defined_macros={
         'dag_conf': dag_conf.macro,
-        'wmf_conf': wmf_conf.macro,
     },
-    template_undefined=jinja2.StrictUndefined,
 ) as dag_init:
     complete = DummyOperator(task_id='complete')
     HiveOperator(
@@ -71,14 +56,14 @@ with DAG(
 
 with DAG(
     'mediawiki_revision_recommendation_create_hourly',
-    default_args=default_args,
+    default_args={
+        'start_date': datetime(2020, 1, 8),
+    },
     schedule_interval='@hourly',
     # Allow a second job to start even if the previous is still
     # processing retrys
     max_active_runs=2,
     catchup=True,
-    # Error when templating uses undefined values
-    template_undefined=jinja2.StrictUndefined,
 ) as dag:
     wait_for_data = NamedHivePartitionSensor(
         task_id='wait_for_data',

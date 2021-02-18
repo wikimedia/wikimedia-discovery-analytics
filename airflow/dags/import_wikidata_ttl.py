@@ -7,11 +7,9 @@
 """
 from datetime import datetime, timedelta
 
-from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 
-import jinja2
-import pendulum
+from wmf_airflow import DAG
 from wmf_airflow.hdfs_cli import HdfsCliSensor
 from wmf_airflow.spark_submit import SparkSubmitOperator
 from wmf_airflow.template import REPO_PATH, DagConf
@@ -30,23 +28,12 @@ ENTITY_REV_MAP_CSV = dag_conf("entity_revision_map")
 
 RDF_DATA_TABLE = dag_conf("rdf_data_table")
 
-# Default kwargs for all Operators
-default_args = {
-    'owner': 'discovery-analytics',
-    'depends_on_past': False,
-    'start_date': datetime(2020, 9, 18),
-    'email': ['discovery-alerts@lists.wikimedia.org'],
-    'email_on_failure': True,
-    'email_on_retry': True,
-    'retries': 5,
-    'retry_delay': timedelta(hours=1),
-    'provide_context': True,
-}
-
 
 with DAG(
     'import_wikidata_ttl',
-    default_args=default_args,
+    default_args={
+        'start_date': datetime(2020, 9, 18),
+    },
     # all ttl is scheduled on mondays and lexeme on fridays
     # The all_ttl dump arrives on cloud replica on thursdays morning (5am - 7am)
     # It'll be picked-up by the hdfs_rsync running on fridays morning
@@ -57,10 +44,6 @@ with DAG(
     # one running at a time.
     max_active_runs=1,
     catchup=True,
-    user_defined_macros={
-        'p': pendulum,
-    },
-    template_undefined=jinja2.StrictUndefined,
 ) as dag:
     # we have weekly runs and airflow schedules job just after the end of the period
     # an exec date on Fri Jun 5th actually means we run just after Thu Jun 12 23:59

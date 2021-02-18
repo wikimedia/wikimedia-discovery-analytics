@@ -8,12 +8,11 @@ querying.
 """
 from datetime import datetime, timedelta
 
-from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
 from airflow.utils.trigger_rule import TriggerRule
 
-import jinja2
+from wmf_airflow import DAG
 from wmf_airflow.hdfs_cli import HdfsCliHook
 from wmf_airflow.hdfs_to_druid import HdfsToDruidOperator
 from wmf_airflow.hive_partition_range_sensor import HivePartitionRangeSensor
@@ -39,25 +38,15 @@ DRUID_SPEC_TEMPLATE = REPO_PATH + dag_conf('druid_spec_template')
 # Base path for temporary files
 TEMP_DIR = 'hdfs://analytics-hadoop/tmp/{{ dag.dag_id }}_{{ ds }}'
 
-default_args = {
-    'owner': 'discovery-analytics',
-    'depends_on_past': False,
-    'start_date': datetime(2021, 1, 26),
-    'email': ['ebernhardson@wikimedia.org'],
-    'email_on_failure': True,
-    'email_on_retry': False,
-    'retries': 5,
-    'retry_delay': timedelta(minutes=5),
-    'provide_context': True,
-}
 
 with DAG(
     'search_satisfaction_daily',
-    default_args=default_args,
+    default_args={
+        'start_date': datetime(2021, 1, 26),
+    },
     schedule_interval='@daily',
     max_active_runs=3,
     catchup=True,
-    template_undefined=jinja2.StrictUndefined,
 ) as dag:
     # Wait for the events that come from browsers
     wait_for_events = HivePartitionRangeSensor(

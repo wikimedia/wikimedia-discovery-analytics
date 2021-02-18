@@ -1,10 +1,9 @@
 from datetime import datetime, timedelta
 
-from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.hive_operator import HiveOperator
 
-import jinja2
+from wmf_airflow import DAG
 from wmf_airflow.hive_partition_range_sensor import HivePartitionRangeSensor
 
 
@@ -50,30 +49,18 @@ INSERT OVERWRITE TABLE discovery.popularity_score
         agg.view_count
 """
 
-# Default kwargs for all Operators
-default_args = {
-    'owner': 'discovery-analytics',
-    'depends_on_past': False,
-    'start_date': datetime(2020, 1, 8),
-    'email': ['discovery-alerts@lists.wikimedia.org'],
-    'email_on_failure': True,
-    'email_on_retry': False,
-    'retries': 5,
-    'retry_delay': timedelta(minutes=5),
-    'provide_context': True,
-}
-
 
 with DAG(
     'popularity_score_weekly',
-    default_args=default_args,
+    default_args={
+        'start_date': datetime(2020, 1, 8),
+    },
     # Once a week at midnight on Sunday morning
     schedule_interval='0 0 * * 0',
     # As a weekly job there should never really be more than
     # one running at a time.
     max_active_runs=1,
     catchup=True,
-    template_undefined=jinja2.StrictUndefined,
 ) as dag:
     # Require hourly partitions to exist before running
     wait_for_pageview_hourly = HivePartitionRangeSensor(

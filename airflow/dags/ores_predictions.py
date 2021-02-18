@@ -20,43 +20,30 @@ The predictions are finally formatted appropriately for elasticsearch
 ingestion and stored in a staging table for the transfer_to_es_weekly
 DAG to pick up.
 """
-from datetime import datetime, timedelta
+from datetime import datetime
 import os
 from typing import List, Optional
 
-from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
 from airflow.operators.hive_operator import HiveOperator
 from airflow.sensors.external_task_sensor import ExternalTaskSensor
 from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 
-import jinja2
+from wmf_airflow import DAG
 from wmf_airflow.hdfs_cli import HdfsCliHook
 from wmf_airflow.skein import SkeinOperator
 from wmf_airflow.spark_submit import SparkSubmitOperator
 from wmf_airflow.template import (
     HTTPS_PROXY, IVY_SETTINGS_PATH, MARIADB_CREDENTIALS_PATH,
     MEDIAWIKI_ACTIVE_DC, MEDIAWIKI_CONFIG_PATH, REPO_PATH, REPO_HDFS_PATH,
-    YMDH_PARTITION, DagConf, wmf_conf)
+    YMDH_PARTITION, DagConf)
 
 
 dag_conf = DagConf('ores_predictions_conf')
 
 INPUT_TABLE = dag_conf('table_mw_rev_score')
 WIKIBASE_ITEM_TABLE = dag_conf('table_wikibase_item')
-
-# Default kwargs for all Operators
-default_args = {
-    'owner': 'discovery-analytics',
-    'depends_on_past': False,
-    'email': ['discovery-alerts@lists.wikimedia.org'],
-    'email_on_failure': True,
-    'email_on_retry': False,
-    'retries': 5,
-    'retry_delay': timedelta(minutes=5),
-    'provide_context': True,
-}
 
 
 def mw_sql_to_hive(
@@ -199,15 +186,13 @@ def extract_predictions(
 # Manually triggered dag to initialize deployment
 with DAG(
     'ores_predictions_v3_init',
-    default_args=dict(
-        default_args,
+    default_args={
         # Start any time after being deployed and enabled
-        start_date=datetime(2021, 1, 1)
-    ),
+        'start_date': datetime(2021, 1, 1),
+    },
     schedule_interval='@once',
     user_defined_macros={
         'dag_conf': dag_conf.macro,
-        'wmf_conf': wmf_conf.macro,
         'col_wikiid': "`wikiid` string COMMENT 'MediaWiki database name'",
         'col_page_id': "`page_id` int COMMENT 'MediaWiki page_id'",
         'col_page_namespace': "`page_namespace` int"
@@ -219,7 +204,6 @@ with DAG(
             `month` int COMMENT 'Month collection starts at',
             `day` int COMMENT 'Day collection starts at'""",
     },
-    template_undefined=jinja2.StrictUndefined,
 ) as init_dag:
     complete = DummyOperator(task_id='complete')
 
@@ -310,17 +294,15 @@ with DAG(
 # from the replicas once a week.
 with DAG(
     'ores_predictions_wbitem',
-    default_args=dict(
-        default_args,
-        start_date=datetime(2021, 1, 1),
-    ),
+    default_args={
+        'start_date': datetime(2021, 1, 1),
+    },
     schedule_interval='0 0 * * 0',
     max_active_runs=1,
     # Nothing references exact date=, they use hive.max_partition. If
     # we miss a week there is no benefit to putting new data in a
     # previously dated partition.
     catchup=False,
-    template_undefined=jinja2.StrictUndefined,
 ) as dag_wbitem:
     mw_sql_to_hive(
         task_id='extract_wikibase_item',
@@ -336,16 +318,14 @@ with DAG(
 
 with DAG(
     'ores_predictions_daily',
-    default_args=dict(
-        default_args,
+    default_args={
         # Must start 1 day before ores_predictions_hourly, as that
         # means the job runs at the beginning of the day hourly starts.
-        start_date=datetime(2021, 1, 23)
-    ),
+        'start_date': datetime(2021, 1, 23),
+    },
     schedule_interval='@daily',
     max_active_runs=1,
     catchup=True,
-    template_undefined=jinja2.StrictUndefined,
 ) as daily_dag:
     complete = DummyOperator(task_id='complete')
     fetch_thresholds('articletopic') >> complete
@@ -354,10 +334,9 @@ with DAG(
 
 with DAG(
     'ores_predictions_hourly',
-    default_args=dict(
-        default_args,
-        start_date=datetime(2021, 1, 24)
-    ),
+    default_args={
+        'start_date': datetime(2021, 1, 24)
+    },
     # Every hour on the hour
     schedule_interval='@hourly',
     # Let the next hour try even if the prior hour is having issues.
@@ -366,7 +345,6 @@ with DAG(
     user_defined_macros={
         'dag_conf': dag_conf.macro,
     },
-    template_undefined=jinja2.StrictUndefined,
 ) as hourly_dag:
     wait_for_thresholds = ExternalTaskSensor(
         task_id='wait_for_thresholds',

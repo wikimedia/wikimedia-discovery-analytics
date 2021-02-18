@@ -2,13 +2,12 @@
 
 from datetime import datetime, timedelta
 
-from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.latest_only_operator import LatestOnlyOperator
 from airflow.operators.python_operator import PythonOperator
 from airflow.utils.trigger_rule import TriggerRule
 
-import jinja2
+from wmf_airflow import DAG
 from wmf_airflow.hdfs_cli import HdfsCliHook
 from wmf_airflow.hive_partition_range_sensor import HivePartitionRangeSensor
 from wmf_airflow.spark_submit import SparkSubmitOperator
@@ -50,19 +49,6 @@ LEGAL_CUTOFF = '{{ macros.ds_add(ds, -77) }}T00:00:00Z'
 PREV_PARTITION = '{{ ds_nodash }}'
 CUR_PARTITION = '{{ macros.ds_format(macros.ds_add(ds, 7), "%Y-%m-%d", "%Y%m%d") }}'
 
-# Default arguments for all operators/sensors/etc.
-default_args = {
-    'owner': 'discovery-analytics',
-    'depends_on_past': False,
-    'start_date': datetime(2020, 4, 25),
-    'email': ['discovery-alerts@lists.wikimedia.org'],
-    'email_on_failure': True,
-    'email_on_retry': False,
-    'retries': 5,
-    'retry_delay': timedelta(minutes=5),
-    'provide_context': True,
-}
-
 
 def glent_op(
     task_id, conf={}, executor_memory='6G',
@@ -88,7 +74,9 @@ def glent_op(
 
 with DAG(
     'glent_weekly',
-    default_args=default_args,
+    default_args={
+        'start_date': datetime(2020, 4, 25),
+    },
     # Once a week at 2am saturday morning. This lines up with the prior
     # oozie job schedule.
     # expression order: min hour month dom dow
@@ -96,8 +84,6 @@ with DAG(
     # As a weekly job there should never be more than one running at a time.
     max_active_runs=1,
     catchup=True,
-    # Error when templating uses undefined values
-    template_undefined=jinja2.StrictUndefined,
 ) as dag:
     # Wait for backend logs from CirrusSearch
     wait_for_data = HivePartitionRangeSensor(
