@@ -17,9 +17,9 @@
     "root.default",
     "/srv/deployment/wikimedia/discovery/analytics/spark/generate_daily_search_satisfaction.py",
     "--cirrus-partition",
-    "event.mediawiki_cirrussearch_request/year=2038/month=1/day=17",
+    "event.mediawiki_cirrussearch_request/year=2021/month=1/day=26",
     "--satisfaction-partition",
-    "event.SearchSatisfaction/year=2038/month=1/day=17",
+    "event.SearchSatisfaction/year=2021/month=1/day=26",
     "--output-partition",
-    "discovery.search_satisfaction_daily/year=2038/month=1/day=17"
+    "discovery.search_satisfaction_daily/year=2021/month=1/day=26"
 ]

@@ -33,7 +33,7 @@
             "memory": 1024,
             "vcores": 1
         },
-        "script": "set -o errexit\npython3 swift_upload.py --swift-overwrite true --swift-delete-after 604800 --swift-auto-version false --swift-object-prefix 20380124 --event-per-object false --event-stream swift.search_glent.upload-complete --event-service-url https://eventgate-analytics.svc.eqiad.wmnet:4592/v1/events swift_auth.env search_glent hdfs://analytics-hadoop/tmp/glent_weekly_2038-01-17/esbulk"
+        "script": "set -o errexit\npython3 swift_upload.py --swift-overwrite true --swift-delete-after 604800 --swift-auto-version false --swift-object-prefix 20200502 --event-per-object false --event-stream swift.search_glent.upload-complete --event-service-url https://eventgate-analytics.svc.eqiad.wmnet:4592/v1/events swift_auth.env search_glent hdfs://analytics-hadoop/tmp/glent_weekly_2020-04-25/esbulk"
     },
     "max_attempts": 1,
     "name": "swift_upload",

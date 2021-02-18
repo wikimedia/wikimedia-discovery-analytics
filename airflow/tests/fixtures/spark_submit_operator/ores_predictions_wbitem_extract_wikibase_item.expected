@@ -37,5 +37,5 @@
     "--query",
     "\n            SELECT pp_page as page_id, page_namespace, pp_value as wikibase_item\n            FROM page_props\n            JOIN page ON page_id = pp_page\n            WHERE pp_propname=\"wikibase_item\"\n        ",
     "--output-partition",
-    "discovery.wikibase_item/date=20380117"
+    "discovery.wikibase_item/date=20210103"
 ]

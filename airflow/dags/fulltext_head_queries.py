@@ -1,6 +1,7 @@
 """Generate daily head queries report for all wikis"""
+from datetime import datetime
+
 from airflow.operators.dummy_operator import DummyOperator
-from airflow.utils.dates import days_ago
 
 from wmf_airflow import DAG
 from wmf_airflow.spark_submit import SparkSubmitOperator
@@ -14,7 +15,7 @@ with DAG(
     'fulltext_head_queries_daily',
     default_args={
         # No schedule, but airflow still requires start_date to be a valid datetime
-        'start_date': days_ago(2),
+        'start_date': datetime(2021, 1, 1),
     },
     # min hour day month dow
     schedule_interval='38 0 * * *',

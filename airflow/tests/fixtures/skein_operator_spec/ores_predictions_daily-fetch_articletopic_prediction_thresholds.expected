@@ -28,7 +28,7 @@
             "memory": 1024,
             "vcores": 1
         },
-        "script": "set -o errexit\npython3 fetch_ores_thresholds.py --model articletopic --output-path thresholds.json\nhdfs dfs -put thresholds.json hdfs:///wmf/data/discovery/ores/thresholds/articletopic_20380117.json"
+        "script": "set -o errexit\npython3 fetch_ores_thresholds.py --model articletopic --output-path thresholds.json\nhdfs dfs -put thresholds.json hdfs:///wmf/data/discovery/ores/thresholds/articletopic_20210123.json"
     },
     "max_attempts": 1,
     "name": "fetch_articletopic_prediction_thresholds",

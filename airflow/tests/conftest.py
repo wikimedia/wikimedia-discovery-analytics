@@ -48,6 +48,7 @@ all_dag_ids = [
 fixture_dir = os.path.join(os.path.dirname(__file__), 'fixtures')
 airflow_variables_dir = os.path.realpath(
     os.path.join(os.path.dirname(__file__), '../config'))
+dag_bag = DagBag()
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -104,9 +105,8 @@ def fixture_factory():
 
 
 def all_tasks():
-    bag = DagBag()
     for dag_id in all_dag_ids:
-        dag = bag.get_dag(dag_id)
+        dag = dag_bag.get_dag(dag_id)
         if dag is None:
             # This is run while collecting tests, before running them.
             # Failing here would bail the entire suite. There is a
@@ -121,7 +121,7 @@ def tasks(kind):
 
 
 def dag_tasks(dag_id, kind):
-    dag = DagBag().get_dag(dag_id)
+    dag = dag_bag.get_dag(dag_id)
     return [task for task in dag.tasks if isinstance(task, kind)]
 
 
@@ -202,7 +202,11 @@ def rendered_task(task, mocker):
     mocker.patch.object(macros.hive, 'max_partition').return_value = b'20010115'
     # This will change the task, take a copy
     task = deepcopy(task)
-    ti = TaskInstance(task, datetime(year=2038, month=1, day=17, hour=3))
+    # Some dags have expectations, such as it always runs on sunday. Some date manipulation
+    # can depend on this. To ensure changes to date manipulation are properly tested for
+    # consistency render the task against the first run date of the task.
+    task_first_dt = dag_bag.get_dag(task.dag_id).normalize_schedule(task.start_date)
+    ti = TaskInstance(task, task_first_dt)
     context = ti.get_template_context()
     context['run_id'] = 'pytest_compare_against_fixtures'
     if task.dag_id in DAG_RUN_CONF:

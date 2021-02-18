@@ -33,9 +33,9 @@
     "--input-table",
     "glent.m1prep",
     "--input-partition",
-    "20380124",
+    "20200502",
     "--candidates-directory",
-    "hdfs://analytics-hadoop/tmp/glent_weekly_2038-01-17/query_similarity_candidates",
+    "hdfs://analytics-hadoop/tmp/glent_weekly_2020-04-25/query_similarity_candidates",
     "--max-edit-dist-sugg",
     "3",
     "--max-norm-edit-dist",
@@ -47,7 +47,7 @@
     "--output-table",
     "glent.suggestions",
     "--output-partition",
-    "20380124",
+    "20200502",
     "--max-output-partitions",
     "100"
 ]

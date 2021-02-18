@@ -33,7 +33,7 @@
             "memory": 1024,
             "vcores": 1
         },
-        "script": "set -o errexit\npython3 swift_upload.py --swift-overwrite true --swift-delete-after 604800 --swift-auto-version true --swift-object-prefix 20380117 --event-per-object false --event-stream swift.search_mjolnir_model.upload-complete --event-service-url https://eventgate-analytics.svc.eqiad.wmnet:4592/v1/events swift_auth.env search_mjolnir_model hdfs://analytics-hadoop/wmf/data/discovery/mjolnir/trained_models/date=20380117/wikiid=idwiki/labeling_algorithm=dbn/feature_set=20180215-query_explorer-pruned_mrmr"
+        "script": "set -o errexit\npython3 swift_upload.py --swift-overwrite true --swift-delete-after 604800 --swift-auto-version true --swift-object-prefix 20200108 --event-per-object false --event-stream swift.search_mjolnir_model.upload-complete --event-service-url https://eventgate-analytics.svc.eqiad.wmnet:4592/v1/events swift_auth.env search_mjolnir_model hdfs://analytics-hadoop/wmf/data/discovery/mjolnir/trained_models/date=20200108/wikiid=idwiki/labeling_algorithm=dbn/feature_set=20180215-query_explorer-pruned_mrmr"
     },
     "max_attempts": 1,
     "name": "upload-idwiki-dbn-20180215-query_explorer-pruned_mrmr",

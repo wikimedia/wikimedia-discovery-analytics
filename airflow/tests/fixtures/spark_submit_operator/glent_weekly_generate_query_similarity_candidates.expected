@@ -29,9 +29,9 @@
     "--input-table",
     "glent.m1prep",
     "--input-partition",
-    "20380124",
+    "20200502",
     "--output-directory",
-    "hdfs://analytics-hadoop/tmp/glent_weekly_2038-01-17/query_similarity_candidates",
+    "hdfs://analytics-hadoop/tmp/glent_weekly_2020-04-25/query_similarity_candidates",
     "--num-fst",
     "1"
 ]

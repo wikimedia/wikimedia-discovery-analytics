@@ -17,5 +17,5 @@
     "--source-partition",
     "discovery.search_satisfaction_daily/",
     "--destination-directory",
-    "hdfs://analytics-hadoop/tmp/search_satisfaction_daily_2038-01-17"
+    "hdfs://analytics-hadoop/tmp/search_satisfaction_daily_2021-01-26"
 ]

@@ -2,9 +2,9 @@
 INSERT OVERWRITE TABLE discovery.popularity_score
     PARTITION(
         agg_days=7,
-        year=2038,
+        year=2020,
         month=1,
-        day=17)
+        day=12)
     SELECT
         hourly.project,
         hourly.page_id,
@@ -23,7 +23,7 @@ INSERT OVERWRITE TABLE discovery.popularity_score
             AND TO_DATE(CONCAT_WS('-',
                     CAST(year AS string), CAST(month AS string),
                     CAST(day AS string)))
-                BETWEEN TO_DATE('2038-01-17') AND DATE_ADD(TO_DATE('2038-01-17'), 7)
+                BETWEEN TO_DATE('2020-01-12') AND DATE_ADD(TO_DATE('2020-01-12'), 7)
         GROUP BY
             project
         ) agg on hourly.project = agg.project
@@ -32,7 +32,7 @@ INSERT OVERWRITE TABLE discovery.popularity_score
         AND TO_DATE(CONCAT_WS('-',
                 CAST(year AS string), CAST(month AS string),
                 CAST(day AS string)))
-            BETWEEN TO_DATE('2038-01-17') AND DATE_ADD(TO_DATE('2038-01-17'), 7)
+            BETWEEN TO_DATE('2020-01-12') AND DATE_ADD(TO_DATE('2020-01-12'), 7)
     GROUP BY
         hourly.project,
         hourly.page_id,
