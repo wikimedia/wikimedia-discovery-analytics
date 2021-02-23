@@ -28,6 +28,6 @@
     "discovery.ores_scores_export/wikiid=kowiki/model=articletopic/year=2021/month=1/day=1",
     "--ores-model",
     "articletopic",
-    "--namespaces",
+    "--namespace",
     "0"
 ]

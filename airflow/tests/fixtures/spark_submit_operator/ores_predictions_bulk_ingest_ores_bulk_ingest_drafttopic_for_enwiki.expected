@@ -28,7 +28,7 @@
     "discovery.ores_scores_export/wikiid=enwiki/model=drafttopic/year=2021/month=1/day=1",
     "--ores-model",
     "drafttopic",
-    "--namespaces",
+    "--namespace",
     "0",
     "1",
     "2",

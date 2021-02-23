@@ -180,7 +180,7 @@ def bulk_ingest(
             '--mediawiki-dbname', wiki,
             '--output-partition', bulk_partition_spec(model, wiki),
             '--ores-model', model,
-            '--namespaces'] + [str(x) for x in namespaces]
+            '--namespace'] + [str(x) for x in namespaces]
     )
 
 
