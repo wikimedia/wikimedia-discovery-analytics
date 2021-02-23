@@ -10,6 +10,8 @@
     "--conf",
     "spark.yarn.maxAppAttempts=1",
     "--conf",
+    "spark.executorEnv.HTTPS_PROXY=http://webproxy.eqiad.wmnet:8080",
+    "--conf",
     "spark.yarn.appMasterEnv.HTTPS_PROXY=http://webproxy.eqiad.wmnet:8080",
     "--files",
     "hdfs:///wmf/data/discovery/ores/thresholds/articletopic_20201231.json#thresholds.json",

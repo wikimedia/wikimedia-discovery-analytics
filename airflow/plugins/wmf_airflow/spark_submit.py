@@ -15,6 +15,8 @@ class SparkSubmitOperator(BaseOperator):
      provides this functionality, but the upstream SparkSubmitOperator cannot invoke it.
 
      * The _archives field was added to the set of template_fields
+     * Applies the provided env_vars to the executors. Upstream only applies them
+       to the master.
     """
     template_fields = (
         '_application', '_conf', '_files', '_py_files', '_jars',
@@ -85,8 +87,15 @@ class SparkSubmitOperator(BaseOperator):
         """
         Call the SparkSubmitHook to run the provided spark job
         """
+        # SparkSubmitHook only applies env vars to the master, but we
+        # want the executors too for consistency
+        conf = self._conf.copy() if self._conf else {}
+        if self._env_vars:
+            for k, v in self._env_vars.items():
+                conf['spark.executorEnv.{}'.format(k)] = v
+
         return SparkSubmitHook(
-            conf=self._conf,
+            conf=conf,
             conn_id=self._conn_id,
             files=self._files,
             py_files=self._py_files,
