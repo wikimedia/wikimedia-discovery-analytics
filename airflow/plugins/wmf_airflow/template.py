@@ -44,10 +44,6 @@ wmf_conf = DagConf('wmf_conf')
 # the airflow server
 REPO_PATH = wmf_conf('wikimedia_discovery_analytics_path')
 
-# Path to the root of this repository on hdfs. Used primarily for sourcing python
-# environments that must be built in a specific context.
-REPO_HDFS_PATH = wmf_conf('wikimedia_discovery_analytics_hdfs_path')
-
 HTTPS_PROXY = wmf_conf('https_proxy')
 
 # Local path to ivysettings.xml on the airflow server that specifies the remote

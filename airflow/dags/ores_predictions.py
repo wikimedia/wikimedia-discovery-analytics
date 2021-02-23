@@ -36,7 +36,7 @@ from wmf_airflow.skein import SkeinOperator
 from wmf_airflow.spark_submit import SparkSubmitOperator
 from wmf_airflow.template import (
     HTTPS_PROXY, IVY_SETTINGS_PATH, MARIADB_CREDENTIALS_PATH,
-    MEDIAWIKI_ACTIVE_DC, MEDIAWIKI_CONFIG_PATH, REPO_PATH, REPO_HDFS_PATH,
+    MEDIAWIKI_ACTIVE_DC, MEDIAWIKI_CONFIG_PATH, REPO_PATH,
     YMDH_PARTITION, DagConf)
 
 
@@ -69,7 +69,7 @@ def mw_sql_to_hive(
         # from hdfs, because it has to be built on an older version of debian than runs
         # on the airflow instance.
         name='airflow: ores: ' + task_id,
-        archives=REPO_HDFS_PATH + '/environments/mw_sql_to_hive/venv.zip#venv',
+        archives='{{ wmf_conf.venv_path }}/mw_sql_to_hive.venv.zip#venv',
         py_files=REPO_PATH + '/spark/wmf_spark.py',
         # jdbc connector for talking to analytics replicas
         packages='mysql:mysql-connector-java:8.0.19',
