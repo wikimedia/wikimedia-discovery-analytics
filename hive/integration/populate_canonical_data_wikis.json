@@ -33,6 +33,17 @@
             "visibility": "public",
             "editability": "public",
             "english_name": "Test Wikipedia"
+        },
+        {
+            "database_code": "arwiki",
+            "domain_name": "ar.wikipedia.org",
+            "database_group": "wikipedia",
+            "language_code": "ar",
+            "language_name": "Arabic",
+            "status": "open",
+            "visibility": "public",
+            "editability": "public",
+            "english_name": "Arabic Wikipedia"
         }
     ]
 }

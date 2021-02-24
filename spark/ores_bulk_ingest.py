@@ -5,7 +5,7 @@ from datetime import datetime
 import itertools
 import logging
 import sys
-from typing import Iterator, Mapping, Sequence, Tuple, TypeVar
+from typing import Iterator, Mapping, Optional, Sequence, Tuple, TypeVar
 
 from pyspark.sql import SparkSession, functions as F, types as T
 import mwapi
@@ -65,6 +65,8 @@ def lookup_hostname(spark: SparkSession, dbname: str) -> str:
 
 
 class ErrorThreshold:
+    _min_seen = ORES_API_BATCH_SIZE
+
     def __init__(self, threshold: float):
         self.threshold = threshold
         self._seen = 0
@@ -83,26 +85,12 @@ class ErrorThreshold:
         if error is False:
             return
         self._errors += 1
-        if self.error_rate > self.threshold:
+        if self._seen >= self._min_seen and self.error_rate > self.threshold:
             raise Exception('Exceeded error threshold of {}, {}.'.format(
                 self.threshold, self.status))
 
 
-def fetch_scores(
-    mediawiki_host: str,
-    mediawiki_dbname: str,
-    ores_host: str,
-    model: str,
-    user_agent: str,
-    namespaces: Sequence[int],
-    error_threshold=ErrorThreshold(1 / 1000),
-) -> Iterator[Tuple[int, int, Mapping[str, float]]]:
-    """Fetch scores for all main namespace pages of wiki."""
-    logging.info('Querying mediawiki api at {}'.format(mediawiki_host))
-    api = mwapi.Session(mediawiki_host, user_agent=user_agent)
-    logging.info('Querying ores api at {}'.format(ores_host))
-    ores = oresapi.Session(ores_host, user_agent=user_agent)
-
+def all_pages(api: mwapi.Session, namespaces: Sequence[int]) -> Iterator[Mapping]:
     # While this API is called 'allpages', it's actually all pages in a single
     # namespace. Since we need more than one namespace, run once for each.
     all_ns_page_batches = [api.get(
@@ -119,25 +107,66 @@ def fetch_scores(
         continuation=True,
     ) for namespace in set(namespaces)]
     page_batches = itertools.chain(*all_ns_page_batches)
-    pages = (
-        page
-        for batch in page_batches
-        for page in batch['query']['pages'])
+    for batch in page_batches:
+        # wmf enables miser mode which means some batchs may be empty.
+        for page in batch.get('query', {}).get('pages', []):
+            yield page
+
+
+def score_one_batch(
+    ores: oresapi.Session,
+    mediawiki_dbname: str,
+    rev_ids: Sequence[int],
+    error_threshold: ErrorThreshold,
+    retries=5
+) -> Sequence[Optional[Mapping[str, float]]]:
+    while retries:
+        scores = list(ores.score(mediawiki_dbname, [MODEL], rev_ids))
+        # When the request fails oresapi returns a single error
+        if len(scores) == 1 and 'error' in scores[0][MODEL]:
+            retries -= 1
+            continue
+        probs = []
+        for score in scores:
+            probability = score.get(MODEL, {}).get('score', {}).get('probability', None)
+            error_threshold.incr(error=probability is None)
+            probs.append(probability)
+        assert len(rev_ids) == len(probs)
+        return probs
+    # Split batch into smaller pieces and figure out which ids don't work?
+    raise RuntimeError('Ran out of retries fetching batch scores from ores')
+
+
+def fetch_scores(
+    mediawiki_host: str,
+    mediawiki_dbname: str,
+    ores_host: str,
+    model: str,
+    user_agent: str,
+    namespaces: Sequence[int],
+    error_threshold=ErrorThreshold(1 / 1000),
+) -> Iterator[Tuple[int, int, Mapping[str, float]]]:
+    """Fetch scores for all main namespace pages of wiki."""
+    # spark doesn't init logging on executors
+    if not logging.getLogger().handlers:
+        logging.basicConfig(level=logging.INFO)
+    logging.info('Querying mediawiki api at {}'.format(mediawiki_host))
+    api = mwapi.Session(mediawiki_host, user_agent=user_agent)
+    logging.info('Querying ores api at {}'.format(ores_host))
+    ores = oresapi.Session(ores_host, user_agent=user_agent)
+
+    pages = all_pages(api, namespaces)
     page_w_latest_rev = ((page['pageid'], page['ns'], page['revisions'][0]['revid']) for page in pages)
+
     page_w_latest_rev_batches = make_batch(page_w_latest_rev, ORES_API_BATCH_SIZE)
 
     for batch in page_w_latest_rev_batches:
         page_ids, page_namespaces, rev_ids = zip(*batch)
         logging.info('Scoring revision batch')
-        scores = ores.score(mediawiki_dbname, [MODEL], rev_ids)
-        for page_id, page_namespace, data in zip(page_ids, page_namespaces, scores):
-            try:
-                yield (page_id, page_namespace, data[MODEL]['score']['probability'])
-                error_threshold.incr(error=False)
-            except KeyError:
-                if 'error' not in data[MODEL]:
-                    raise
-                error_threshold.incr(error=True)
+        scores = score_one_batch(ores, mediawiki_dbname, rev_ids, error_threshold)
+        for page_id, page_namespace, probability in zip(page_ids, page_namespaces, scores):
+            if probability is not None:
+                yield (page_id, page_namespace, probability)
 
     logging.info('Finished scoring for {}. {}'.format(
         mediawiki_dbname, error_threshold.status))
