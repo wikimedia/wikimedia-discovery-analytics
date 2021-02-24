@@ -15,13 +15,15 @@
     "--name",
     "airflow-spark",
     "--class",
-    "org.wikidata.query.rdf.spark.WikidataTurtleDumpConverter",
+    "org.wikidata.query.rdf.spark.WikibaseRDFDumpConverter",
     "--queue",
     "root.default",
     "/srv/deployment/wikimedia/discovery/analytics/artifacts/rdf-spark-tools-latest-jar-with-dependencies.jar",
     "--input-path",
-    "hdfs://analytics-hadoop/wmf/data/raw/wikidata/dumps/all_ttl/20200921/wikidata-20200921-all-BETA.ttl.bz2,hdfs://analytics-hadoop/wmf/data/raw/wikidata/dumps/lexemes_ttl/20200918/wikidata-20200918-lexemes-BETA.ttl.bz2",
+    "hdfs://analytics-hadoop/wmf/data/raw/wikidata/dumps/all_ttl/20210222/wikidata-20210222-all-BETA.ttl.bz2,hdfs://analytics-hadoop/wmf/data/raw/wikidata/dumps/lexemes_ttl/20210219/wikidata-20210219-lexemes-BETA.ttl.bz2",
     "--output-table",
-    "discovery.wikidata_rdf/date=20200921",
-    "--skolemize"
+    "discovery.wikibase_rdf/date=20210222/wiki=wikidata",
+    "--skolemize",
+    "--site",
+    "wikidata"
 ]
