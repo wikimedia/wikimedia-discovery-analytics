@@ -40,7 +40,7 @@ def test_score_one_batch(mocker):
             }
         }
     ])
-    scores = list(ores_bulk_ingest.score_one_batch(ores, 'x', [1, 2], mocker.MagicMock()))
+    scores = list(ores_bulk_ingest.score_one_batch(ores, 'x', [1, 2], mocker.MagicMock(), sleep=lambda x: None))
     assert scores == [
         {'Some.Thing': 0.123},
         None

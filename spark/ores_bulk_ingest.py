@@ -1,10 +1,12 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 from argparse import ArgumentParser
-from datetime import datetime
+from datetime import datetime, timedelta
 import itertools
 import logging
+import math
 import sys
+import time
 from typing import Iterator, Mapping, Optional, Sequence, Tuple, TypeVar
 
 from pyspark.sql import SparkSession, functions as F, types as T
@@ -118,13 +120,18 @@ def score_one_batch(
     mediawiki_dbname: str,
     rev_ids: Sequence[int],
     error_threshold: ErrorThreshold,
-    retries=5
+    retries=5,
+    sleep=time.sleep
 ) -> Sequence[Optional[Mapping[str, float]]]:
-    while retries:
+    max_backoff = timedelta(minutes=5).total_seconds()
+    # starting at 5 makes our first retry a 32 second delay.
+    backoff = (min(max_backoff, math.pow(2, i)) for i in range(5, 5 + retries))
+    while retries >= 0:
         scores = list(ores.score(mediawiki_dbname, [MODEL], rev_ids))
         # When the request fails oresapi returns a single error
         if len(scores) == 1 and 'error' in scores[0][MODEL]:
             retries -= 1
+            sleep(next(backoff))
             continue
         probs = []
         for score in scores:
