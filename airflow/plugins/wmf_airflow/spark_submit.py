@@ -4,6 +4,8 @@ from airflow.contrib.hooks.spark_submit_hook import SparkSubmitHook
 from airflow.models.baseoperator import BaseOperator
 from airflow.utils.decorators import apply_defaults
 
+from wmf_airflow.template import REPO_PATH
+
 
 class SparkSubmitOperator(BaseOperator):
     """
@@ -17,6 +19,14 @@ class SparkSubmitOperator(BaseOperator):
      * The _archives field was added to the set of template_fields
      * Applies the provided env_vars to the executors. Upstream only applies them
        to the master.
+     * Add max_executors kwarg as shortcut to setting spark.dynamicAllocation.maxExecutors
+       conf value.
+     * Defaults spark.yarn.maxAppAttempts to 1 to delegate retries to airflow and keep the
+       mental model of how many times a script is run simple.
+     * Add python kwarg. When a string it treats as path to packaged venv which will be
+       used as the runtime. When truthy enables discolytics defaults for running python.
+       False does nothing. None (default) autodetects True or False by application
+       extension.
     """
     template_fields = (
         '_application', '_conf', '_files', '_py_files', '_jars',
@@ -39,6 +49,7 @@ class SparkSubmitOperator(BaseOperator):
                  exclude_packages=None,
                  repositories=None,
                  total_executor_cores=None,
+                 max_executors=None,
                  executor_cores=None,
                  executor_memory=None,
                  driver_memory=None,
@@ -52,11 +63,12 @@ class SparkSubmitOperator(BaseOperator):
                  spark_submit_env_vars=None,
                  verbose=False,
                  spark_binary="spark-submit",
+                 python=None,
                  *args,
                  **kwargs):
         super().__init__(*args, **kwargs)
         self._application = application
-        self._conf = conf
+        self._conf = conf.copy() if conf else {}
         self._files = files
         self._py_files = py_files
         self._archives = archives
@@ -67,6 +79,7 @@ class SparkSubmitOperator(BaseOperator):
         self._exclude_packages = exclude_packages
         self._repositories = repositories
         self._total_executor_cores = total_executor_cores
+        self._max_executors = max_executors
         self._executor_cores = executor_cores
         self._executor_memory = executor_memory
         self._driver_memory = driver_memory
@@ -76,27 +89,56 @@ class SparkSubmitOperator(BaseOperator):
         self._name = name
         self._num_executors = num_executors
         self._application_args = application_args
-        self._env_vars = env_vars
-        self._spark_submit_env_vars = spark_submit_env_vars
+        self._env_vars = env_vars.copy() if env_vars else {}
+        self._spark_submit_env_vars = spark_submit_env_vars.copy() if spark_submit_env_vars else {}
         self._verbose = verbose
         self._spark_binary = spark_binary
+        self._python = python if python is not None else application.endswith('.py')
         self._hook = None
         self._conn_id = conn_id
+
+        def append(base, val, sep=','):
+            if base is None:
+                return val
+            else:
+                return base + sep + val
+
+        # Delegate retrys to airflow.
+        if 'spark.yarn.maxAppAttempts' not in self._conf:
+            self._conf['spark.yarn.maxAppAttempts'] = 1
+        # reduce typos by providing common conf keys as kwargs
+        if self._max_executors is not None:
+            self._conf['spark.dynamicAllocation.maxExecutors'] = self._max_executors
+
+        # Common deployment configuration for python tasks in discolytics
+        if self._python:
+            # Deploy venv if requested
+            if isinstance(self._python, str):
+                self._conf['spark.pyspark.python'] = 'venv/bin/python3.7'
+                self._archives = append(self._archives, self._python + '#venv')
+            elif not isinstance(self._python, bool):
+                raise ValueError('Expected python kwargs as Optional[str|bool], found {}'.format(
+                    type(self._python)))
+            # Make wmf_spark module available to all python executions
+            self._py_files = append(self._py_files, REPO_PATH + '/spark/wmf_spark.py')
+            # Inform wmf deployed spark-env.sh script what version
+            # of python we intend to run, so it ships the correct
+            # pyspark deps.
+            self._spark_submit_env_vars['PYSPARK_PYTHON'] = 'python3.7'
+
+        # SparkSubmitHook only applies env vars to the master, but we
+        # want the executors too for consistency
+        if self._env_vars:
+            for k, v in self._env_vars.items():
+                self._conf['spark.executorEnv.{}'.format(k)] = v
 
     def _make_hook(self):
         """
         Call the SparkSubmitHook to run the provided spark job
         """
-        # SparkSubmitHook only applies env vars to the master, but we
-        # want the executors too for consistency
-        conf = self._conf.copy() if self._conf else {}
-        if self._env_vars:
-            for k, v in self._env_vars.items():
-                conf['spark.executorEnv.{}'.format(k)] = v
-
         return SparkSubmitHook(
             # Sort for stable fixture output
-            conf={k: v for k, v in sorted(conf.items())},
+            conf={k: v for k, v in sorted(self._conf.items())},
             conn_id=self._conn_id,
             files=self._files,
             py_files=self._py_files,

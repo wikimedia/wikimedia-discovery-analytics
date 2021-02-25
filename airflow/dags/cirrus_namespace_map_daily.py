@@ -25,20 +25,13 @@ with DAG(
 ) as dag:
     fetch_namespace_map = SparkSubmitOperator(
         task_id='fetch_namespace_map',
-        conf={
-            'spark.yarn.maxAppAttempts': 1,
-            # Could be 1, spark is only really being used for
-            # hive/hdfs/parquet integration used by downstream consumers
-            'spark.dynamicAllocation.maxExecutors': 10,
-        },
         env_vars={
             # Provide access to public internet to query prod apis
             'https_proxy': HTTPS_PROXY,
         },
-        spark_submit_env_vars={
-            'PYSPARK_PYTHON': 'python3.7',
-        },
-        py_files=REPO_PATH + '/spark/wmf_spark.py',
+        # Could be 1, spark is only really being used for
+        # hive/hdfs/parquet integration used by downstream consumers
+        max_executors=10,
         application=REPO_PATH + '/spark/fetch_cirrussearch_namespace_map.py',
         application_args=[
             # The trailing '/' indicates they are unpartitioned tables.

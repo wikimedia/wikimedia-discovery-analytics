@@ -52,18 +52,18 @@ CUR_PARTITION = '{{ macros.ds_format(macros.ds_add(ds, 7), "%Y-%m-%d", "%Y%m%d")
 
 def glent_op(
     task_id, conf={}, executor_memory='6G',
-    executor_cores='3', driver_memory='1G', **kwargs,
+    executor_cores='3', driver_memory='1G',
+    max_executors=70, **kwargs,
 ):
     """Helper applies defaults for invoking glent via spark"""
     return SparkSubmitOperator(
         task_id=task_id,
         conf=dict({
-            'spark.yarn.maxAppAttempts': 1,
             'spark.sql.shuffle.partitions': 200,
-            'spark.dynamicAllocation.maxExecutors': 70,
             'spark.sql.executor.memoryOverhead': '640M',
             'spark.sql.shuffle.service.enabled': 'true',
         }, **conf),
+        max_executors=max_executors,
         executor_memory=executor_memory,
         executor_cores=executor_cores,
         driver_memory=driver_memory,
@@ -205,10 +205,10 @@ with DAG(
             # Increase required from defaults for returning
             # the FSTs to the driver
             'spark.driver.maxResultSize': '4096M',
-            # This allocates ~900GB and 800 cores, almost
-            # half the available cores.
-            'spark.dynamicAllocation.maxExecutors': 50,
         },
+        # This allocates ~900GB and 800 cores, almost
+        # half the available cores.
+        max_executors=50,
         # FST evaluation has minimal memory requirements, and
         # sharing a large data structure between all tasks on
         # same executor. Size up executors accordingly.
@@ -232,7 +232,6 @@ with DAG(
         pool='sequential',
         conf={
             'spark.sql.shuffle.partitions': 2500,
-            'spark.dynamicAllocation.maxExecutors': 150,
             # The joins performed in here generation billions
             # of rows. To avoid `FetchFailedException` on the largest
             # joins we need a few extra parameters.
@@ -241,6 +240,7 @@ with DAG(
             'spark.shuffle.io.retryWait': '120s',
             'spark.shuffle.io.maxRetries': 10,
         },
+        max_executors=150,
         executor_memory='8G',
         executor_cores='4',
         application_args=[

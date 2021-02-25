@@ -111,13 +111,9 @@ with DAG(
 
     munge_and_import_commons_dumps = SparkSubmitOperator(
         task_id='munge_dumps',
-        conf={
-            # Delegate retries to airflow
-            'spark.yarn.maxAppAttempts': '1',
-            'spark.dynamicAllocation.maxExecutors': '25',
-        },
         application=WDQS_SPARK_TOOLS,
         java_class="org.wikidata.query.rdf.spark.WikibaseRDFDumpConverter",
+        max_executors=25,
         executor_cores=8,
         executor_memory="16g",
         driver_memory="2g",
@@ -185,13 +181,9 @@ with DAG(
 
     munge_and_import_dumps = SparkSubmitOperator(
         task_id='munge_dumps',
-        conf={
-            # Delegate retries to airflow
-            'spark.yarn.maxAppAttempts': '1',
-            'spark.dynamicAllocation.maxExecutors': '25',
-        },
         application=WDQS_SPARK_TOOLS,
         java_class="org.wikidata.query.rdf.spark.WikibaseRDFDumpConverter",
+        max_executors=25,
         executor_cores=8,
         executor_memory="16g",
         driver_memory="2g",
@@ -205,13 +197,9 @@ with DAG(
 
     generate_entity_rev_map = SparkSubmitOperator(
         task_id='gen_rev_map',
-        conf={
-            # Delegate retries to airflow
-            'spark.yarn.maxAppAttempts': '1',
-            'spark.dynamicAllocation.maxExecutors': '25',
-        },
         application=WDQS_SPARK_TOOLS,
         java_class="org.wikidata.query.rdf.spark.EntityRevisionMapGenerator",
+        max_executors=25,
         executor_cores=8,
         executor_memory="16g",
         driver_memory="2g",

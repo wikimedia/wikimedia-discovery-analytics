@@ -77,15 +77,9 @@ with DAG(
     aggregate = SparkSubmitOperator(
         task_id='aggregate',
         conf={
-            # Defer retrys to airflow
-            'spark.yarn.maxAppAttempts': '1',
             'spark.sql.shuffle.partitions': '20',
-            'spark.dynamicAllocation.maxExecutors': '50',
         },
-        spark_submit_env_vars={
-            'PYSPARK_PYTHON': 'python3.7',
-        },
-        py_files=REPO_PATH + '/spark/wmf_spark.py',
+        max_executors=50,
         application=REPO_PATH + '/spark/generate_daily_search_satisfaction.py',
         application_args=[
             '--cirrus-partition', TABLE_SEARCH_LOGS + '/' + YMD_PARTITION,
@@ -99,16 +93,11 @@ with DAG(
     prepare_json_for_druid = SparkSubmitOperator(
         task_id='prepare_json_for_druid',
         conf={
-            'spark.yarn.maxAppAttempts': '1',
-            'spark.dynamicAllocation.maxExecutors': '200',
             # The output needs to be read by the druid user, sharing
             # no groups. Make outputs world-readable.
             'spark.hadoop.fs.permissions.umask-mode': '022',
         },
-        spark_submit_env_vars={
-            'PYSPARK_PYTHON': 'python3.7',
-        },
-        py_files=REPO_PATH + '/spark/wmf_spark.py',
+        max_executors=200,
         application=REPO_PATH + '/spark/generate_daily_druid_search_satisfaction.py',
         application_args=[
             '--source-partition', TABLE_SEARCH_SATISFACTION + '/',

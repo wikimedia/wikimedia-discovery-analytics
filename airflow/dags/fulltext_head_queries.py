@@ -28,18 +28,10 @@ with DAG(
     head_queries = SparkSubmitOperator(
         task_id='head_queries',
         name='airflow: fulltext_head_queries - {{ ds }}',
-        conf={
-            # Delegate retrys to airflow
-            'spark.yarn.maxAppAttempts': '1',
-            # This task reads the fully history of searchsatisfaction,
-            # hundreds of GB and thousands of partitions. Keep a cap
-            # on how much parallelism spark will try to use.
-            'spark.dynamicAllocation.maxExecutors': 200,
-        },
-        spark_submit_env_vars={
-            'PYSPARK_PYTHON': 'python3.7',
-        },
-        py_files=REPO_PATH + '/spark/wmf_spark.py',
+        # This task reads the fully history of searchsatisfaction,
+        # hundreds of GB and thousands of partitions. Keep a cap
+        # on how much parallelism spark will try to use.
+        max_executors=200,
         application=REPO_PATH + '/spark/fulltext_head_queries.py',
         application_args=[
             '--search-satisfaction-partition', dag_conf('table_search_satisfaction') + '/',

@@ -47,14 +47,9 @@ def convert_and_upload(
     convert = SparkSubmitOperator(
         task_id='convert_to_esbulk',
         conf={
-            'spark.yarn.maxAppAttempts': '1',
-            'spark.dynamicAllocation.maxExecutors': '25',
             'spark.executor.memoryOverhead': '768'
         },
-        spark_submit_env_vars={
-            'PYSPARK_PYTHON': 'python3.7',
-        },
-        py_files='{{ wmf_conf.wikimedia_discovery_analytics_path }}/spark/wmf_spark.py',
+        max_executors=25,
         application='{{ wmf_conf.wikimedia_discovery_analytics_path }}/spark/convert_to_esbulk.py',
         application_args=[
             '--config', convert_config,

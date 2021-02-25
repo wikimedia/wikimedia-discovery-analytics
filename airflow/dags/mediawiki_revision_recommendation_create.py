@@ -78,15 +78,7 @@ with DAG(
     # a format suitable for shipping to elasticsearch.
     extract_predictions = SparkSubmitOperator(
         task_id='extract_recommendations',
-        conf={
-            # Delegate retrys to airflow
-            'spark.yarn.maxAppAttempts': '1',
-            'spark.dynamicAllocation.maxExecutors': '20',
-        },
-        spark_submit_env_vars={
-            'PYSPARK_PYTHON': 'python3.7',
-        },
-        py_files=REPO_PATH + '/spark/wmf_spark.py',
+        max_executors=20,
         application=REPO_PATH + '/spark/prepare_recommendation_create.py',
         application_args=[
             '--input-partition', INPUT_TABLE + '/' + YMDH_PARTITION,

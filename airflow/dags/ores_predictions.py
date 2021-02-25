@@ -66,36 +66,23 @@ def mw_sql_to_hive(
 
     return SparkSubmitOperator(
         task_id=task_id,
-        # Custom environment provides dnspython dependency. The environment must come
-        # from hdfs, because it has to be built on an older version of debian than runs
-        # on the airflow instance.
         name='airflow: ores: ' + task_id,
-        archives='{{ wmf_conf.venv_path }}/mw_sql_to_hive.venv.zip#venv',
-        py_files=REPO_PATH + '/spark/wmf_spark.py',
+        # Custom environment provides dnspython dependency.
+        python='{{ wmf_conf.venv_path }}/mw_sql_to_hive.venv.zip',
         # jdbc connector for talking to analytics replicas
         packages='mysql:mysql-connector-java:8.0.19',
-        spark_submit_env_vars={
-            # Must be explicitly provided for spark-env.sh. Note that these will not actually
-            # be used by spark, it will take the override from spark.pyspark.python. This is
-            # necessary to con spark-env.sh into being happy.
-            'PYSPARK_PYTHON': 'python3.7',
-        },
         conf={
-            # Delegate retrys to airflow
-            'spark.yarn.maxAppAttempts': '1',
-            # Use the venv shipped in archives.
-            'spark.pyspark.python': 'venv/bin/python3.7',
             # Fetch jars specified in packages from archiva
             'spark.jars.ivySettings': IVY_SETTINGS_PATH,
             # By default ivy will use $HOME/.ivy2, but system users dont have a home
             'spark.jars.ivy': '/tmp/airflow_ivy2',
-            # Limit parallelism so we don't try and query 900 databases all at once
-            'spark.dynamicAllocation.maxExecutors': '20',
             # Don't know exactly where it's used, but we need extra memory or we get
             # high gc and timeouts or yarn killing executors.
             'spark.executor.memoryOverhead': '1g',
             'spark.executor.memory': '4g',
         },
+        # Limit parallelism so we don't try and query 900 databases all at once
+        max_executors=20,
         files=','.join([mysql_defaults_path] + local_dblists),
         application=REPO_PATH + '/spark/mw_sql_to_hive.py',
         application_args=[
@@ -165,18 +152,9 @@ def bulk_ingest(
     return SparkSubmitOperator(
         task_id='ores_bulk_ingest_{}_for_{}_ns_{}'.format(model, wiki, namespace),
         name='airflow: ores_bulk_ingest {} for {}'.format(model, wiki),
-        archives='{{ wmf_conf.venv_path }}/ores_bulk_ingest.venv.zip#venv',
-        conf={
-            'spark.yarn.maxAppAttempts': '1',
-            'spark.dynamicAllocation.maxExecutors': '20',
-            # Use the venv shipped in archives.
-            'spark.pyspark.python': 'venv/bin/python3.7',
-        },
-        spark_submit_env_vars={
-            'PYSPARK_PYTHON': 'python3.7',
-        },
+        python='{{ wmf_conf.venv_path }}/ores_bulk_ingest.venv.zip',
+        max_executors=20,
         files=yesterday_thresholds_path(model) + '#thresholds.json',
-        py_files=REPO_PATH + '/spark/wmf_spark.py',
         env_vars={
             'HTTPS_PROXY': HTTPS_PROXY
         },
@@ -224,16 +202,8 @@ def extract_predictions(
     # a format suitable for shipping to elasticsearch.
     return SparkSubmitOperator(
         task_id='extract_{}_predictions'.format(model),
-        conf={
-            # Delegate retrys to airflow
-            'spark.yarn.maxAppAttempts': '1',
-            'spark.dynamicAllocation.maxExecutors': '20',
-        },
-        spark_submit_env_vars={
-            'PYSPARK_PYTHON': 'python3.7',
-        },
+        max_executors=20,
         files=yesterday_thresholds_path(model) + '#thresholds.json',
-        py_files=REPO_PATH + '/spark/wmf_spark.py',
         application=REPO_PATH + '/spark/prepare_mw_rev_score.py',
         application_args=propagate_args + [
             '--input-partition', input_partition,
