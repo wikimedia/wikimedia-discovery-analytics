@@ -1,3 +1,4 @@
 dnspython
 docopt
 python-dateutil
+mock

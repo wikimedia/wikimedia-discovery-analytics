@@ -1,6 +1,6 @@
 from datetime import datetime
 import shlex
-from typing import Optional
+from typing import Sequence
 
 from airflow.operators.bash_operator import BashOperator
 from airflow.operators.dummy_operator import DummyOperator
@@ -9,11 +9,14 @@ from wmf_airflow import DAG
 from wmf_airflow.template import REPO_PATH, ANALYTICS_REFINERY_PATH
 
 
-def refinery_drop_hive_partitions(
+def refinery_drop_older_than(
     database: str,
+    tables: Sequence[str],
+    # This script requires a significant arguments checksum. A human must
+    # execute the script without a checksum, verify the dry-run operation, and
+    # update the checksum reported in any automated usage.
+    checksum: str,
     older_than_days: int = 60,
-    tables: Optional[str] = None,
-    partition_depth: Optional[int] = None,
     *args, **kwargs
 ):
     # Refinery isn't packaged like our own python, so it's hard
@@ -23,15 +26,13 @@ def refinery_drop_hive_partitions(
     arguments = [
         'PYTHONPATH={}/python/'.format(ANALYTICS_REFINERY_PATH),
         REPO_PATH + '/environments/refinery/venv/bin/python',
-        ANALYTICS_REFINERY_PATH + '/bin/refinery-drop-hive-partitions',
+        ANALYTICS_REFINERY_PATH + '/bin/refinery-drop-older-than',
         '--verbose',
         '--database=' + database,
-        '--older-than-days=' + str(older_than_days),
+        '--tables=^({})$'.format('|'.join(tables)),
+        '--older-than=' + str(older_than_days),
+        '--execute=' + checksum,
     ]
-    if tables is not None:
-        arguments.append('--tables=' + tables)
-    if partition_depth is not None:
-        arguments.append('--partition-depth=' + str(partition_depth))
 
     safe_arguments = ' '.join(shlex.quote(x) for x in arguments)
     bash_command = executable + ' ' + safe_arguments
@@ -55,9 +56,10 @@ with DAG(
 ) as dag:
     complete = DummyOperator(task_id='complete')
 
-    refinery_drop_hive_partitions(
+    refinery_drop_older_than(
         task_id='drop_glent_prep_partitions',
         database='glent',
+        tables=['.*'],
         # Each glent partition contains a full dataset, rather than for slice
         # of the time range like some other dbs. It runs once a week and uses
         # last weeks output as this weeks input, as such we really want at
@@ -66,14 +68,15 @@ with DAG(
         # The limits here are not related to privacy policy, glent is approved
         # to maintain its de-identified datasets indefinitly, but practical.
         older_than_days=29,
+        checksum='66e1a6a9afff6fa7a76e3b25f611287d',
     ) >> complete
 
-    refinery_drop_hive_partitions(
+    refinery_drop_older_than(
         task_id='drop_mjolnir_partitions',
         database='mjolnir',
         # This data is derived from long term data
         older_than_days=15,
-        tables=','.join([
+        tables=[
             # All contain private data that must not be retained.
             'feature_vectors',
             'labeled_query_page',
@@ -82,14 +85,15 @@ with DAG(
             # Intentionally excluded:
             # - model_parameters: Has no private data, useful for looking at
             #   training history.
-        ])
+        ],
+        checksum='fd1a8418fbe95f56beeaf0ddc5e81fbe',
     ) >> complete
 
-    refinery_drop_hive_partitions(
+    refinery_drop_older_than(
         task_id='drop_discovery_partitions',
         older_than_days=84,  # 12 weeks
         database='discovery',
-        tables=','.join([
+        tables=[
             # Contains private data that must not be retained
             'query_clicks_daily',
             'query_clicks_hourly',
@@ -104,21 +108,24 @@ with DAG(
             # - cirrus_namespace_index_map: Not private, not partitioned
             # - wikibase_rdf: Managed somewhere else
             # - fulltext_head_queries: Handled below with shorter allowed lifetime
-        ])
+        ],
+        checksum='bd4c3f327371196380bb574cba281d09',
     ) >> complete
 
-    refinery_drop_hive_partitions(
+    refinery_drop_older_than(
         task_id='drop_discovery_short_term_partitions',
         older_than_days=6,  # Data derived from 84 day tables
         database='discovery',
-        tables='fulltext_head_queries'
+        tables=['fulltext_head_queries'],
+        checksum='bc4207e7033413997a69e3473b0d6f5f',
     ) >> complete
 
-    refinery_drop_hive_partitions(
-        task_id='drop_wikidata_rdf_partitions',
+    refinery_drop_older_than(
+        task_id='drop_wikibase_rdf_partitions',
         database='discovery',
-        tables="wikidata_rdf",
+        tables=["wikibase_rdf"],
         # we want to keep 4 partition (generated weekly). But since the data takes
         # multiple days to arrive we allow a 6 days tolerance here
         older_than_days=29 + 6,
+        checksum='d19f53f49a86f95b4d46d0bcb114e6f1',
     ) >> complete

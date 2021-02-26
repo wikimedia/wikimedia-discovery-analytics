@@ -1,0 +1,1 @@
+"/usr/bin/env 'PYTHONPATH=/srv/deployment/analytics/refinery/python/' '/srv/deployment/wikimedia/discovery/analytics/environments/refinery/venv/bin/python' '/srv/deployment/analytics/refinery/bin/refinery-drop-older-than' --verbose --database=discovery '--tables=^(wikibase_rdf)$' --older-than=35 --execute=d19f53f49a86f95b4d46d0bcb114e6f1"

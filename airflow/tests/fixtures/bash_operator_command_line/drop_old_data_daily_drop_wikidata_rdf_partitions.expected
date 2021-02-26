@@ -1,1 +1,0 @@
-"/usr/bin/env 'PYTHONPATH=/srv/deployment/analytics/refinery/python/' '/srv/deployment/wikimedia/discovery/analytics/environments/refinery/venv/bin/python' '/srv/deployment/analytics/refinery/bin/refinery-drop-hive-partitions' --verbose --database=discovery --older-than-days=35 --tables=wikidata_rdf"
