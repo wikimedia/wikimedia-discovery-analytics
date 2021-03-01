@@ -126,13 +126,19 @@ def score_one_batch(
     max_backoff = timedelta(minutes=5).total_seconds()
     # starting at 5 makes our first retry a 32 second delay.
     backoff = (min(max_backoff, math.pow(2, i)) for i in range(5, 5 + retries))
-    while retries >= 0:
+    logging.info('Scoring revision batch')
+    while True:
         scores = list(ores.score(mediawiki_dbname, [MODEL], rev_ids))
-        # When the request fails oresapi returns a single error
-        if len(scores) == 1 and 'error' in scores[0][MODEL]:
+        # When the request fails oresapi returns a single error. Don't
+        # consider a failing request for a single revision retryable.
+        if len(rev_ids) > 1 and len(scores) == 1 and 'error' in scores[0][MODEL]:
             retries -= 1
-            sleep(next(backoff))
-            continue
+            if retries:
+                logging.warning('Failed scoring request. Sleeping before retry')
+                sleep(next(backoff))
+                continue
+            else:
+                break
         probs = []
         for score in scores:
             probability = score.get(MODEL, {}).get('score', {}).get('probability', None)
@@ -161,22 +167,35 @@ def fetch_scores(
     api = mwapi.Session(mediawiki_host, user_agent=user_agent)
     logging.info('Querying ores api at {}'.format(ores_host))
     ores = oresapi.Session(ores_host, user_agent=user_agent)
+    yield from _fetch_scores(api, ores, mediawiki_dbname, namespaces, error_threshold)
+    logging.info('Finished scoring for {}. {}'.format(
+        mediawiki_dbname, error_threshold.status))
+
+
+def _fetch_scores(
+    api: mwapi.Session,
+    ores: oresapi.Session,
+    mediawiki_dbname: str,
+    namespaces: Sequence[int],
+    error_threshold: ErrorThreshold,
+) -> Iterator[Tuple[int, int, Mapping[str, float]]]:
+    def extract(pages):
+        for page in pages:
+            try:
+                yield (page['pageid'], page['ns'], page['revisions'][0]['revid'])
+            except KeyError:
+                logging.warning('Skipping invalid page: %s', str(page))
 
     pages = all_pages(api, namespaces)
-    page_w_latest_rev = ((page['pageid'], page['ns'], page['revisions'][0]['revid']) for page in pages)
-
+    page_w_latest_rev = extract(pages)
     page_w_latest_rev_batches = make_batch(page_w_latest_rev, ORES_API_BATCH_SIZE)
 
     for batch in page_w_latest_rev_batches:
         page_ids, page_namespaces, rev_ids = zip(*batch)
-        logging.info('Scoring revision batch')
         scores = score_one_batch(ores, mediawiki_dbname, rev_ids, error_threshold)
         for page_id, page_namespace, probability in zip(page_ids, page_namespaces, scores):
             if probability is not None:
                 yield (page_id, page_namespace, probability)
-
-    logging.info('Finished scoring for {}. {}'.format(
-        mediawiki_dbname, error_threshold.status))
 
 
 def main(
