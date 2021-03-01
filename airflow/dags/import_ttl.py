@@ -104,7 +104,7 @@ with DAG(
                                    timeout=timedelta(days=1).total_seconds(),
                                    mode='reschedule')
 
-    input_path = "{base}/{commons_ds}/wikidata-{commons_ds}-mediainfo.ttl.bz2,".format(
+    input_path = "{base}/{commons_ds}/commons-{commons_ds}-mediainfo.ttl.bz2,".format(
                  base=COMMONS_DUMP_DIR,
                  commons_ds=commons_ds,
     )

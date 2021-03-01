@@ -20,7 +20,7 @@
     "root.default",
     "/srv/deployment/wikimedia/discovery/analytics/artifacts/rdf-spark-tools-latest-jar-with-dependencies.jar",
     "--input-path",
-    "hdfs://analytics-hadoop/wmf/data/raw/commons/dumps/mediainfo-ttl/20210221/wikidata-20210221-mediainfo.ttl.bz2,",
+    "hdfs://analytics-hadoop/wmf/data/raw/commons/dumps/mediainfo-ttl/20210221/commons-20210221-mediainfo.ttl.bz2,",
     "--output-table",
     "discovery.wikibase_rdf/date=20210221/wiki=commons",
     "--skolemize",
