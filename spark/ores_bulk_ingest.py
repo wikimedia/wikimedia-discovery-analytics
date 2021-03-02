@@ -40,6 +40,9 @@ def arg_parser() -> ArgumentParser:
     parser.add_argument(
         '--ores-model', default='articletopic',
         help='ORES model to export scores for')
+    parser.add_argument(
+        '--error-threshold', default=ErrorThreshold(0.001), type=lambda x: ErrorThreshold(float(x)),
+        help='Percentage of pages with failed predictions to accept from ores')
     return parser
 
 
@@ -157,7 +160,7 @@ def fetch_scores(
     model: str,
     user_agent: str,
     namespaces: Sequence[int],
-    error_threshold=ErrorThreshold(1 / 1000),
+    error_threshold: ErrorThreshold,
 ) -> Iterator[Tuple[int, int, Mapping[str, float]]]:
     """Fetch scores for all main namespace pages of wiki."""
     # spark doesn't init logging on executors
@@ -204,7 +207,8 @@ def main(
     ores_model: str,
     user_agent: str,
     output_partition: HivePartitionWriter,
-    namespaces: Sequence[int]
+    namespaces: Sequence[int],
+    error_threshold: ErrorThreshold,
 ):
     # Basically a hack, here we create an rdd with a single row and use it to
     # run our function on the executor.  Once we have an rdd representing the
@@ -227,7 +231,8 @@ def main(
         .flatMap(lambda x: fetch_scores(
             mediawiki_host, mediawiki_dbname,
             ores_host, ores_model,
-            user_agent, namespaces))
+            user_agent, namespaces,
+            error_threshold))
     )
 
     df = spark.createDataFrame(rdd, T.StructType([  # type: ignore

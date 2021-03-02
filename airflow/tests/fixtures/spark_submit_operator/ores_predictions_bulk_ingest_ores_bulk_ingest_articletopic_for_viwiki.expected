@@ -30,6 +30,8 @@
     "discovery.ores_scores_export/wikiid=viwiki/model=articletopic/year=2021/month=1/day=1",
     "--ores-model",
     "articletopic",
+    "--error-threshold",
+    "0.001",
     "--namespace",
     "0"
 ]

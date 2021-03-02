@@ -30,6 +30,8 @@
     "discovery.ores_scores_export/wikiid=enwiki/model=drafttopic/year=2021/month=1/day=1",
     "--ores-model",
     "drafttopic",
+    "--error-threshold",
+    "0.002",
     "--namespace",
     "0",
     "1",
