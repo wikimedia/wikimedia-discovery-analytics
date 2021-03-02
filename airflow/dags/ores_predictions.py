@@ -155,7 +155,8 @@ def bulk_partition_spec(model: str, wiki: Optional[str]):
 def bulk_ingest(
     wiki: str,
     model: str,
-    namespaces: Sequence[int]
+    namespaces: Sequence[int],
+    error_threshold: float,
 ):
     return SparkSubmitOperator(
         task_id='ores_bulk_ingest_{}_for_{}'.format(model, wiki),
@@ -180,6 +181,7 @@ def bulk_ingest(
             '--mediawiki-dbname', wiki,
             '--output-partition', bulk_partition_spec(model, wiki),
             '--ores-model', model,
+            '--error-threshold', str(error_threshold),
             '--namespace'] + [str(x) for x in namespaces]
     )
 
@@ -477,15 +479,20 @@ with DAG(
 
     model = 'articletopic'
     namespaces = [0]
+    error_threshold = 0.001
     for wiki in ('arwiki', 'cswiki', 'enwiki', 'kowiki', 'testwiki', 'viwiki'):
-        last_task = last_task >> bulk_ingest(wiki, model, namespaces)
+        last_task = last_task >> bulk_ingest(wiki, model, namespaces, error_threshold)
 
     # TODO: Unclear what the proper set of namespaces is. This is the set of namespaces
     # seen in drafttopic events for january 2021.
     model = 'drafttopic'
     namespaces = [0, 1, 2, 3, 4, 5, 6, 7, 10, 11, 14, 15, 100, 118, 119, 711, 828]
+    # Drafttopic visits most pages on the wiki, errors are much more
+    # common outside the content namespaces. Increase error_threshold
+    # to help ensure it finishes eventually.
+    error_threshold = 0.002
     for wiki in ('enwiki',):
-        last_task = last_task >> bulk_ingest(wiki, model, namespaces)
+        last_task = last_task >> bulk_ingest(wiki, model, namespaces, error_threshold)
 
     extract = [
         extract_predictions(
@@ -493,14 +500,14 @@ with DAG(
             input_kind='ores_bulk_ingest',
             output_table=dag_conf('table_articletopic'),
             propagate_from_wiki='enwiki',
-            source=bulk_dag.dag_id
+            source=bulk_dag.dag_id,
         ),
         extract_predictions(
             model='drafttopic',
             input_kind='ores_bulk_ingest',
             output_table=dag_conf('table_drafttopic'),
             propagate_from_wiki=None,
-            source=bulk_dag.dag_id
+            source=bulk_dag.dag_id,
         ),
     ]
 
