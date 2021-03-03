@@ -107,6 +107,9 @@ with DAG(
         conf={
             'spark.yarn.maxAppAttempts': '1',
             'spark.dynamicAllocation.maxExecutors': '200',
+            # The output needs to be read by the druid user, sharing
+            # no groups. Make outputs world-readable.
+            'spark.hadoop.fs.permissions.umask-mode': '022',
         },
         spark_submit_env_vars={
             'PYSPARK_PYTHON': 'python3.7',

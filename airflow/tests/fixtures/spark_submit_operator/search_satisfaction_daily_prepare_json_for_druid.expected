@@ -6,6 +6,8 @@
     "--conf",
     "spark.dynamicAllocation.maxExecutors=200",
     "--conf",
+    "spark.hadoop.fs.permissions.umask-mode=022",
+    "--conf",
     "spark.yarn.maxAppAttempts=1",
     "--py-files",
     "/srv/deployment/wikimedia/discovery/analytics/spark/wmf_spark.py",
