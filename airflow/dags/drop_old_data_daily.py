@@ -127,5 +127,5 @@ with DAG(
         # we want to keep 4 partition (generated weekly). But since the data takes
         # multiple days to arrive we allow a 6 days tolerance here
         older_than_days=29 + 6,
-        checksum='d19f53f49a86f95b4d46d0bcb114e6f1',
+        checksum='b51f3fa319fc7bf71e3bc7128c855b4b',
     ) >> complete
