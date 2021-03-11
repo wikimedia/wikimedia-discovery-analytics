@@ -27,6 +27,7 @@ from pyspark.sql import SparkSession  # noqa
 all_dag_ids = [
     'cirrus_namespace_map_daily',
     'drop_old_data_daily',
+    'export_queries_to_relforge',
     'fulltext_head_queries_daily',
     'glent_weekly',
     'import_wikidata_ttl',

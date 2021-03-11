@@ -1,0 +1,144 @@
+{
+  "rows": [
+    [
+      "8271",
+      [
+        {"page_title": "first"},
+        {"page_title": "second"},
+        {"page_title": "third"},
+        {"page_title": "fourth"},
+        {"page_title": "fifth"},
+        {"page_title": "sixth"},
+        {"page_title": "seventh"},
+        {"page_title": "eighth"},
+        {"page_title": "ninth"},
+        {"page_title": "tenth"}
+      ],
+      [
+        {
+          "query_type": "full_text",
+          "indices": ["enwiki_content"],
+          "hits_total": 30,
+          "hits_returned": 21,
+          "hits_offset": 0,
+          "syntax": ["full_text", "bag_of_words"]
+        }
+      ]
+    ],
+    [
+      "1121",
+      [],
+      [
+        {
+          "query_type": "full_text",
+          "indices": ["enwiki_content"],
+          "hits_total": 0,
+          "hits_returned": 0,
+          "hits_offset": 0,
+          "syntax": ["full_text", "bag_of_words"]
+        }
+      ]
+    ]
+  ],
+  "schema": {
+    "type": "struct",
+    "fields": [
+      {
+        "name": "search_id",
+        "type": "string",
+        "nullable": false,
+        "metadata": {
+        }
+      },
+      {
+        "name":"hits",
+        "type":{
+          "type":"array",
+          "elementType":{
+            "type":"struct",
+            "fields":[
+              {
+                "name":"page_title",
+                "type":"string",
+                "nullable":false,
+                "metadata":{
+
+                }
+              }
+            ]
+          },
+          "containsNull":true
+        },
+        "nullable":false,
+        "metadata":{
+
+        }
+      },
+      {
+        "name": "elasticsearch_requests",
+        "type": {
+          "type": "array",
+          "elementType": {
+            "type": "struct",
+            "fields": [
+              {
+                "name": "query_type",
+                "type": "string",
+                "nullable": false,
+                "metadata": {
+                }
+              },
+              {
+                "name": "indices",
+                "type": {
+                  "type": "array",
+                  "elementType": "string",
+                  "containsNull": true
+                },
+                "nullable": false,
+                "metadata": {
+                }
+              },
+              {
+                "name": "hits_total",
+                "type": "long",
+                "nullable": false,
+                "metadata": {
+                }
+              },
+              {
+                "name": "hits_returned",
+                "type": "long",
+                "nullable": false,
+                "metadata": {
+                }
+              },
+              {
+                "name": "hits_offset",
+                "type": "long",
+                "nullable": false,
+                "metadata": {
+                }
+              },
+              {
+                "name": "syntax",
+                "type": {
+                  "type": "array",
+                  "elementType": "string",
+                  "containsNull": true
+                },
+                "nullable": false,
+                "metadata": {
+                }
+              }
+            ]
+          },
+          "containsNull": true
+        },
+        "nullable": false,
+        "metadata": {
+        }
+      }
+    ]
+  }
+}

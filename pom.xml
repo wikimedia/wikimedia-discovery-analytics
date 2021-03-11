@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.wikimedia.discovery</groupId>
+        <artifactId>discovery-parent-pom</artifactId>
+        <version>1.46</version>
+    </parent>
+    <groupId>org.wikimedia.search</groupId>
+    <artifactId>analytics-deps</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+
+    <name>analytics-deps</name>
+    <description>Analytics java dependencies downloader</description>
+
+    <properties>
+        <elasticsearch.version>6.5.4</elasticsearch.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.elasticsearch</groupId>
+            <artifactId>elasticsearch-hadoop</artifactId>
+            <version>${elasticsearch.version}</version>
+        </dependency>
+    </dependencies>
+</project>
