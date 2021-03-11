@@ -30,6 +30,7 @@ def arg_parser() -> ArgumentParser:
     parser.add_argument('--elastic-host', required=True)
     parser.add_argument('--elastic-port', required=True)
     parser.add_argument('--elastic-index', required=True)
+    parser.add_argument('--elastic-template', required=True)
     parser.add_argument('--no-ssl', required=False, dest='use_ssl', action='store_false')
     parser.set_defaults(use_ssl=True)
 
