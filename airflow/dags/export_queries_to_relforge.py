@@ -53,6 +53,7 @@ with DAG(
             'REQUESTS_CA_BUNDLE': '/etc/ssl/certs/ca-certificates.crt',
         },
         jars=REPO_PATH + '/artifacts/elasticsearch-hadoop-6.5.4.jar',
+        files=REPO_PATH + '/spark/resources/queries_index_settings.json',
         py_files=REPO_PATH + '/spark/wmf_spark.py',
         application=REPO_PATH + '/spark/export_queries_to_relforge.py',
         application_args=[

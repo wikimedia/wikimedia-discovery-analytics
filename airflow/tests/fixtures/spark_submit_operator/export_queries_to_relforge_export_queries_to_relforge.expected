@@ -11,6 +11,8 @@
     "spark.executorEnv.REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt",
     "--conf",
     "spark.yarn.appMasterEnv.REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt",
+    "--files",
+    "/srv/deployment/wikimedia/discovery/analytics/spark/resources/queries_index_settings.json",
     "--py-files",
     "/srv/deployment/wikimedia/discovery/analytics/spark/wmf_spark.py",
     "--jars",

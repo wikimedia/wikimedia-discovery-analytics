@@ -20,7 +20,7 @@ from wmf_spark import HivePartition
 
 from pyspark.sql import DataFrame, SparkSession, functions as F, types as T
 
-INDEX_CONFIG_PATH = 'resources/queries_index_settings.json'
+INDEX_CONFIG = 'queries_index_settings.json'
 
 
 def arg_parser() -> ArgumentParser:
@@ -128,7 +128,7 @@ def initialize_index_template(elastic_host: str, elastic_port: str, elastic_temp
     template_url = ('https://' if use_ssl else "http://") + elastic_host.split(",")[0] + ':' \
         + str(elastic_port) + '/_template/' + elastic_template
 
-    with open(INDEX_CONFIG_PATH) as f:
+    with open(INDEX_CONFIG) as f:
         data = json.load(f)
         requests.put(template_url, json=data)
 
