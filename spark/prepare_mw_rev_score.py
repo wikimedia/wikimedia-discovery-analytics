@@ -232,7 +232,7 @@ def load_mediawiki_revision_score(
         F.col('scores')[prediction].probability.alias('probability'))
 
 
-def load_ores_scores_export(
+def load_ores_bulk_ingest(
     df: DataFrame, prediction: str
 ) -> DataFrame:
     """Load probabilities from bulk export
@@ -248,7 +248,7 @@ def load_ores_scores_export(
 
 INPUT_KINDS = {
     'mediawiki_revision_score': load_mediawiki_revision_score,
-    'ores_scores_export': load_ores_scores_export,
+    'ores_bulk_ingest': load_ores_bulk_ingest,
 }
 
 
