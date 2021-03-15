@@ -47,10 +47,8 @@ from wmf_spark import HivePartition
 
 
 def str_to_dt(val: str) -> datetime:
-    # Only accept time precision in hours, as that is the minimum
-    # partitioning granularity we use, but use full iso-8601
-    # matching airflow `ts` formatting for sanity purposes.
-    return datetime.strptime(val, '%Y-%m-%dT%H:00:00+00:00')
+    # full iso-8601 matching airflow `ts` formatting for sanity purposes.
+    return datetime.strptime(val, '%Y-%m-%dT%H:%M:%S+00:00')
 
 
 def arg_parser() -> ArgumentParser:
