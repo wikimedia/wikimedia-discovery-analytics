@@ -14,3 +14,5 @@ venv
 venv.zip
 .idea/
 target/
+airflow/coverage.xml
+coverage.xml
