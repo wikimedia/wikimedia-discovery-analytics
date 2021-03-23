@@ -22,7 +22,7 @@ DAG to pick up.
 """
 from datetime import datetime
 import os
-from typing import List, Optional, Sequence
+from typing import List, Optional
 
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
@@ -139,6 +139,10 @@ def fetch_thresholds(model: str):
 
 
 def bulk_partition_spec(model: str, wiki: Optional[str]):
+    # Worth noting that the actual partitioning also includes the namespace,
+    # but we ignore it. The spark integration will still correctly store
+    # the underlying data partitioned by namespaces since the script includes
+    # the page_namespace column for us.
     if wiki is None:
         # Reads are all wikis at once
         tmpl = '{table}/model={model}/{ymd}'
@@ -155,11 +159,11 @@ def bulk_partition_spec(model: str, wiki: Optional[str]):
 def bulk_ingest(
     wiki: str,
     model: str,
-    namespaces: Sequence[int],
+    namespace: int,
     error_threshold: float,
 ):
     return SparkSubmitOperator(
-        task_id='ores_bulk_ingest_{}_for_{}'.format(model, wiki),
+        task_id='ores_bulk_ingest_{}_for_{}_ns_{}'.format(model, wiki, namespace),
         name='airflow: ores_bulk_ingest {} for {}'.format(model, wiki),
         archives='{{ wmf_conf.venv_path }}/ores_bulk_ingest.venv.zip#venv',
         conf={
@@ -182,7 +186,8 @@ def bulk_ingest(
             '--output-partition', bulk_partition_spec(model, wiki),
             '--ores-model', model,
             '--error-threshold', str(error_threshold),
-            '--namespace'] + [str(x) for x in namespaces]
+            '--namespace', str(namespace),
+        ]
     )
 
 
@@ -242,7 +247,7 @@ def extract_predictions(
 
 # Manually triggered dag to initialize deployment
 with DAG(
-    'ores_predictions_v3_init',
+    'ores_predictions_v4_init',
     default_args={
         # Start any time after being deployed and enabled
         'start_date': datetime(2021, 1, 1),
@@ -267,10 +272,6 @@ with DAG(
     HiveOperator(
         task_id='create_tables',
         hql="""
-            -- table is changing its partitioning, move the old one out of the way
-            -- to be manually deleted
-            ALTER TABLE {{ dag_conf.table_articletopic }} RENAME TO {{ dag_conf.table_articletopic }}_old;
-
             CREATE TABLE IF NOT EXISTS {{ dag_conf.table_articletopic }} (
                 {{ col_wikiid }},
                 {{ col_page_id }},
@@ -286,9 +287,6 @@ with DAG(
             LOCATION '{{ wmf_conf.data_path }}/{{ dag_conf.rel_path_articletopic }}'
             ;
 
-            -- table is changing its partitioning, move the old one out of the way
-            -- to be manually deleted
-            ALTER TABLE {{ dag_conf.table_drafttopic }} RENAME TO {{ dag_conf.table_drafttopic }}_old;
             CREATE TABLE IF NOT EXISTS {{ dag_conf.table_drafttopic }} (
                 {{ col_wikiid }},
                 {{ col_page_id }},
@@ -304,17 +302,15 @@ with DAG(
             LOCATION '{{ wmf_conf.data_path }}/{{ dag_conf.rel_path_drafttopic }}'
             ;
 
-            -- Not used directly from dag, populated by spark/ores_bulk_ingest.py.
-            -- Contains raw predictions exported by ores prior to thresholding
-            -- and propagation.
+            ALTER TABLE {{ dag_conf.table_scores_export }} RENAME TO {{ dag_conf.table_scores_export }}_old;
             CREATE TABLE IF NOT EXISTS {{ dag_conf.table_scores_export }} (
                 {{ col_page_id }},
-                {{ col_page_namespace }},
                 `probability` map<string,float> COMMENT 'predicted classification as key, confidence as value'
             )
             PARTITIONED BY (
                 {{ col_wikiid }},
                 `model` string COMMENT 'ORES model that produced predictions',
+                {{ col_page_namespace }},
                 {{ cols_ymd }}
             )
             STORED AS PARQUET
@@ -475,24 +471,32 @@ with DAG(
     # rejecting requests. This means our dump, proxying through a single host,
     # has to run a single task a time. To keep things simple we use a
     # straight-line dag to force sequential execution.
-    last_task = wait_for_thresholds
+    def bulk_ingest_wikis(last_task, wikis, model, namespaces, error_threshold):
+        for wiki in wikis:
+            # We run a task per namespace to avoid having a single week long task for enwiki
+            # when many namespaces are requested.
+            for namespace in namespaces:
+                last_task = last_task >> bulk_ingest(wiki, model, namespace, error_threshold)
+        return last_task
 
-    model = 'articletopic'
-    namespaces = [0]
-    error_threshold = 0.001
-    for wiki in ('arwiki', 'cswiki', 'enwiki', 'kowiki', 'testwiki', 'viwiki'):
-        last_task = last_task >> bulk_ingest(wiki, model, namespaces, error_threshold)
+    last_task = bulk_ingest_wikis(
+        wait_for_thresholds,
+        wikis=['arwiki', 'cswiki', 'enwiki', 'kowiki', 'testwiki', 'viwiki'],
+        model='articletopic',
+        namespaces=[0],
+        error_threshold=0.001)
 
-    # TODO: Unclear what the proper set of namespaces is. This is the set of namespaces
-    # seen in drafttopic events for january 2021.
-    model = 'drafttopic'
-    namespaces = [0, 1, 2, 3, 4, 5, 6, 7, 10, 11, 14, 15, 100, 118, 119, 711, 828]
-    # Drafttopic visits most pages on the wiki, errors are much more
-    # common outside the content namespaces. Increase error_threshold
-    # to help ensure it finishes eventually.
-    error_threshold = 0.002
-    for wiki in ('enwiki',):
-        last_task = last_task >> bulk_ingest(wiki, model, namespaces, error_threshold)
+    last_task = bulk_ingest_wikis(
+        last_task,
+        wikis=['enwiki'],
+        model='drafttopic',
+        # TODO: Unclear what the proper set of namespaces is. This is the set of namespaces
+        # seen in drafttopic events for january 2021.
+        namespaces=[0, 1, 2, 3, 4, 5, 6, 7, 10, 11, 14, 15, 100, 118, 119, 711, 828],
+        # Drafttopic visits most pages on the wiki, errors are much more
+        # common outside the content namespaces. Increase error_threshold
+        # to help ensure it finishes eventually.
+        error_threshold=0.002)
 
     extract = [
         extract_predictions(

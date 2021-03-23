@@ -35,7 +35,7 @@ all_dag_ids = [
     'mediawiki_revision_recommendation_create_hourly',
     'import_commons_ttl',
     'mjolnir',
-    'ores_predictions_v3_init',
+    'ores_predictions_v4_init',
     'ores_predictions_hourly',
     'ores_predictions_daily',
     'ores_predictions_wbitem',
