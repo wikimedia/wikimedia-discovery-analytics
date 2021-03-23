@@ -29,5 +29,7 @@
     "--input-partition",
     "20200502",
     "--output-path",
-    "hdfs://analytics-hadoop/tmp/glent_weekly_2020-04-25/esbulk"
+    "hdfs://analytics-hadoop/tmp/glent_weekly_2020-04-25/esbulk",
+    "--version-marker",
+    "20200502"
 ]

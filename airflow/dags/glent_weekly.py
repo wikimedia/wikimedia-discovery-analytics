@@ -266,6 +266,7 @@ with DAG(
             '--input-table', TABLE_SUGGESTIONS,
             '--input-partition', CUR_PARTITION,
             '--output-path', TEMP_ESBULK_DIR,
+            '--version-marker', CUR_PARTITION,
         ])
 
     swift_upload = SwiftUploadOperator(
