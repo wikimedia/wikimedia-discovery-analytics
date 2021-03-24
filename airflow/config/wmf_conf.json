@@ -6,7 +6,7 @@
         "mariadb_credentials_path": "/etc/mysql/conf.d/analytics-search-client.cnf",
         "mediawiki_config_path": "/srv/mediawiki-config",
         "analytics_refinery_path": "/srv/deployment/analytics/refinery",
-        "mediawiki_active_datacenter": "codfw",
+        "mediawiki_active_datacenter": "eqiad",
         "data_path": "hdfs:///wmf/data/discovery",
         "venv_path": "hdfs:///wmf/discovery/spark_venv/2021-02-23T18.27.24-c2190da"
     }
