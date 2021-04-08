@@ -4,7 +4,7 @@
     "mediawiki_cirrussearch_request": "event.mediawiki_cirrussearch_request",
     "elastic_host": "relforge1003.eqiad.wmnet,relforge1004.eqiad.wmnet",
     "elastic_port": "9243",
-    "elastic_index": "joined_queries-*{dt|yyyyMMdd}/_doc",
+    "elastic_index": "joined_queries-{dt|yyyyMMdd}/_doc",
     "elastic_template": "joined_queries"
   }
 }

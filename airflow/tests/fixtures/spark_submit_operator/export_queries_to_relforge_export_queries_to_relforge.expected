@@ -31,7 +31,7 @@
     "--elastic-port",
     "9243",
     "--elastic-index",
-    "joined_queries-*{dt|yyyyMMdd}/_doc",
+    "joined_queries-{dt|yyyyMMdd}/_doc",
     "--elastic-template",
     "joined_queries"
 ]
