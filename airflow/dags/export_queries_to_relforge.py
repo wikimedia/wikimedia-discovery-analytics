@@ -18,9 +18,9 @@ SEARCH_SATISFACTION_TABLE = dag_conf('table_search_satisfaction')
 CIRRUSSEARCH_REQUEST_TABLE = dag_conf('mediawiki_cirrussearch_request')
 
 
-def get_wait_sensor(table: str) -> NamedHivePartitionSensor:
+def get_wait_sensor(table: str, sensor_name: str) -> NamedHivePartitionSensor:
     return NamedHivePartitionSensor(
-        task_id='wait_for_data',
+        task_id='wait_for_data_in_{}'.format(sensor_name),
         # We send a failure email every 6 hours and keep trying for a full day.
         timeout=60 * 60 * 6,
         retries=4,
@@ -67,8 +67,10 @@ with DAG(
 
     )
 
-    wait_for_search_satisfaction_data = get_wait_sensor(SEARCH_SATISFACTION_TABLE)
-    wait_for_cirrussearch_data = get_wait_sensor(CIRRUSSEARCH_REQUEST_TABLE)
+    wait_for_search_satisfaction_data = get_wait_sensor(SEARCH_SATISFACTION_TABLE,
+                                                        'search_satisfaction')
+    wait_for_cirrussearch_data = get_wait_sensor(CIRRUSSEARCH_REQUEST_TABLE,
+                                                 'cirrussearch_request')
     complete = DummyOperator(task_id='complete')
 
     [wait_for_search_satisfaction_data, wait_for_cirrussearch_data] \
