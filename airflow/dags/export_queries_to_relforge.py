@@ -11,7 +11,7 @@ dag_conf = DagConf('export_queries_to_relforge_conf')
 
 # Default kwargs for all Operators
 default_args = {
-    'start_date': datetime(2020, 12, 12)
+    'start_date': datetime(2021, 1, 10)
 }
 
 SEARCH_SATISFACTION_TABLE = dag_conf('table_search_satisfaction')
