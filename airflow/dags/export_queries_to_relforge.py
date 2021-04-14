@@ -36,7 +36,7 @@ with DAG(
         'export_queries_to_relforge',
         default_args=default_args,
         # min hour day month dow
-        schedule_interval='38 5 * * *',
+        schedule_interval='38 * * * *',
         max_active_runs=1,
         catchup=True
 ) as dag:
