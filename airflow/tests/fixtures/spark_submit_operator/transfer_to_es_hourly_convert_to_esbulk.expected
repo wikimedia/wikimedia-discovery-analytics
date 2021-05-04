@@ -6,6 +6,8 @@
     "--conf",
     "spark.dynamicAllocation.maxExecutors=25",
     "--conf",
+    "spark.executor.memoryOverhead=512",
+    "--conf",
     "spark.yarn.maxAppAttempts=1",
     "--py-files",
     "/srv/deployment/wikimedia/discovery/analytics/spark/wmf_spark.py",

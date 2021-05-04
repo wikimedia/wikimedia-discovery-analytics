@@ -35,6 +35,7 @@ def convert_and_upload(
         conf={
             'spark.yarn.maxAppAttempts': '1',
             'spark.dynamicAllocation.maxExecutors': '25',
+            'spark.executor.memoryOverhead': '512'
         },
         spark_submit_env_vars={
             'PYSPARK_PYTHON': 'python3.7',
