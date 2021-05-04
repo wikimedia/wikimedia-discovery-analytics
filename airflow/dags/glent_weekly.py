@@ -28,7 +28,7 @@ TABLE_M0_PREP = dag_conf('table_m0_prep')
 TABLE_M1_PREP = dag_conf('table_m1_prep')
 TABLE_SUGGESTIONS = dag_conf('table_suggestions')
 
-GLENT_JAR_PATH = REPO_PATH + '/artifacts/glent-0.2.3-jar-with-dependencies.jar'
+GLENT_JAR_PATH = REPO_PATH + '/artifacts/glent-latest-jar-with-dependencies.jar'
 
 # Temporary paths for each run, deleted after dagrun is done (success or fail)
 TEMP_DIR = dag_conf('base_temp_dir') + '/{{ dag.dag_id }}_{{ ds }}'
