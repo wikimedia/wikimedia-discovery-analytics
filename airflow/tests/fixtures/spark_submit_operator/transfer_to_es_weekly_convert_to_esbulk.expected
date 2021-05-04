@@ -6,7 +6,7 @@
     "--conf",
     "spark.dynamicAllocation.maxExecutors=25",
     "--conf",
-    "spark.executor.memoryOverhead=512",
+    "spark.executor.memoryOverhead=768",
     "--conf",
     "spark.yarn.maxAppAttempts=1",
     "--py-files",
