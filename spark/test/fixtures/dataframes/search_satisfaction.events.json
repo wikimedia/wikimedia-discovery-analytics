@@ -1,7 +1,7 @@
 {
   "rows": [
     [
-      "2021-02-09T09:33:10Z",
+      "2021-02-09T09:34:10Z",
       {
         "action": "searchResultPage",
         "source": "fulltext",
@@ -12,10 +12,13 @@
       {
         "is_bot": false
       },
+      {
+        "dt": "2021-02-09T09:33:10Z"
+      },
       "enwiki"
     ],
     [
-      "2021-02-09T09:33:10Z",
+      "2021-02-09T09:32:10Z",
       {
         "action": "searchResultPage",
         "source": "fulltext",
@@ -26,10 +29,13 @@
       {
         "is_bot": false
       },
+      {
+        "dt": "2021-02-09T09:33:10Z"
+      },
       "enwiki"
     ],
     [
-      "2021-01-09T09:33:10Z",
+      "2021-01-09T09:33:30Z",
       {
         "action": "searchResultPage",
         "source": "fulltext",
@@ -40,10 +46,13 @@
       {
         "is_bot": false
       },
+      {
+        "dt": "2021-01-09T09:33:10Z"
+      },
       "enwiki"
     ],
     [
-      "2021-01-09T09:33:10Z",
+      "2021-01-09T09:32:10Z",
       {
         "action": "click",
         "source": "fulltext",
@@ -53,6 +62,9 @@
       },
       {
         "is_bot": false
+      },
+      {
+        "dt": "2021-01-09T09:33:10Z"
       },
       "enwiki"
     ]
@@ -131,6 +143,25 @@
         "metadata": {
         }
       },
+      {
+        "name": "meta",
+        "type": {
+          "type": "struct",
+          "fields": [
+            {
+              "name": "dt",
+              "type": "string",
+              "nullable":false,
+              "metadata": {
+              }
+            }
+          ]
+        },
+        "nullable":false,
+        "metadata": {
+        }
+      }
+      ,
       {
         "name": "wiki",
         "type": "string",
