@@ -11,7 +11,7 @@ dag_conf = DagConf('export_queries_to_relforge_conf')
 
 # Default kwargs for all Operators
 default_args = {
-    'start_date': datetime(2021, 1, 14)
+    'start_date': datetime(2021, 2, 17)
 }
 
 SEARCH_SATISFACTION_TABLE = dag_conf('table_search_satisfaction')
@@ -24,7 +24,8 @@ def get_wait_sensor(table: str, sensor_name: str) -> NamedHivePartitionSensor:
         # We send a failure email every 6 hours and keep trying for a full day.
         timeout=60 * 60 * 6,
         retries=4,
-        sla=timedelta(hours=6),
+        # temporary sla change to accomodate the catchup, should be reverted afterwards
+        sla=timedelta(days=365),
         # Select single hourly partition
         partition_names=[
             '{}/datacenter={}/{}'.format(

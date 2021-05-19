@@ -23,15 +23,15 @@
     "root.default",
     "/srv/deployment/wikimedia/discovery/analytics/spark/export_queries_to_relforge.py",
     "--search-satisfaction-partition",
-    "event.searchsatisfaction/year=2021/month=1/day=14/hour=0",
+    "event.searchsatisfaction/year=2021/month=2/day=17/hour=0",
     "--cirrus-events-partition",
-    "event.mediawiki_cirrussearch_request/year=2021/month=1/day=14/hour=0",
+    "event.mediawiki_cirrussearch_request/year=2021/month=2/day=17/hour=0",
     "--elastic-host",
     "relforge1003.eqiad.wmnet,relforge1004.eqiad.wmnet",
     "--elastic-port",
     "9243",
     "--elastic-index",
-    "joined_queries-{dt|yyyyMMdd}/_doc",
+    "joined_queries-{dt|yyyyMM}/_doc",
     "--elastic-template",
     "joined_queries"
 ]

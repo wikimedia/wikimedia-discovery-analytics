@@ -84,7 +84,7 @@ def extract_main_search_request(requests: Sequence[Mapping], wiki: str) -> Optio
 
 
 EXTRACT_MAP = {
-    'dt': 'dt',
+    'meta.dt': 'dt',
     'event.query': 'query',
     'event.hitsReturned': 'hits_total',
     'useragent.is_bot': 'is_bot',
@@ -105,7 +105,7 @@ def extract_from_joined_dfs(cirrus_search_request_df: DataFrame, search_satisfac
         .filter(F.col('event.action') == 'searchResultPage')
         .filter(F.col('event.source') == 'fulltext')
         .dropDuplicates(['event'])
-        .select(F.col('dt'), F.col('event'), F.col('useragent'), F.col('wiki'))
+        .select(F.col('event'), F.col('useragent'), F.col('wiki'), F.col('meta'))
     )
     df_be = (
         cirrus_search_request_df
