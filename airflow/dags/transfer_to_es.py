@@ -48,7 +48,8 @@ with DAG(
 
     convert, upload = convert_and_upload(
         'hourly',
-        'freq=hourly/hour={{ execution_date.hour }}')
+        'freq=hourly/hour={{ execution_date.hour }}',
+        'swift.search_updates_prioritized.upload-complete')
 
     sensors >> convert >> upload >> DummyOperator(task_id='complete')
 

@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Union
 
 from airflow.models.baseoperator import BaseOperator
 
@@ -15,12 +15,26 @@ dag_conf = DagConf('transfer_to_es_conf')
 def convert_and_upload(
     convert_config: str,
     rel_path: str,
+    event_stream: Union[bool, str] = True,
 ) -> Tuple[BaseOperator, BaseOperator]:
     """Create operators to apply convert_to_esbulk and ship to prod
 
     First returned operator is convert, second is upload.  Returned operators
     are not connected, caller is responsible to set upstream and downstream as
     appropriate for their use case.
+
+    Parameters
+    ----------
+    convert_config
+        Named configuration of convert_to_esbulk to use
+    rel_path
+        Used in the output path for intermediate data. Should be unique
+        per use case.
+    event_stream
+        Set this to False to disable sending of events. Otherwise,
+        this will be used as the value of meta.stream in the produced
+        swift/upload/complete event. If not set, this will default to
+        swift.<container>.upload-complete.
     """
     # TODO: Nothing cleans up old data on this path yet, we use date={{ ds_nodash }} in front so
     # we at least have a clear way to implement it.
@@ -56,6 +70,7 @@ def convert_and_upload(
         source_directory=path_out,
         swift_object_prefix='{{ ds_nodash }}',
         swift_overwrite=True,
-        event_per_object=True)
+        event_per_object=True,
+        event_stream=event_stream)
 
     return convert, upload
