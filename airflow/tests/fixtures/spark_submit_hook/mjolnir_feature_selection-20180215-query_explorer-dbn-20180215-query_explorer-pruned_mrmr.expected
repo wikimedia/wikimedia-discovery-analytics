@@ -25,7 +25,7 @@
     "--jars",
     "hdfs://analytics-hadoop/wmf/refinery/current/artifacts/refinery-hive.jar",
     "--packages",
-    "org.wikimedia.search:mjolnir:0.5-SNAPSHOT,sramirez:spark-infotheoretic-feature-selection:1.4.4,sramirez:spark-MDLP-discretization:1.4.1",
+    "org.wikimedia.search:mjolnir:0.7,sramirez:spark-infotheoretic-feature-selection:1.4.4,sramirez:spark-MDLP-discretization:1.4.1",
     "--driver-memory",
     "6g",
     "--name",
