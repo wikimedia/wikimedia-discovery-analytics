@@ -21,7 +21,7 @@
     "--conf",
     "spark.yarn.maxAppAttempts=1",
     "--archives",
-    "hdfs://analytics-hadoop/user/ebernhardson/mjolnir_venv.zip#mjolnir_venv",
+    "/srv/deployment/wikimedia/discovery/analytics/environments/mjolnir/venv.zip#mjolnir_venv",
     "--jars",
     "hdfs://analytics-hadoop/wmf/refinery/current/artifacts/refinery-hive.jar",
     "--packages",

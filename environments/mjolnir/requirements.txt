@@ -1,0 +1,3 @@
+wmf_mjolnir==1.0
+python-logstash==0.4.6
+python-snappy
