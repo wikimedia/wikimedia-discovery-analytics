@@ -68,8 +68,10 @@ def convert_and_upload(
         task_id='upload_to_swift',
         swift_container=dag_conf('swift_container'),
         source_directory=path_out,
-        swift_object_prefix='{{ ds_nodash }}',
-        swift_overwrite=True,
+        swift_object_prefix='{{ ds_nodash }}T{{ execution_date.hour }}/' + rel_path,
+        # Auto versioning will add a timestamp to the prefix, ensuring
+        # retrying a task uploads to a different prefix
+        swift_auto_version=True,
         event_per_object=True,
         event_stream=event_stream)
 
