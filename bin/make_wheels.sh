@@ -35,7 +35,7 @@ header() {
     echo
 }
 
-echo "Looking for environments in ${BASE}/environments/*"
+echo "Looking for environments in ${1:-${BASE}/environments/*}"
 for ENV_DIR in ${1:-${BASE}/environments/*}; do
     ENV_NAME="$(basename "$ENV_DIR")"
     REQUIREMENTS="${ENV_DIR}/requirements.txt"
@@ -54,9 +54,11 @@ for ENV_DIR in ${1:-${BASE}/environments/*}; do
         # Install the frozen requirements first to avoid unnecessary upgrades.
         # To remove a package it must be deleted from both requirements files.
         if [ -e "${REQUIREMENTS_FROZEN}" ]; then
-            $PIP install -r "${REQUIREMENTS_FROZEN}"
+            $PIP install --find-links "${WHEEL_DIR}" \
+                --requirement "${REQUIREMENTS_FROZEN}"
         fi
-        $PIP install -r "${REQUIREMENTS}"
+        $PIP install --find-links "${WHEEL_DIR}" \
+            --requirement "${REQUIREMENTS}"
         $PIP freeze --local | grep -v pkg-resources > "${REQUIREMENTS_FROZEN}"
         $PIP install wheel
         $PIP wheel --find-links "${WHEEL_DIR}" \

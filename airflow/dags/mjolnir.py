@@ -42,8 +42,7 @@ TABLES = {
 
 # Paths to deployed resources for MjolnirOperator
 deploys = {
-    # TODO: decide how, when and where to deploy the mjolnir venv
-    'mjolnir_venv': NAME_NODE + '/user/ebernhardson/mjolnir_venv.zip',
+    'mjolnir_venv': REPO_PATH + '/environments/mjolnir/venv.zip',
     'refinery': NAME_NODE + '/wmf/refinery/current',
     'discovery-analytics': REPO_PATH,
 }
