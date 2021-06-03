@@ -96,7 +96,7 @@ if __name__ == "__main__":
                 print("Remote wheel does not match local: %s (remote) != %s (local)" % (repo_sha1, local_sha1))
                 print("Downloading repo wheel from: %s" % (url))
                 if not DRY_RUN:
-                    urllib.urlretrieve(url, path)
+                    urllib2.urlretrieve(url, path)
         else:
             mvn_deploy_file(
                 repositoryId='archiva.python', url=REPO, file=path,
