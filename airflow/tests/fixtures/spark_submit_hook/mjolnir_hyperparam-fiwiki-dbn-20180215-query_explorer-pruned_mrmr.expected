@@ -29,7 +29,7 @@
     "--jars",
     "hdfs://analytics-hadoop/wmf/refinery/current/artifacts/refinery-hive.jar",
     "--packages",
-    "org.wikimedia.search:mjolnir:0.5-SNAPSHOT",
+    "org.wikimedia.search:mjolnir:0.7",
     "--driver-memory",
     "3g",
     "--name",

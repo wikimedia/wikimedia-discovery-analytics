@@ -250,7 +250,7 @@ class MjolnirOperator(BaseOperator, LoggingMixin):
         args['archives'] = '{}#mjolnir_venv'.format(self._deploys['mjolnir_venv'])
         args['driver_memory'] = '2g'
         # mjolnir jvm helpers
-        args['packages'] = 'org.wikimedia.search:mjolnir:0.5-SNAPSHOT'
+        args['packages'] = 'org.wikimedia.search:mjolnir:0.7'
         # Pull in analytics/refinery-hive for some UDF's
         args['jars'] = os.path.join(
             self._deploys['refinery'], 'artifacts/refinery-hive.jar')
