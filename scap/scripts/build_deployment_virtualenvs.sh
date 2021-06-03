@@ -49,6 +49,16 @@ for ENV_DIR in ${ENVIRONMENTS_DIR}/*; do
             pipargs="--no-index"
         fi
 
+        # Install pip and wheel. Debian 10.9 systems with pip 18 fail to
+        # install some binary wheels and need the update.
+        $PIP install \
+            -vv \
+            $pipargs \
+            --find-links "$WHEEL_DIR" \
+            --upgrade \
+            --force-reinstall \
+            pip wheel
+
         # Install our packages
         $PIP install \
             -vv \
