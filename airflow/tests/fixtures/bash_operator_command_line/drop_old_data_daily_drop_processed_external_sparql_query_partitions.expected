@@ -1,0 +1,1 @@
+"/usr/bin/env 'PYTHONPATH=/srv/deployment/analytics/refinery/python/' '/srv/deployment/wikimedia/discovery/analytics/environments/refinery/venv/bin/python' '/srv/deployment/analytics/refinery/bin/refinery-drop-older-than' --verbose --database=discovery '--tables=^(processed_external_sparql_query)$' --older-than=90 --execute=6fa0b352b56bae3b76e61794e1a43611"

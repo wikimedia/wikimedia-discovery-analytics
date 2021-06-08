@@ -1,0 +1,36 @@
+
+CREATE TABLE IF NOT EXISTS discovery.processed_external_sparql_query (
+    `id`                string  COMMENT 'Query Id',
+    `query`             string  COMMENT 'The sparql query',
+    `query_time`        bigint  COMMENT 'Time taken to run the query',
+    `query_time_class`  string  COMMENT 'Bucketed time taken to run the query',
+    `ua`                string  COMMENT 'User agent',
+    `q_info`            struct<
+                            queryReprinted: string,
+                            opList: array<string>,
+                            operators: map<string, bigint>,
+                            prefixes: map<string, bigint>,
+                            nodes: map<string, bigint>,
+                            services: map<string, bigint>,
+                            wikidataNames: map<string, bigint>,
+                            expressions: map<string, bigint>,
+                            paths: map<string, bigint>,
+                            triples: array<
+                                struct<
+                                    subjectNode: struct<nodeType: string,nodeValue: string>,
+                                    predicateNode: struct<nodeType: string,nodeValue: string>,
+                                    objectNode: struct<nodeType: string,nodeValue: string>
+                                    >
+                                >
+                            >
+                                COMMENT 'Extracted information from the query string'
+)
+PARTITIONED BY (
+    `year`              int     COMMENT 'Unpadded year of queries',
+    `month`             int     COMMENT 'Unpadded month of queries',
+    `day`               int     COMMENT 'Unpadded day of queries',
+    `hour`              int     COMMENT 'Unpadded hour of queries',
+    `wiki`              string  COMMENT 'Wiki name: one of {wikidata, commons}'
+)
+STORED AS PARQUET
+LOCATION 'hdfs:///wmf/data/discovery/query_service/processed_external_sparql_query'

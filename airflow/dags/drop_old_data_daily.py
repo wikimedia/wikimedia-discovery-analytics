@@ -129,3 +129,11 @@ with DAG(
         older_than_days=29 + 6,
         checksum='b51f3fa319fc7bf71e3bc7128c855b4b',
     ) >> complete
+
+    refinery_drop_older_than(
+        task_id='drop_processed_external_sparql_query_partitions',
+        database='discovery',
+        tables=["processed_external_sparql_query"],
+        older_than_days=90,
+        checksum='6fa0b352b56bae3b76e61794e1a43611',
+    ) >> complete
