@@ -13,7 +13,7 @@ from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 from wmf_airflow import DAG
 from wmf_airflow.spark_submit import SparkSubmitOperator
 from wmf_airflow.template import \
-    MEDIAWIKI_ACTIVE_DC, REPO_PATH, YMDH_PARTITION, DagConf
+    REPO_PATH, YMDH_PARTITION, DagConf, eventgate_partitions
 
 
 dag_conf = DagConf('mediawiki_revision_recommendation_create_hourly_conf')
@@ -72,10 +72,7 @@ with DAG(
         retries=4,
         email_on_retry=True,
         # Select single hourly partition
-        partition_names=[
-            '{}/datacenter={}/{}'.format(
-                INPUT_TABLE, MEDIAWIKI_ACTIVE_DC, YMDH_PARTITION)
-        ])
+        partition_names=eventgate_partitions(INPUT_TABLE))
 
     # Extract the data from mediawiki event logs and put into
     # a format suitable for shipping to elasticsearch.

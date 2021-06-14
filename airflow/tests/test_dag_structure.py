@@ -19,8 +19,11 @@ import jinja2
 import pendulum
 import pytest
 from wmf_airflow.spark_submit import SparkSubmitOperator
+from wmf_airflow.template import TemplatedSeq
 
-from conftest import airflow_variables_dir, all_dag_ids, all_tasks, tasks
+from conftest import (
+    all_template_fields, airflow_variables_dir, all_dag_ids, all_tasks, tasks)
+
 
 bag = DagBag()
 
@@ -255,6 +258,13 @@ def _sort_items_recursive(maybe_dict):
         return OrderedDict(sorted(items, key=lambda x: x[0]))
     else:
         return maybe_dict
+
+
+@pytest.mark.parametrize('task,field_name', all_template_fields(TemplatedSeq))
+def test_templated_seq_against_fixtures(task, rendered_task, field_name, fixture_factory):
+    fixture = '{}-{}-{}'.format(task.dag_id, task.task_id, field_name)
+    comparer = fixture_factory('templated_seq', fixture)
+    comparer(list(getattr(rendered_task, field_name)))
 
 
 def parse_mem(mem_spec: str) -> int:
