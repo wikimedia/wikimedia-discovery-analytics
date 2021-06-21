@@ -1,0 +1,8 @@
+{
+    "process_sparql_query_conf": {
+        "event_sparql_query_table": "event.wdqs_external_sparql_query",
+        "discovery_processed_sparql_query_table": "discovery.processed_external_sparql_query",
+        "rel_processed_sparql_query_location": "query_service/processed_external_sparql_query",
+        "wiki": "wikidata"
+    }
+}

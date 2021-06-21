@@ -46,6 +46,8 @@ all_dag_ids = [
     'transfer_to_es_weekly',
     'mediawiki_revision_recommendation_create_hourly',
     'import_ttl_init',
+    'process_sparql_query_init',
+    'process_sparql_query_hourly'
 ]
 
 
