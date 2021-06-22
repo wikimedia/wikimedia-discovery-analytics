@@ -75,6 +75,7 @@ def configure_airflow_variables():
 class FixtureSerDe:
     encode: Callable[[TextIO, Any], None]
     decode: Callable[[TextIO], Any]
+    roundtrip: Callable[[Any], Any]
 
 
 def on_disk_fixture(path, serde: FixtureSerDe):
@@ -82,7 +83,9 @@ def on_disk_fixture(path, serde: FixtureSerDe):
         if os.path.exists(path):
             with open(path, 'r') as f:
                 expect = serde.decode(f)
-            assert expect == other
+            # Some encoders, like json, convert tuple->list, so we need
+            # a roundtrip to normalize
+            assert expect == serde.roundtrip(other)
         elif os.environ.get('REBUILD_FIXTURES') == 'yes':
             with open(path, 'w') as f:
                 serde.encode(f, other)
@@ -95,10 +98,12 @@ def on_disk_fixture(path, serde: FixtureSerDe):
 on_disk_fixture.serde = {
     'json': FixtureSerDe(
         encode=lambda f, val: json.dump(val, f, indent=4, sort_keys=True),
-        decode=lambda f: json.load(f)),
+        decode=lambda f: json.load(f),
+        roundtrip=lambda val: json.loads(json.dumps(val))),
     'str': FixtureSerDe(
         encode=lambda f, val: f.write(val),
-        decode=lambda f: f.read())
+        decode=lambda f: f.read(),
+        roundtrip=lambda val: val)
 }
 
 
@@ -129,6 +134,17 @@ def tasks(kind):
 def dag_tasks(dag_id, kind):
     dag = dag_bag.get_dag(dag_id)
     return [task for task in dag.tasks if isinstance(task, kind)]
+
+
+def all_template_fields(kind):
+    for task in all_tasks():
+        try:
+            fields = task.template_fields
+        except AttributeError:
+            continue
+        for name in fields:
+            if isinstance(getattr(task, name), kind):
+                yield task, name
 
 
 @pytest.fixture

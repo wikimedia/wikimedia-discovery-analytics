@@ -12,7 +12,7 @@ from wmf_airflow.hdfs_cli import HdfsCliHook
 from wmf_airflow.hive_partition_range_sensor import HivePartitionRangeSensor
 from wmf_airflow.spark_submit import SparkSubmitOperator
 from wmf_airflow.swift_upload import SwiftUploadOperator
-from wmf_airflow.template import MEDIAWIKI_ACTIVE_DC, REPO_PATH, DagConf
+from wmf_airflow.template import REPO_PATH, DagConf, eventgate_partition_range
 
 
 dag_conf = DagConf('glent_conf')
@@ -93,15 +93,7 @@ with DAG(
         table=TABLE_CIRRUS_EVENT,
         period=timedelta(days=7),
         partition_frequency='hours',
-        partition_specs=[
-            [
-                # While multiple datacenters exist, only the currently active
-                # dc is populated. Periods including switchovers will have to
-                # be manually approved.
-                ('datacenter', MEDIAWIKI_ACTIVE_DC), ('year', None),
-                ('month', None), ('day', None), ('hour', None)
-            ]
-        ])
+        partition_specs=eventgate_partition_range())
 
     # Merge the recent week of events into m0prep
     merge_session_similarity = glent_op(

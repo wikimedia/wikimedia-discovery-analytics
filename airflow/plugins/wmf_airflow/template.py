@@ -1,12 +1,14 @@
 """Common templated values used across DAGs
 
-This file primarily serves as the source of truth for what must be defined in
-the wmf_conf Variable.
+This file serves as the source of truth for what must be defined in
+the wmf_conf Variable. It also contains helpers for common templated
+use cases in the repo.
 
-Typically these refer to resources deployed to the airflow host, or a fact of
-the attached networks. The values are expected to be constant across dags
-deployed to the same location.
+Typically the wmf_conf variables refer to resources deployed to the airflow
+host, or a fact of the attached networks. The values are expected to be
+constant across dags deployed to the same location.
 """
+from typing import Callable, Optional, Sequence, Tuple
 
 from airflow.models.variable import Variable
 
@@ -59,11 +61,6 @@ MEDIAWIKI_CONFIG_PATH = wmf_conf('mediawiki_config_path')
 # Local path to the analytics/refinery repository on the airflow server
 ANALYTICS_REFINERY_PATH = wmf_conf('analytics_refinery_path')
 
-# MediaWiki can only be active in one datacenter at a time and eventgate inputs
-# are partitioned by the datacenter they come from. This marker indicates
-# which datacenter to expect events from.
-MEDIAWIKI_ACTIVE_DC = wmf_conf('mediawiki_active_datacenter')
-
 # execution date formatted as hive partition with year=/month=/day=/hour=
 YMDH_PARTITION = \
     'year={{ execution_date.year }}/month={{ execution_date.month }}/' \
@@ -102,3 +99,91 @@ class LazyJsonVariableAccessor:
             return self.var[item]
         except KeyError:
             raise AttributeError('Attribute not found in ' + self.var_name)
+
+
+class TemplatedSeq:
+    """Dynamic length templated sequence
+
+    Typically sequences passed to an airflow operator have to be a constant
+    length. This wrapper interprets a templated string as a delimited sequence
+    of elements, allowing to generate a dynamic length sequence as an operator
+    field value.
+
+    During template rendering, performed prior to task display or execution,
+    airflow will recurse from the task into templated fields containing a
+    TemplatedSeq and render our template_fields. Prior to rendering the output
+    of the sequence is undefined. In practice this is acceptable as field
+    values are unreferenced outside of task execution, and templates are always
+    rendered prior to task execution or display.
+    """
+    template_fields = ('fn_args', 'template')
+
+    def __init__(
+        self,
+        template: str,
+        fn_args: Optional[Sequence] = None,
+        fn: Optional[Callable] = None,
+        sep: str = ',',
+    ):
+        self.template = template
+        self.fn_args = tuple() if fn_args is None else fn_args
+        self.fn = (lambda x: x) if fn is None else fn
+        self.sep = sep
+
+    @classmethod
+    def for_var(
+        cls,
+        var_expr: str,
+        fn_args: Optional[Sequence] = None,
+        fn: Optional[Callable] = None,
+        sep: str = ','
+    ):
+        """Specialize TemplatedSeq to wrap values of a single config list"""
+        template = '{{ ' + var_expr + '|join("' + sep + '") }}'
+        return cls(template, fn_args, fn, sep)
+
+    def __str__(self):
+        # This is a slight lie, but it's how we intend to use it and helps visibility
+        # in the 'rendered' tab of a task instance where this is displayed.
+        return str(list(self))
+
+    def __repr__(self):
+        return "<TemplatedSeq: {}>".format(self.template)
+
+    def __iter__(self):
+        """Returns an iterable over the templated sequence.
+
+        Assumes the template has been rendered into it's final form, output is
+        undefined prior to rendering. The inclusion of an output transformation
+        allows the creation of complex return values, rather than only strings.
+        """
+        return (self.fn(x, *self.fn_args) for x in self.template.split(self.sep))
+
+
+def eventgate_partitions(table_tmpl: str) -> Sequence[str]:
+    """Templated sequence of hive partition spec strings for one hour of eventgate input
+
+    Eventgate inputs are consistent across use cases. They come with a
+    partition for every active datacenter, and have the same hourly
+    partitioning scheme across all tables.
+
+    Input table is a templated string. Output suitable for use in
+    NamedHivePartitionSensor.partition_names
+    """
+    return TemplatedSeq.for_var(
+        'wmf_conf.eventgate_datacenters',
+        fn_args=(table_tmpl, YMDH_PARTITION),
+        fn=lambda dc, table, ymdh: '{}/datacenter={}/{}'.format(table, dc, ymdh))
+
+
+def eventgate_partition_range() -> Sequence[Sequence[Tuple]]:
+    """Constant partition specification for time ranged eventgate tables
+
+    Output suitable for use in HivePartitionRangeSensor.partition_specs
+    """
+    return TemplatedSeq.for_var(
+        'wmf_conf.eventgate_datacenters',
+        fn=lambda dc: [
+            ('datacenter', dc), ('year', None),
+            ('month', None), ('day', None), ('hour', None)
+        ])
