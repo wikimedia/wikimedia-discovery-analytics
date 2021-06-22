@@ -4,7 +4,7 @@ from wmf_airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 
 from wmf_airflow.spark_submit import SparkSubmitOperator
-from wmf_airflow.template import YMDH_PARTITION, REPO_PATH, DagConf, eventgate_partitions
+from wmf_airflow.template import MEDIAWIKI_ACTIVE_DC, YMDH_PARTITION, REPO_PATH, DagConf
 from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 
 dag_conf = DagConf('export_queries_to_relforge_conf')
@@ -27,7 +27,10 @@ def get_wait_sensor(table: str, sensor_name: str) -> NamedHivePartitionSensor:
         # temporary sla change to accomodate the catchup, should be reverted afterwards
         sla=timedelta(days=365),
         # Select single hourly partition
-        partition_names=eventgate_partitions(table))
+        partition_names=[
+            '{}/datacenter={}/{}'.format(
+                table, MEDIAWIKI_ACTIVE_DC, YMDH_PARTITION)
+        ])
 
 
 with DAG(
@@ -62,6 +65,7 @@ with DAG(
             '--elastic-index', dag_conf('elastic_index'),
             '--elastic-template', dag_conf('elastic_template')
         ]
+
     )
 
     wait_for_search_satisfaction_data = get_wait_sensor(SEARCH_SATISFACTION_TABLE,

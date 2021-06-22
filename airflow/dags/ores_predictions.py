@@ -36,8 +36,8 @@ from wmf_airflow.skein import SkeinOperator
 from wmf_airflow.spark_submit import SparkSubmitOperator
 from wmf_airflow.template import (
     HTTPS_PROXY, IVY_SETTINGS_PATH, MARIADB_CREDENTIALS_PATH,
-    MEDIAWIKI_CONFIG_PATH, REPO_PATH, YMD_PARTITION,
-    YMDH_PARTITION, DagConf, eventgate_partitions)
+    MEDIAWIKI_ACTIVE_DC, MEDIAWIKI_CONFIG_PATH, REPO_PATH,
+    YMD_PARTITION, YMDH_PARTITION, DagConf)
 from wmf_airflow.transfer_to_es import convert_and_upload
 
 
@@ -415,7 +415,10 @@ with DAG(
         timeout=60 * 60 * 6,  # 6 hours
         retries=4,
         email_on_retry=True,
-        partition_names=eventgate_partitions(INPUT_TABLE))
+        partition_names=[
+            '{}/datacenter={}/{}'.format(
+                INPUT_TABLE, MEDIAWIKI_ACTIVE_DC, YMDH_PARTITION)
+        ])
 
     extract_articletopic = extract_predictions(
         model='articletopic',

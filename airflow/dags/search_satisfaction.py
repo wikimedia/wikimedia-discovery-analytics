@@ -17,7 +17,7 @@ from wmf_airflow.hdfs_cli import HdfsCliHook
 from wmf_airflow.hdfs_to_druid import HdfsToDruidOperator
 from wmf_airflow.hive_partition_range_sensor import HivePartitionRangeSensor
 from wmf_airflow.spark_submit import SparkSubmitOperator
-from wmf_airflow.template import REPO_PATH, YMD_PARTITION, DagConf, eventgate_partition_range
+from wmf_airflow.template import MEDIAWIKI_ACTIVE_DC, REPO_PATH, YMD_PARTITION, DagConf
 
 
 dag_conf = DagConf('search_satisfaction_conf')
@@ -71,7 +71,13 @@ with DAG(
         table=TABLE_SEARCH_LOGS,
         period=timedelta(days=1),
         partition_frequency='hours',
-        partition_specs=eventgate_partition_range())
+        partition_specs=[
+            [
+                ('datacenter', MEDIAWIKI_ACTIVE_DC),
+                ('year', None), ('month', None),
+                ('day', None), ('hour', None),
+            ]
+        ])
 
     # Aggregate frontend and backend logs into unified per-search logs
     aggregate = SparkSubmitOperator(

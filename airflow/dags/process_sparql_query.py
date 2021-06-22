@@ -14,8 +14,7 @@ from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 
 from wmf_airflow import DAG
 from wmf_airflow.spark_submit import SparkSubmitOperator
-from wmf_airflow.template import (
-    REPO_PATH, YMDH_PARTITION, DagConf, wmf_conf, eventgate_partitions)
+from wmf_airflow.template import REPO_PATH, YMDH_PARTITION, DagConf, wmf_conf
 
 
 dag_conf = DagConf('process_sparql_query_conf')
@@ -100,13 +99,18 @@ with DAG(
     # Select single hourly partition
     output_table_and_partition = '%s/%s/wiki=%s' % (OUTPUT_TABLE, YMDH_PARTITION, WIKI)
     input_table_and_partition = '%s/%s' % (INPUT_TABLE, YMDH_PARTITION)
+    # input table with datacenter(dc) partition
+    input_table_and_partition_dc = [
+        '%s/datacenter=%s/%s' % (INPUT_TABLE, datacenter, YMDH_PARTITION)
+        for datacenter in DATACENTERS
+    ]
 
     wait_for_data = NamedHivePartitionSensor(
         task_id='wait_for_data',
         # to be changed to hours=6 after backfill completes
         sla=timedelta(days=365),
         retries=4,
-        partition_names=eventgate_partitions(INPUT_TABLE),
+        partition_names=input_table_and_partition_dc
     )
 
     # Extract the sparql queries from table and
