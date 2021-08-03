@@ -41,9 +41,6 @@ with DAG(
     export_queries_to_relforge = SparkSubmitOperator(
         task_id='export_queries_to_relforge',
         max_executors=10,
-        env_vars={
-            'REQUESTS_CA_BUNDLE': '/etc/ssl/certs/ca-certificates.crt',
-        },
         jars=REPO_PATH + '/artifacts/elasticsearch-hadoop-6.5.4.jar',
         files=REPO_PATH + '/spark/resources/queries_index_settings.json',
         application=REPO_PATH + '/spark/export_queries_to_relforge.py',

@@ -119,6 +119,9 @@ class SparkSubmitOperator(BaseOperator):
             elif not isinstance(self._python, bool):
                 raise ValueError('Expected python kwargs as Optional[str|bool], found {}'.format(
                     type(self._python)))
+            # tls to internal services, like relforge, only work if requests uses
+            # the system ca certificates.
+            self._env_vars['REQUESTS_CA_BUNDLE'] = '/etc/ssl/certs/ca-certificates.crt'
             # Make wmf_spark module available to all python executions
             self._py_files = append(self._py_files, REPO_PATH + '/spark/wmf_spark.py')
             # Inform wmf deployed spark-env.sh script what version
