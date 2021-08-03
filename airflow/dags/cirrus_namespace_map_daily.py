@@ -30,8 +30,10 @@ with DAG(
             # Could be 1, spark is only really being used for
             # hive/hdfs/parquet integration used by downstream consumers
             'spark.dynamicAllocation.maxExecutors': 10,
+        },
+        env_vars={
             # Provide access to public internet to query prod apis
-            'spark.executorEnv.https_proxy': HTTPS_PROXY,
+            'https_proxy': HTTPS_PROXY,
         },
         spark_submit_env_vars={
             'PYSPARK_PYTHON': 'python3.7',
