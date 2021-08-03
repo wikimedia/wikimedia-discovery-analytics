@@ -95,7 +95,8 @@ class SparkSubmitOperator(BaseOperator):
                 conf['spark.executorEnv.{}'.format(k)] = v
 
         return SparkSubmitHook(
-            conf=conf,
+            # Sort for stable fixture output
+            conf={k: v for k, v in sorted(conf.items())},
             conn_id=self._conn_id,
             files=self._files,
             py_files=self._py_files,
