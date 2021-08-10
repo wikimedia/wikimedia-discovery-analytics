@@ -91,9 +91,9 @@ with DAG(
     'process_sparql_query_hourly',
     default_args=default_args,
     schedule_interval='@hourly',
-    # Allow a second job to start even if the previous is still
-    # processing retries
-    max_active_runs=2,
+    # The spark job uses minimal internal parallelism, increase top level
+    # parallelism to allow backfills to complete in under a week.
+    max_active_runs=8,
     catchup=True,
 ) as dag:
 
@@ -116,10 +116,13 @@ with DAG(
         conf={
             # Delegate retries to airflow
             'spark.yarn.maxAppAttempts': '1',
-            'spark.dynamicAllocation.maxExecutors': '20',
         },
         application=WDQS_SPARK_TOOLS,
         java_class="org.wikidata.query.rdf.spark.analysis.QueryExtractor",
+        # The job is a straight map, no shuffle occurs and the data is
+        # small enough (< 200MB per run) that the job doesn't use more than
+        # a couple tasks, which fit in a single executor.
+        max_executors=1,
         executor_cores=8,
         executor_memory="16g",
         driver_memory="2g",

@@ -3,7 +3,7 @@
     "--master",
     "yarn",
     "--conf",
-    "spark.dynamicAllocation.maxExecutors=20",
+    "spark.dynamicAllocation.maxExecutors=1",
     "--conf",
     "spark.yarn.maxAppAttempts=1",
     "--executor-cores",
