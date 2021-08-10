@@ -1,13 +1,4 @@
 checks:
-    # Virtualenvs run in the hadoop cluster must be built from a debian stretch
-    # machine, aka stat1007. These will run on both stretch and buster. If the
-    # venv is built from buster it will not run on stretch.
-    virtualenv_analytics:
-        type: script
-        stage: fetch
-        timeout: 300
-        group: analytics
-        command: build_deployment_virtualenvs.sh
     # Some virtualenvs, notably the refinery, run directly on the airflow instance
     virtualenv_airflow:
         type: script
