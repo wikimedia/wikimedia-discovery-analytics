@@ -76,3 +76,14 @@ with DAG(
     # structure when waiting on multiple dags.
     convert, upload = convert_and_upload('weekly', 'freq=weekly')
     sensors >> convert >> upload >> DummyOperator(task_id='complete')
+
+
+with DAG(
+    'imagerec_manual',
+    default_args=default_args,
+    schedule_interval=None,
+) as imagerec_dag:
+    # event_stream=False for first run to verify outputs before actually indexing them.
+    convert, upload = convert_and_upload(
+        'imagerec_manual', 'freq=manual/imagerec', event_stream=False)
+    convert >> upload >> DummyOperator(task_id='complete')

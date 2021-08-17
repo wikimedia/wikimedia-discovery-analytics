@@ -409,7 +409,24 @@ CONFIG: Mapping[str, Callable[[], Sequence[Table]]] = {
             fields=t.fields)
         for t in CONFIG['hourly']()
         if t.table_name.startswith('discovery.ores_')
-    ]
+    ],
+    'imagerec_manual': lambda: [
+        Table(
+            table_name='clarakosi.search_imagerec',
+            partition_spec_tmpl='@daily',
+            join_on=JOIN_ON_WIKIID,
+            update_kind=UPDATE_ALL,
+            fields=[
+                MultiListField(
+                    # The only information to share about recommendations is if
+                    # they exist, provide a constant expression as the field
+                    # instead of awkwardly storing the repeated value in the table.
+                    field='array("exists|1")',
+                    alias=WEIGHTED_TAGS,
+                    prefix=('concat("recommendation.", recommendation_type)', {'recommendation.image'})),
+            ],
+        ),
+    ],
 }
 
 
