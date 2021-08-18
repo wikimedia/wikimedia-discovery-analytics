@@ -33,7 +33,7 @@
             "memory": 1024,
             "vcores": 1
         },
-        "script": "set -o errexit\npython3 swift_upload.py --swift-overwrite false --swift-delete-after 2592000 --swift-auto-version true --swift-object-prefix 20210124T0/freq=manual/imagerec --event-per-object true --event-stream false --event-service-url https://eventgate-analytics.svc.eqiad.wmnet:4592/v1/events swift_auth.env search_updates hdfs:///wmf/data/discovery/transfer_to_es/date=20210124/freq=manual/imagerec"
+        "script": "set -o errexit\npython3 swift_upload.py --swift-overwrite false --swift-delete-after 2592000 --swift-auto-version true --swift-object-prefix 20210124T0/freq=manual/imagerec --event-per-object true --event-stream swift.search_updates_prioritized.upload-complete --event-service-url https://eventgate-analytics.svc.eqiad.wmnet:4592/v1/events swift_auth.env search_updates hdfs:///wmf/data/discovery/transfer_to_es/date=20210124/freq=manual/imagerec"
     },
     "max_attempts": 1,
     "name": "upload_to_swift",

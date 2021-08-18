@@ -83,7 +83,8 @@ with DAG(
     default_args=default_args,
     schedule_interval=None,
 ) as imagerec_dag:
-    # event_stream=False for first run to verify outputs before actually indexing them.
     convert, upload = convert_and_upload(
-        'imagerec_manual', 'freq=manual/imagerec', event_stream=False)
+        'imagerec_manual',
+        'freq=manual/imagerec',
+        'swift.search_updates_prioritized.upload-complete')
     convert >> upload >> DummyOperator(task_id='complete')
