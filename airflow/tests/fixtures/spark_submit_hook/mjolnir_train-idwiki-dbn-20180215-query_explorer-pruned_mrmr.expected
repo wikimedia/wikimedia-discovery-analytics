@@ -25,7 +25,7 @@
     "--archives",
     "/srv/deployment/wikimedia/discovery/analytics/environments/mjolnir/venv.zip#mjolnir_venv",
     "--jars",
-    "hdfs://analytics-hadoop/wmf/refinery/current/artifacts/refinery-hive.jar",
+    "hdfs://analytics-hadoop/wmf/refinery/current/artifacts/refinery-hive-shaded.jar",
     "--packages",
     "org.wikimedia.search:mjolnir:0.7",
     "--driver-memory",

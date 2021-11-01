@@ -23,7 +23,7 @@
     "--archives",
     "/srv/deployment/wikimedia/discovery/analytics/environments/mjolnir/venv.zip#mjolnir_venv",
     "--jars",
-    "hdfs://analytics-hadoop/wmf/refinery/current/artifacts/refinery-hive.jar",
+    "hdfs://analytics-hadoop/wmf/refinery/current/artifacts/refinery-hive-shaded.jar",
     "--packages",
     "org.wikimedia.search:mjolnir:0.7,sramirez:spark-infotheoretic-feature-selection:1.4.4,sramirez:spark-MDLP-discretization:1.4.1",
     "--driver-memory",

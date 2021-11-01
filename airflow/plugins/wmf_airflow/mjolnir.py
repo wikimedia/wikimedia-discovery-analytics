@@ -253,7 +253,7 @@ class MjolnirOperator(BaseOperator, LoggingMixin):
         args['packages'] = 'org.wikimedia.search:mjolnir:0.7'
         # Pull in analytics/refinery-hive for some UDF's
         args['jars'] = os.path.join(
-            self._deploys['refinery'], 'artifacts/refinery-hive.jar')
+            self._deploys['refinery'], 'artifacts/refinery-hive-shaded.jar')
 
         conf = cast(Dict[str, Any], dict())
         # Retry at the airflow level instead of in spark
