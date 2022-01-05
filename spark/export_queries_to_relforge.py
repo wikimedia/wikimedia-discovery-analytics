@@ -39,15 +39,15 @@ def arg_parser() -> ArgumentParser:
 
 HitsStructType = T.StructType([
     T.StructField('top1', T.StringType(), True),
-    T.StructField('top3', T.ArrayType(T.StringType()), False),
-    T.StructField('top10', T.ArrayType(T.StringType()), False)
+    T.StructField('top3', T.ArrayType(T.StringType()), True),
+    T.StructField('top10', T.ArrayType(T.StringType()), True)
 ])
 
 SearchReqType = T.StructType([
-    T.StructField('hits_returned', T.IntegerType(), False),
-    T.StructField('syntax', T.ArrayType(T.StringType()), False),
-    T.StructField('first_page', T.BooleanType(), False),
-    T.StructField('indices', T.ArrayType(T.StringType()), False)
+    T.StructField('hits_returned', T.IntegerType(), True),
+    T.StructField('syntax', T.ArrayType(T.StringType()), True),
+    T.StructField('first_page', T.BooleanType(), True),
+    T.StructField('indices', T.ArrayType(T.StringType()), True)
 ])
 
 
