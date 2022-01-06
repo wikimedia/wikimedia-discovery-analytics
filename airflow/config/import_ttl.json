@@ -4,7 +4,10 @@
     "rdf_data_location": "wikidata/rdf/",
     "all_ttl_dump_dir": "hdfs://analytics-hadoop/wmf/data/raw/wikidata/dumps/all_ttl",
     "lexeme_ttl_dump_dir": "hdfs://analytics-hadoop/wmf/data/raw/wikidata/dumps/lexemes_ttl",
-    "entity_revision_map": "hdfs://analytics-hadoop/wmf/data/discovery/wdqs/entity_revision_map",
+    "entity_revision_map": {
+        "wdqs": "hdfs://analytics-hadoop/wmf/data/discovery/wdqs/entity_revision_map",
+        "wcqs": "hdfs://analytics-hadoop/wmf/data/discovery/wcqs/entity_revision_map"
+    },
     "commons_dump_dir": "hdfs://analytics-hadoop/wmf/data/raw/commons/dumps/mediainfo-ttl"
   }
 }

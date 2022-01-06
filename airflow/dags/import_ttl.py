@@ -36,9 +36,7 @@ WDQS_SPARK_TOOLS = ARTIFACTS_DIR + '/rdf-spark-tools-latest-jar-with-dependencie
 COMMONS_DUMP_DIR = dag_conf("commons_dump_dir")
 ALL_TTL_DUMP_DIR = dag_conf("all_ttl_dump_dir")
 LEXEMES_TTL_DUMP_DIR = dag_conf("lexeme_ttl_dump_dir")
-
 TRIPLE_OUTPUT_PATH = dag_conf("triple_output_path")
-ENTITY_REV_MAP_CSV = dag_conf("entity_revision_map")
 
 RDF_DATA_TABLE = dag_conf("rdf_data_table")
 
@@ -125,8 +123,25 @@ with DAG(
         ],
     )
 
+    generate_entity_rev_map = SparkSubmitOperator(
+        task_id='gen_rev_map',
+        application=WDQS_SPARK_TOOLS,
+        java_class="org.wikidata.query.rdf.spark.EntityRevisionMapGenerator",
+        max_executors=25,
+        executor_cores=8,
+        executor_memory="16g",
+        driver_memory="2g",
+        application_args=[
+            '--input-table', rdf_table_and_partition,
+            '--output-path', "%s/%s/rev_map.csv" % (
+                dag_conf('entity_revision_map.wcqs'), commons_ds),
+            '--uris-scheme', 'commons',
+            '--hostname', 'commons.wikimedia.org',
+        ]
+    )
+
     end = DummyOperator(task_id='complete')
-    end << munge_and_import_commons_dumps << commons_sensor
+    end << generate_entity_rev_map << munge_and_import_commons_dumps << commons_sensor
 
 with DAG(
     'import_wikidata_ttl',
@@ -205,7 +220,8 @@ with DAG(
         driver_memory="2g",
         application_args=[
             '--input-table', rdf_table_and_partition,
-            '--output-path', "%s/%s/rev_map.csv" % (ENTITY_REV_MAP_CSV, all_ttl_ds)
+            '--output-path', "%s/%s/rev_map.csv" % (
+                dag_conf('entity_revision_map.wdqs'), all_ttl_ds),
         ]
     )
 
