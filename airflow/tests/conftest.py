@@ -48,7 +48,9 @@ all_dag_ids = [
     'mediawiki_revision_recommendation_create_hourly',
     'import_ttl_init',
     'process_sparql_query_init',
-    'process_sparql_query_hourly'
+    'process_sparql_query_hourly',
+    'wdqs_streaming_updater_reconcile_hourly',
+    'wcqs_streaming_updater_reconcile_hourly',
 ]
 
 

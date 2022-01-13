@@ -46,6 +46,12 @@ wmf_conf = DagConf('wmf_conf')
 # the airflow server
 REPO_PATH = wmf_conf('wikimedia_discovery_analytics_path')
 
+# Local path to binary artifacts (wheels/jars/...)
+ARTIFACTS_DIR = REPO_PATH + "/artifacts"
+
+# Path to the jar containing WDQS/WCQS spark jobs
+WDQS_SPARK_TOOLS = ARTIFACTS_DIR + '/rdf-spark-tools-latest-jar-with-dependencies.jar'
+
 HTTPS_PROXY = wmf_conf('https_proxy')
 
 # Local path to ivysettings.xml on the airflow server that specifies the remote

@@ -1,0 +1,20 @@
+{
+  "rdf_streaming_updater_reconcile_conf": {
+    "lapsed_actions_table": "event.rdf_streaming_updater_lapsed_action",
+    "fetch_failures_table": "event.rdf_streaming_updater_fetch_failure",
+    "state_inconsistencies_table": "event.rdf_streaming_updater_state_inconsistency",
+    "eventgate_endpoint": "https://eventgate-main.discovery.wmnet:4492/v1/events",
+    "http_routes": "www.wikidata.org=https://api-ro.discovery.wmnet,commons.wikimedia.org=https://api-ro.discovery.wmnet",
+    "reconciliation_stream": "rdf-streaming-updater.reconcile",
+
+    "wdqs_source_tag_prefix": "wdqs_sideoutputs_reconcile",
+    "wdqs_events_domain": "www.wikidata.org",
+    "wdqs_entity_namespaces": "0,120,146",
+    "wdqs_initial_to_namespace_map": "Q=,P=120,L=146",
+
+    "wcqs_source_tag_prefix": "wcqs_sideoutputs_reconcile",
+    "wcqs_events_domain": "commons.wikimedia.org",
+    "wcqs_entity_namespaces": "6",
+    "wcqs_initial_to_namespace_map": "M=6"
+  }
+}

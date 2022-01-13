@@ -26,12 +26,9 @@ from wmf_airflow.spark_submit import SparkSubmitOperator
 import jinja2
 import pendulum
 
-from wmf_airflow.template import REPO_PATH, DagConf, wmf_conf
+from wmf_airflow.template import WDQS_SPARK_TOOLS, DagConf, wmf_conf
 
 dag_conf = DagConf('import_ttl_conf')
-
-ARTIFACTS_DIR = REPO_PATH + "/artifacts"
-WDQS_SPARK_TOOLS = ARTIFACTS_DIR + '/rdf-spark-tools-latest-jar-with-dependencies.jar'
 
 COMMONS_DUMP_DIR = dag_conf("commons_dump_dir")
 ALL_TTL_DUMP_DIR = dag_conf("all_ttl_dump_dir")
