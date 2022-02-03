@@ -21,7 +21,7 @@
     "--driver-memory",
     "32G",
     "--name",
-    "airflow-spark",
+    "[Search Airflow Job] Glent Weekly: Generate Query Similarity Candidates",
     "--queue",
     "root.default",
     "/srv/deployment/wikimedia/discovery/analytics/artifacts/glent-latest-jar-with-dependencies.jar",

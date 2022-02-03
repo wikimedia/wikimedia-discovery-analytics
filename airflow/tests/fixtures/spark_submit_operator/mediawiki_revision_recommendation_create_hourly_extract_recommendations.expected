@@ -14,7 +14,7 @@
     "--py-files",
     "/srv/deployment/wikimedia/discovery/analytics/spark/wmf_spark.py",
     "--name",
-    "airflow-spark",
+    "[Search Airflow Job] Mediawiki Revision Recommendation Create Hourly: Extract Recommendations",
     "--queue",
     "root.default",
     "/srv/deployment/wikimedia/discovery/analytics/spark/prepare_recommendation_create.py",

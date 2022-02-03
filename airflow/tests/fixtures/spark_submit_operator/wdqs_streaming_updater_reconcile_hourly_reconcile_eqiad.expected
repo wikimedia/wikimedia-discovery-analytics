@@ -13,7 +13,7 @@
     "--driver-memory",
     "4g",
     "--name",
-    "airflow-spark",
+    "[Search Airflow Job] Wdqs Streaming Updater Reconcile Hourly: Reconcile Eqiad",
     "--class",
     "org.wikidata.query.rdf.updater.reconcile.UpdaterReconcile",
     "--queue",

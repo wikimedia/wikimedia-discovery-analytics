@@ -16,7 +16,7 @@
     "--py-files",
     "/srv/deployment/wikimedia/discovery/analytics/spark/wmf_spark.py",
     "--name",
-    "airflow-spark",
+    "[Search Airflow Job] Transfer To Es Weekly: Convert To Esbulk",
     "--queue",
     "root.default",
     "/srv/deployment/wikimedia/discovery/analytics/spark/convert_to_esbulk.py",

@@ -18,7 +18,7 @@
     "--py-files",
     "/srv/deployment/wikimedia/discovery/analytics/spark/wmf_spark.py",
     "--name",
-    "airflow-spark",
+    "[Search Airflow Job] Cirrus Namespace Map Daily: Fetch Namespace Map",
     "--queue",
     "root.default",
     "/srv/deployment/wikimedia/discovery/analytics/spark/fetch_cirrussearch_namespace_map.py",

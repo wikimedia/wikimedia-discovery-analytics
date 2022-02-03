@@ -13,7 +13,7 @@
     "--driver-memory",
     "2g",
     "--name",
-    "airflow-spark",
+    "[Search Airflow Job] Process Sparql Query Hourly: Extract Queries",
     "--class",
     "org.wikidata.query.rdf.spark.analysis.QueryExtractor",
     "--queue",

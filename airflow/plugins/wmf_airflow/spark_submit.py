@@ -1,5 +1,6 @@
 import os
 
+from airflow import settings
 from airflow.contrib.hooks.spark_submit_hook import SparkSubmitHook
 from airflow.models.baseoperator import BaseOperator
 from airflow.utils.decorators import apply_defaults
@@ -56,7 +57,7 @@ class SparkSubmitOperator(BaseOperator):
                  keytab=None,
                  principal=None,
                  proxy_user=None,
-                 name='airflow-spark',
+                 name=None,
                  num_executors=None,
                  application_args=None,
                  env_vars=None,
@@ -86,6 +87,20 @@ class SparkSubmitOperator(BaseOperator):
         self._keytab = keytab
         self._principal = principal
         self._proxy_user = proxy_user
+        dag = None
+        if 'dag' in kwargs:
+            dag = kwargs['dag']
+        if dag is None and settings.CONTEXT_MANAGER_DAG:
+            dag = settings.CONTEXT_MANAGER_DAG
+
+        if name is None:
+            def f(x: str):
+                return x.replace('_', ' ').title()
+            dag_name = f(dag.dag_id)
+            task_name = f(kwargs['task_id'])
+            if dag_name != task_name:
+                task_name = dag_name + ": " + task_name
+            name = "[Search Airflow Job] {task}".format(task=task_name)
         self._name = name
         self._num_executors = num_executors
         self._application_args = application_args

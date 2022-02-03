@@ -13,7 +13,7 @@
     "--driver-memory",
     "2g",
     "--name",
-    "airflow-spark",
+    "[Search Airflow Job] Import Commons Ttl: Munge Dumps",
     "--class",
     "org.wikidata.query.rdf.spark.WikibaseRDFDumpConverter",
     "--queue",

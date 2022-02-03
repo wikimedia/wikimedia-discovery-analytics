@@ -16,7 +16,7 @@
     "--py-files",
     "/srv/deployment/wikimedia/discovery/analytics/spark/wmf_spark.py",
     "--name",
-    "airflow-spark",
+    "[Search Airflow Job] Ores Predictions Hourly: Extract Articletopic Predictions",
     "--queue",
     "root.default",
     "/srv/deployment/wikimedia/discovery/analytics/spark/prepare_mw_rev_score.py",

@@ -13,7 +13,7 @@
     "--driver-memory",
     "2g",
     "--name",
-    "airflow-spark",
+    "[Search Airflow Job] Import Wikidata Ttl: Gen Rev Map",
     "--class",
     "org.wikidata.query.rdf.spark.EntityRevisionMapGenerator",
     "--queue",

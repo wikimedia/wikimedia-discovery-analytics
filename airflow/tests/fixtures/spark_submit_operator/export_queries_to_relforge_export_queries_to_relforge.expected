@@ -18,7 +18,7 @@
     "--jars",
     "/srv/deployment/wikimedia/discovery/analytics/artifacts/elasticsearch-hadoop-6.5.4.jar",
     "--name",
-    "airflow-spark",
+    "[Search Airflow Job] Export Queries To Relforge",
     "--queue",
     "root.default",
     "/srv/deployment/wikimedia/discovery/analytics/spark/export_queries_to_relforge.py",

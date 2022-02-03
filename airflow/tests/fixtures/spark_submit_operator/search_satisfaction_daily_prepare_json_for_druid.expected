@@ -16,7 +16,7 @@
     "--py-files",
     "/srv/deployment/wikimedia/discovery/analytics/spark/wmf_spark.py",
     "--name",
-    "airflow-spark",
+    "[Search Airflow Job] Search Satisfaction Daily: Prepare Json For Druid",
     "--queue",
     "root.default",
     "/srv/deployment/wikimedia/discovery/analytics/spark/generate_daily_druid_search_satisfaction.py",
