@@ -122,7 +122,7 @@ search_req AS (
                 csrs.`database` == 'commonswiki'
                 AND get_main_search_request(csrs.`database`, csrs.elasticsearch_requests).indices[0] == 'commonswiki'
                 -- Since we dont have _content to filter non-content queries, restrict to the default
-                -- selected namespaces. Also hive doesn't have an array_equals function...
+                -- selected namespaces. Also hive doesnt have an array_equals function...
                 AND size(get_main_search_request(csrs.`database`, csrs.elasticsearch_requests).namespaces) == 6
                 AND array_contains(get_main_search_request(csrs.`database`, csrs.elasticsearch_requests).namespaces, CAST(0 AS BIGINT))
                 AND array_contains(get_main_search_request(csrs.`database`, csrs.elasticsearch_requests).namespaces, CAST(6 AS BIGINT))
