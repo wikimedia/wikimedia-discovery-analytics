@@ -87,9 +87,9 @@ with DAG(
 with DAG(
     'query_clicks_hourly',
     schedule_interval='@hourly',
-    start_date=datetime(2022, 1, 1),
+    start_date=datetime(2022, 2, 8),
     max_active_runs=1,
-    catchup=False,
+    catchup=True,
     user_defined_macros={
         'dag_conf': dag_conf.macro,
         # Generate row_timestamp to allow requesting the specified year / month
@@ -339,9 +339,9 @@ with DAG(
 with DAG(
     'query_clicks_daily',
     schedule_interval='@daily',
-    start_date=datetime(2022, 1, 1),
+    start_date=datetime(2022, 2, 8),
     max_active_runs=1,
-    catchup=False,
+    catchup=True,
     user_defined_macros={
         'dag_conf': dag_conf.macro,
     },

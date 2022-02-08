@@ -47,14 +47,14 @@ WITH web_req AS (
                 ' ',
                 CONCAT_WS(':', CAST(hour AS string), '00', '00')
             ))
-         >= 1640995200
+         >= 1644278400
         AND 
             TO_UNIX_TIMESTAMP(CONCAT(
                 CONCAT_WS('-', CAST(year AS string), CAST(month AS string), CAST(day AS string)),
                 ' ',
                 CONCAT_WS(':', CAST(hour AS string), '00', '00')
             ))
-         <= 1641002340
+         <= 1644285540
         AND webrequest_source = 'text'
         -- Users clicking navigational elements will match the search token,
         -- but it won't be a pageview with page_id
@@ -102,8 +102,8 @@ search_req AS (
         namespace_map.dbname = csrs.`database`
     WHERE
         year = 2022
-        AND month = 1
-        AND day = 1
+        AND month = 2
+        AND day = 8
         AND hour = 0
         -- We only want requests from the web, because their clicks are recorded
         -- in webrequests
@@ -179,8 +179,8 @@ INSERT OVERWRITE TABLE
     discovery.query_clicks_hourly
 PARTITION(
     year=2022,
-    month=1,
-    day=1,
+    month=2,
+    day=8,
     hour=0
 )
 -- Join our search request data against clicks in web_request.

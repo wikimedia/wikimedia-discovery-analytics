@@ -34,8 +34,8 @@ WITH sessionized AS (
                     discovery.query_clicks_hourly
                 WHERE
                     year = 2022
-                    AND month = 1
-                    AND day = 1
+                    AND month = 2
+                    AND day = 8
             ) x
             WHERE
                 -- We have some identities that make hundreds of thousands of queries a day.
@@ -51,8 +51,8 @@ INSERT OVERWRITE TABLE
     discovery.query_clicks_daily
 PARTITION(
     year = 2022,
-    month = 1,
-    day = 1)
+    month = 2,
+    day = 8)
 SELECT
     -- Order here must match the create_table statement
     sessionized.query,
