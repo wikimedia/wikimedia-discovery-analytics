@@ -54,11 +54,13 @@ reconciliation_stream = dag_conf('reconciliation_stream')
 SideOutputs = namedtuple('SideOutputs',
                          ['lapsed_actions', 'fetch_failures', 'state_inconsistencies'])
 
+SENSORS_SLA = timedelta(hours=6)
+
 
 def wait_for_side_output(name: str, partition: str) -> NamedHivePartitionSensor:
     return NamedHivePartitionSensor(
         task_id='wait_for_' + name,
-        sla=timedelta(hours=6),
+        #  re-enable once the backfill is comlete: sla=SENSORS_SLA,
         partition_names=[partition])
 
 
@@ -151,7 +153,7 @@ def build_dag(dag_id: str,
 
 
 wdqs_reconcile_dag = build_dag(dag_id='wdqs_streaming_updater_reconcile_hourly',
-                               start_date=datetime(2021, 10, 1, 12, 00, 00),
+                               start_date=datetime(2022, 2, 18, 12, 00, 00),
                                source_tag=wdqs_source_tag_prefix,
                                domain=wdqs_events_domain,
                                entity_namespaces=wdqs_entity_namespaces,
