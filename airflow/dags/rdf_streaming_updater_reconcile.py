@@ -151,14 +151,14 @@ def build_dag(dag_id: str,
 
 
 wdqs_reconcile_dag = build_dag(dag_id='wdqs_streaming_updater_reconcile_hourly',
-                               start_date=datetime(2022, 2, 15),
+                               start_date=datetime(2021, 10, 1, 12, 00, 00),
                                source_tag=wdqs_source_tag_prefix,
                                domain=wdqs_events_domain,
                                entity_namespaces=wdqs_entity_namespaces,
                                initial_to_namespace_map=wdqs_initial_to_namespace_map)
 
 wcqs_reconcile_dag = build_dag(dag_id='wcqs_streaming_updater_reconcile_hourly',
-                               start_date=datetime(2022, 2, 15),
+                               start_date=datetime(2022, 1, 13, 16, 00, 00),
                                source_tag=wcqs_source_tag_prefix,
                                domain=wcqs_events_domain,
                                entity_namespaces=wcqs_entity_namespaces,
