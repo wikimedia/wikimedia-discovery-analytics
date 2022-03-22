@@ -60,7 +60,7 @@ SENSORS_SLA = timedelta(hours=6)
 def wait_for_side_output(name: str, partition: str) -> NamedHivePartitionSensor:
     return NamedHivePartitionSensor(
         task_id='wait_for_' + name,
-        #  re-enable once the backfill is comlete: sla=SENSORS_SLA,
+        sla=SENSORS_SLA,
         partition_names=[partition])
 
 
