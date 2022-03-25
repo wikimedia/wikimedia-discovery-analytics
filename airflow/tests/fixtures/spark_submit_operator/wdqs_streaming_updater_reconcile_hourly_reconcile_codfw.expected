@@ -36,7 +36,7 @@
     "--entity-namespaces",
     "0,120,146",
     "--initial-to-namespace",
-    "Q=,P=120,L=146",
+    "Q=,P=Property,L=Lexeme",
     "--http-routes",
     "www.wikidata.org=https://api-ro.discovery.wmnet,commons.wikimedia.org=https://api-ro.discovery.wmnet"
 ]

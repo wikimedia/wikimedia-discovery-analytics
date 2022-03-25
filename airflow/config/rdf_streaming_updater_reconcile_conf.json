@@ -10,11 +10,11 @@
     "wdqs_source_tag_prefix": "wdqs_sideoutputs_reconcile",
     "wdqs_events_domain": "www.wikidata.org",
     "wdqs_entity_namespaces": "0,120,146",
-    "wdqs_initial_to_namespace_map": "Q=,P=120,L=146",
+    "wdqs_initial_to_namespace_map": "Q=,P=Property,L=Lexeme",
 
     "wcqs_source_tag_prefix": "wcqs_sideoutputs_reconcile",
     "wcqs_events_domain": "commons.wikimedia.org",
     "wcqs_entity_namespaces": "6",
-    "wcqs_initial_to_namespace_map": "M=6"
+    "wcqs_initial_to_namespace_map": "M=File"
   }
 }

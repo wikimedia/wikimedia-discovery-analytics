@@ -36,7 +36,7 @@
     "--entity-namespaces",
     "6",
     "--initial-to-namespace",
-    "M=6",
+    "M=File",
     "--http-routes",
     "www.wikidata.org=https://api-ro.discovery.wmnet,commons.wikimedia.org=https://api-ro.discovery.wmnet"
 ]
