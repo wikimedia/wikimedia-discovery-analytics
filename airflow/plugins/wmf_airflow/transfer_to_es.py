@@ -47,7 +47,8 @@ def convert_and_upload(
     convert = SparkSubmitOperator(
         task_id='convert_to_esbulk',
         conf={
-            'spark.executor.memoryOverhead': '1536'
+            'spark.executor.memoryOverhead': '768',
+            'spark.driver.memoryOverhead': '1024',
         },
         max_executors=25,
         application='{{ wmf_conf.wikimedia_discovery_analytics_path }}/spark/convert_to_esbulk.py',
