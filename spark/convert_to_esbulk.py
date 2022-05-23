@@ -286,7 +286,7 @@ class Table:
     PARTITION_TMPL = {
         '@hourly': '{table_name}/year={dt.year}/month={dt.month}/day={dt.day}/hour={dt.hour}',
         '@daily': '{table_name}/year={dt.year}/month={dt.month}/day={dt.day}',
-        '@dailysnapshot': '{table_name}/snapshot={dt.year}-{dt.month}-{dt.day}'
+        '@dailysnapshot': '{table_name}/snapshot={dt.year:04d}-{dt.month:02d}-{dt.day:02d}'
     }
 
     @property
