@@ -391,7 +391,12 @@ CONFIG: Mapping[str, Callable[[], Sequence[Table]]] = {
                 MultiListField(
                     field='values',
                     alias=WEIGHTED_TAGS,
-                    prefix=('tag', {'recommendation.image'})
+                    prefix=('tag', {
+                        'image.linked.from.wikipedia.lead_image',
+                        'image.linked.from.wikidata.p18',
+                        'image.linked.from.wikidata.p373',
+                        'recommendation.image',
+                    }),
                 )
             ],
             # We run May 1, 8, 15 of 2022. They run May 2, 9, 16. Apply
@@ -420,7 +425,12 @@ CONFIG: Mapping[str, Callable[[], Sequence[Table]]] = {
                 MultiListField(
                     field='values',
                     alias=WEIGHTED_TAGS,
-                    prefix=('tag', {'recommendation.image'})
+                    prefix=('tag', {
+                        'image.linked.from.wikipedia.lead_image',
+                        'image.linked.from.wikidata.p18',
+                        'image.linked.from.wikidata.p373',
+                        'recommendation.image',
+                    }),
                 )
             ]
         )

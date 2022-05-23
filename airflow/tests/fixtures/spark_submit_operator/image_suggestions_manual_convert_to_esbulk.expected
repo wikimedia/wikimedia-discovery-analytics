@@ -6,7 +6,7 @@
     "--conf",
     "spark.dynamicAllocation.maxExecutors=25",
     "--conf",
-    "spark.executor.memoryOverhead=768",
+    "spark.executor.memoryOverhead=1536",
     "--conf",
     "spark.executorEnv.REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt",
     "--conf",
