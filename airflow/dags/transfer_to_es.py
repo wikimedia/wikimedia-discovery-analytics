@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.sensors.external_task_sensor import ExternalTaskSensor
+from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 
 from wmf_airflow import DAG
 from wmf_airflow.transfer_to_es import convert_and_upload
@@ -69,22 +70,28 @@ with DAG(
             external_dag_id='popularity_score_weekly',
             external_task_id='complete',
             **sensor_kwargs
-        )
+        ),
+        NamedHivePartitionSensor(
+            task_id='wait_for_image_recommendations',
+            partition_names=[
+                "analytics_platform_eng.image_suggestions_search_index_delta/snapshot="
+                + "{{ execution_date.add(days=-6).format('%Y-%m-%d') }}",
+            ],
+            **sensor_kwargs
+        ),
     ]
 
-    # TODO: Move this into popularity_score dag? We only really need this
-    # structure when waiting on multiple dags.
     convert, upload = convert_and_upload('weekly', 'freq=weekly')
     sensors >> convert >> upload >> DummyOperator(task_id='complete')
 
 
 with DAG(
-    'imagerec_manual',
+    'image_suggestions_manual',
     default_args=default_args,
     schedule_interval=None,
 ) as imagerec_dag:
     convert, upload = convert_and_upload(
-        'imagerec_manual',
-        'freq=manual/imagerec',
+        'image_suggestion_manual',
+        'freq=manual/image_suggestions',
         'swift.search_updates_prioritized.upload-complete')
     convert >> upload >> DummyOperator(task_id='complete')

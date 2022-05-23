@@ -35,7 +35,7 @@ from pyspark import RDD, SparkContext
 from argparse import ArgumentParser
 from collections import defaultdict
 from dataclasses import dataclass, field as dataclass_field, InitVar
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import logging
 import math
@@ -278,12 +278,15 @@ class Table:
     update_kind: str
     # Definitions for the set of fields to source from this table
     fields: Sequence[Field]
+    # Number of days difference between execution schedules
+    effective_dt_adjustment: int = 0
 
     # registered partition spec templates. When key value is in
     # partition_spec_tmpl then this value will be used as the template.
     PARTITION_TMPL = {
         '@hourly': '{table_name}/year={dt.year}/month={dt.month}/day={dt.day}/hour={dt.hour}',
         '@daily': '{table_name}/year={dt.year}/month={dt.month}/day={dt.day}',
+        '@dailysnapshot': '{table_name}/snapshot={dt.year}-{dt.month}-{dt.day}'
     }
 
     @property
@@ -296,13 +299,22 @@ class Table:
         """Set of columns to source from this table"""
         return [field.column for field in self.fields]
 
+    def effective_dt(self, dt: datetime) -> datetime:
+        """Adjusts the schedule for this execution to match external execution.
+
+        When integrating weekly scheduled data from other teams everything
+        may not have matching execution dates. Apply a delta to line up the
+        weekly runs such that partitioning refers to correct dates.
+        """
+        return dt + timedelta(days=self.effective_dt_adjustment)
+
     def partition_spec(self, dt: datetime) -> str:
         tmpl = self.partition_spec_tmpl
         if tmpl.startswith('@'):
             pieces = tmpl.split('/', 2)
             tmpl_prefix = self.PARTITION_TMPL[pieces[0]]
             tmpl = '/'.join([tmpl_prefix] + pieces[1:])
-        return tmpl.format(table_name=self.table_name, dt=dt)
+        return tmpl.format(table_name=self.table_name, dt=self.effective_dt(dt))
 
     def partition(self, dt: datetime) -> HivePartition:
         return HivePartition.from_spec(self.partition_spec(dt))
@@ -370,6 +382,22 @@ CONFIG: Mapping[str, Callable[[], Sequence[Table]]] = {
                 WithinPercentageField(field='score', alias=POPULARITY_SCORE, percentage=20)
             ]
         ),
+        Table(
+            table_name='analytics_platform_eng.image_suggestions_search_index_delta',
+            partition_spec_tmpl='@dailysnapshot',
+            join_on=JOIN_ON_WIKIID,
+            update_kind=UPDATE_ALL,
+            fields=[
+                MultiListField(
+                    field='values',
+                    alias=WEIGHTED_TAGS,
+                    prefix=('tag', {'recommendation.image'})
+                )
+            ],
+            # We run May 1, 8, 15 of 2022. They run May 2, 9, 16. Apply
+            # a -6 delta to line up the 8th with the 2nd, and so forth.
+            effective_dt_adjustment=-6,
+        )
     ],
     'ores_bulk_ingest': lambda: [
         Table(
@@ -381,22 +409,21 @@ CONFIG: Mapping[str, Callable[[], Sequence[Table]]] = {
         for t in CONFIG['hourly']()
         if t.table_name.startswith('discovery.ores_')
     ],
-    'imagerec_manual': lambda: [
+    'image_suggestion_manual': lambda: [
+        # Full replacement of existing data
         Table(
-            table_name='clarakosi.search_imagerec',
-            partition_spec_tmpl='@daily',
+            table_name='analytics_platform_eng.image_suggestions_search_index_full',
+            partition_spec_tmpl='@dailysnapshot',
             join_on=JOIN_ON_WIKIID,
             update_kind=UPDATE_ALL,
             fields=[
                 MultiListField(
-                    # The only information to share about recommendations is if
-                    # they exist, provide a constant expression as the field
-                    # instead of awkwardly storing the repeated value in the table.
-                    field='array("exists|1")',
+                    field='values',
                     alias=WEIGHTED_TAGS,
-                    prefix=('concat("recommendation.", recommendation_type)', {'recommendation.image'})),
-            ],
-        ),
+                    prefix=('tag', {'recommendation.image'})
+                )
+            ]
+        )
     ],
 }
 

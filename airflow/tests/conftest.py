@@ -33,7 +33,7 @@ all_dag_ids = [
     'import_wikidata_ttl',
     'mediawiki_revision_recommendation_create_init',
     'mediawiki_revision_recommendation_create_hourly',
-    'imagerec_manual',
+    'image_suggestions_manual',
     'import_commons_ttl',
     'mjolnir',
     'ores_predictions_v4_init',
