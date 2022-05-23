@@ -17,6 +17,8 @@
     "spark.yarn.appMasterEnv.REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt",
     "--py-files",
     "/srv/deployment/wikimedia/discovery/analytics/spark/wmf_spark.py",
+    "--driver-memory",
+    "4g",
     "--name",
     "[Search Airflow Job] Transfer To Es Hourly: Convert To Esbulk",
     "--queue",

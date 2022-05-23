@@ -50,6 +50,7 @@ def convert_and_upload(
             'spark.executor.memoryOverhead': '768',
             'spark.driver.memoryOverhead': '1024',
         },
+        driver_memory='4g',
         max_executors=25,
         application='{{ wmf_conf.wikimedia_discovery_analytics_path }}/spark/convert_to_esbulk.py',
         application_args=[
