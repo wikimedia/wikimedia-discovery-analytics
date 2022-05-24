@@ -92,6 +92,5 @@ with DAG(
 ) as imagerec_dag:
     convert, upload = convert_and_upload(
         'image_suggestion_manual',
-        'freq=manual/image_suggestions',
-        'swift.search_updates_prioritized.upload-complete')
+        'freq=manual/image_suggestions')
     convert >> upload >> DummyOperator(task_id='complete')
