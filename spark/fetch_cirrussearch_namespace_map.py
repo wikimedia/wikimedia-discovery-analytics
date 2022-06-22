@@ -40,6 +40,8 @@ def filter_wikiid_to_domain_name_map(df: DataFrame) -> DataFrame:
         .where(F.col('visibility') == 'public')
         # login isn't a wiki in the traditional sense
         .where(F.col('database_group') != 'login')
+        # test wikis related to horizon/cloud
+        .where(F.col('database_group') != 'labtest')
         .select('database_code', 'domain_name')
     )
 
