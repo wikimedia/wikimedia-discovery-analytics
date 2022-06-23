@@ -1,0 +1,23 @@
+{
+    "subgraph_and_query_mapping_conf": {
+        "wikidata_dumps_table": "discovery.wikibase_rdf",
+        "all_subgraphs_table": "discovery.all_subgraphs",
+        "top_subgraph_items_table": "discovery.top_subgraph_items",
+        "top_subgraph_triples_table": "discovery.top_subgraph_triples",
+        "min_items": 10000,
+        "processed_query_table": "discovery.processed_external_sparql_query",
+        "subgraph_qitem_match_table": "discovery.subgraph_qitems_match",
+        "subgraph_predicate_match_table": "discovery.subgraph_predicates_match",
+        "subgraph_uri_match_table": "discovery.subgraph_uri_match",
+        "subgraph_query_mapping_table": "discovery.subgraph_queries",
+        "filtering_limit": 99,
+        "wiki": "wikidata",
+        "rel_all_subgraphs_location": "wikidata/subgraph_analysis/all_subgraphs",
+        "rel_top_subgraph_items_location": "wikidata/subgraph_analysis/top_subgraph_items",
+        "rel_top_subgraph_triples_location": "wikidata/subgraph_analysis/top_subgraph_triples",
+        "rel_subgraph_qitem_match_location": "query_service/subgraph_qitems_match",
+        "rel_subgraph_predicate_match_location": "query_service/subgraph_predicates_match",
+        "rel_subgraph_uri_match_location": "query_service/subgraph_uri_match",
+        "rel_subgraph_query_mapping_location": "query_service/subgraph_queries"
+    }
+}

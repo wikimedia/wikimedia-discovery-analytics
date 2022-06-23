@@ -55,6 +55,13 @@ all_dag_ids = [
     'query_clicks_init',
     'query_clicks_hourly',
     'query_clicks_daily',
+    'subgraph_mapping_init',
+    'subgraph_mapping_weekly',
+    'subgraph_query_mapping_init',
+    'subgraph_query_mapping_daily',
+    'subgraph_and_query_metrics_init',
+    'subgraph_metrics_weekly',
+    'subgraph_query_metrics_daily',
 ]
 
 

@@ -1,0 +1,64 @@
+
+CREATE TABLE IF NOT EXISTS discovery.subgraph_queries (
+    `id`                string   COMMENT 'ID of the SPARQL query',
+    `subgraph`          string   COMMENT 'URI of the subgraph the query accesses',
+    `qid`               boolean  COMMENT 'Whether the subgraph-query match was through the subgraphs Qid',
+    `item`              boolean  COMMENT 'Whether the subgraph-query match was through an item',
+    `predicate`         boolean  COMMENT 'Whether the subgraph-query match was through a predicate',
+    `uri`               boolean  COMMENT 'Whether the subgraph-query match was through a URI',
+    `literal`           boolean  COMMENT 'Whether the subgraph-query match was through a literal'
+)
+PARTITIONED BY (
+    `year`              int     COMMENT 'Unpadded year of queries',
+    `month`             int     COMMENT 'Unpadded month of queries',
+    `day`               int     COMMENT 'Unpadded day of queries',
+    `wiki`              string  COMMENT 'Wiki name: one of {wikidata, commons}'
+)
+STORED AS PARQUET
+LOCATION 'hdfs:///wmf/data/discovery/query_service/subgraph_queries'
+;
+
+CREATE TABLE IF NOT EXISTS discovery.subgraph_qitems_match (
+    `id`                          string  COMMENT 'ID of the SPARQL query',
+    `subgraph`                    string  COMMENT 'URI of the subgraph the query accesses',
+    `item`                        string  COMMENT 'Item match that caused the query to match with the subgraph'
+)
+PARTITIONED BY (
+    `year`              int     COMMENT 'Unpadded year of queries',
+    `month`             int     COMMENT 'Unpadded month of queries',
+    `day`               int     COMMENT 'Unpadded day of queries',
+    `wiki`              string  COMMENT 'Wiki name: one of {wikidata, commons}'
+)
+STORED AS PARQUET
+LOCATION 'hdfs:///wmf/data/discovery/query_service/subgraph_qitems_match'
+;
+
+CREATE TABLE IF NOT EXISTS discovery.subgraph_predicates_match (
+    `id`                          string  COMMENT 'ID of the SPARQL query',
+    `subgraph`                    string  COMMENT 'URI of the subgraph the query accesses',
+    `predicate_code`              string  COMMENT 'Wikidata predicates present in queries that are part of the subgraph (causing the match)'
+)
+PARTITIONED BY (
+    `year`              int     COMMENT 'Unpadded year of queries',
+    `month`             int     COMMENT 'Unpadded month of queries',
+    `day`               int     COMMENT 'Unpadded day of queries',
+    `wiki`              string  COMMENT 'Wiki name: one of {wikidata, commons}'
+)
+STORED AS PARQUET
+LOCATION 'hdfs:///wmf/data/discovery/query_service/subgraph_predicates_match'
+;
+
+CREATE TABLE IF NOT EXISTS discovery.subgraph_uri_match (
+    `id`                          string  COMMENT 'ID of the SPARQL query',
+    `subgraph`                    string  COMMENT 'URI of the subgraph the query accesses',
+    `uri`                         string  COMMENT 'URIs present in queries that are part of the subgraph (causing the match)'
+)
+PARTITIONED BY (
+    `year`              int     COMMENT 'Unpadded year of queries',
+    `month`             int     COMMENT 'Unpadded month of queries',
+    `day`               int     COMMENT 'Unpadded day of queries',
+    `wiki`              string  COMMENT 'Wiki name: one of {wikidata, commons}'
+)
+STORED AS PARQUET
+LOCATION 'hdfs:///wmf/data/discovery/query_service/subgraph_uri_match'
+;

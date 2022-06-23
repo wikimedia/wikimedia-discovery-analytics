@@ -1,0 +1,32 @@
+{
+    "subgraph_and_query_metrics_conf": {
+        "wikidata_dumps_table": "discovery.wikibase_rdf",
+        "all_subgraphs_table": "discovery.all_subgraphs",
+        "top_subgraph_items_table": "discovery.top_subgraph_items",
+        "top_subgraph_triples_table": "discovery.top_subgraph_triples",
+        "min_items": 10000,
+        "event_sparql_query_table": "event.wdqs_external_sparql_query",
+        "processed_query_table": "discovery.processed_external_sparql_query",
+        "subgraph_qitem_match_table": "discovery.subgraph_qitems_match",
+        "subgraph_predicate_match_table": "discovery.subgraph_predicates_match",
+        "subgraph_uri_match_table": "discovery.subgraph_uri_match",
+        "subgraph_query_mapping_table": "discovery.subgraph_queries",
+        "filtering_limit": 99,
+        "top_n": 100,
+        "wiki": "wikidata",
+        "general_subgraph_metrics_table": "discovery.general_subgraph_metrics",
+        "per_subgraph_metrics_table": "discovery.per_subgraph_metrics",
+        "subgraph_pair_metrics_table": "discovery.subgraph_pair_metrics",
+        "general_query_metrics_table": "discovery.general_query_metrics",
+        "general_subgraph_query_metrics_table": "discovery.general_subgraph_query_metrics",
+        "per_subgraph_query_metrics_table": "discovery.per_subgraph_query_metrics",
+        "subgraph_pair_query_metrics_table": "discovery.subgraph_pair_query_metrics",
+        "rel_general_subgraph_metrics_location": "wikidata/subgraph_analysis/general_subgraph_metrics",
+        "rel_per_subgraph_metrics_location": "wikidata/subgraph_analysis/per_subgraph_metrics",
+        "rel_subgraph_pair_metrics_location": "wikidata/subgraph_analysis/subgraph_pair_metrics",
+        "rel_general_query_metrics_location": "query_service/general_query_metrics",
+        "rel_general_subgraph_query_metrics_location": "query_service/general_subgraph_query_metrics",
+        "rel_per_subgraph_query_metrics_location": "query_service/per_subgraph_query_metrics",
+        "rel_subgraph_pair_query_metrics_location": "query_service/subgraph_pair_query_metrics"
+    }
+}

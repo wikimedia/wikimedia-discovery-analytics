@@ -166,20 +166,24 @@ class TemplatedSeq:
         return (self.fn(x, *self.fn_args) for x in self.template.split(self.sep))
 
 
-def eventgate_partitions(table_tmpl: str) -> Sequence[str]:
+def eventgate_partitions(table_tmpl: str,
+                         datetime_partition: str = YMDH_PARTITION) -> Sequence[str]:
     """Templated sequence of hive partition spec strings for one hour of eventgate input
 
     Eventgate inputs are consistent across use cases. They come with a
     partition for every active datacenter, and have the same hourly
     partitioning scheme across all tables.
 
+    By default, it extracts hourly data. If datetime_partition is provided,
+    it can extract daily or monthly data.
+
     Input table is a templated string. Output suitable for use in
     NamedHivePartitionSensor.partition_names
     """
     return TemplatedSeq.for_var(
         'wmf_conf.eventgate_datacenters',
-        fn_args=(table_tmpl, YMDH_PARTITION),
-        fn=lambda dc, table, ymdh: '{}/datacenter={}/{}'.format(table, dc, ymdh))
+        fn_args=(table_tmpl, datetime_partition),
+        fn=lambda dc, table, dt: '{}/datacenter={}/{}'.format(table, dc, dt))
 
 
 def eventgate_partition_range() -> Sequence[Sequence[Tuple]]:
