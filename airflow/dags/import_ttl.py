@@ -107,7 +107,7 @@ with DAG(
     munge_and_import_commons_dumps = SparkSubmitOperator(
         task_id='munge_dumps',
         application=WDQS_SPARK_TOOLS,
-        java_class="org.wikidata.query.rdf.spark.WikibaseRDFDumpConverter",
+        java_class="org.wikidata.query.rdf.spark.transform.structureddata.dumps.WikibaseRDFDumpConverter",  # noqa
         max_executors=25,
         executor_cores=8,
         executor_memory="16g",
@@ -123,7 +123,7 @@ with DAG(
     generate_entity_rev_map = SparkSubmitOperator(
         task_id='gen_rev_map',
         application=WDQS_SPARK_TOOLS,
-        java_class="org.wikidata.query.rdf.spark.EntityRevisionMapGenerator",
+        java_class="org.wikidata.query.rdf.spark.transform.structureddata.dumps.EntityRevisionMapGenerator",  # noqa
         max_executors=25,
         executor_cores=8,
         executor_memory="16g",
@@ -194,7 +194,7 @@ with DAG(
     munge_and_import_dumps = SparkSubmitOperator(
         task_id='munge_dumps',
         application=WDQS_SPARK_TOOLS,
-        java_class="org.wikidata.query.rdf.spark.WikibaseRDFDumpConverter",
+        java_class="org.wikidata.query.rdf.spark.transform.structureddata.dumps.WikibaseRDFDumpConverter",  # noqa
         max_executors=25,
         executor_cores=8,
         executor_memory="16g",
@@ -210,7 +210,7 @@ with DAG(
     generate_entity_rev_map = SparkSubmitOperator(
         task_id='gen_rev_map',
         application=WDQS_SPARK_TOOLS,
-        java_class="org.wikidata.query.rdf.spark.EntityRevisionMapGenerator",
+        java_class="org.wikidata.query.rdf.spark.transform.structureddata.dumps.EntityRevisionMapGenerator",  # noqa
         max_executors=25,
         executor_cores=8,
         executor_memory="16g",

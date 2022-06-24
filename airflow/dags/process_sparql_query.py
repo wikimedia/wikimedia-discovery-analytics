@@ -118,7 +118,7 @@ with DAG(
             'spark.yarn.maxAppAttempts': '1',
         },
         application=WDQS_SPARK_TOOLS,
-        java_class="org.wikidata.query.rdf.spark.analysis.QueryExtractor",
+        java_class="org.wikidata.query.rdf.spark.transform.queries.sparql.QueryExtractor",
         # The job is a straight map, no shuffle occurs and the data is
         # small enough (< 200MB per run) that the job doesn't use more than
         # a couple tasks, which fit in a single executor.
