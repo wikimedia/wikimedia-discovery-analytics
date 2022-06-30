@@ -15,6 +15,7 @@ from airflow.models.variable import Variable
 
 import jinja2
 import pytest
+from wmf_airflow.hive_table_path import HiveTablePath
 
 import findspark
 findspark.init()  # must happen before importing pyspark
@@ -228,6 +229,8 @@ def rendered_task(task, mocker):
     # This will try and talk to hive, can't let it. And yes, it really
     # returns a binary string.
     mocker.patch.object(macros.hive, 'max_partition').return_value = b'20010115'
+    # HiveTablePath also tries to talk to hive.
+    mocker.patch.object(HiveTablePath, '__call__').side_effect = lambda t: f"/path/to/{t}"
     # This will change the task, take a copy
     task = deepcopy(task)
     # Some dags have expectations, such as it always runs on sunday. Some date manipulation

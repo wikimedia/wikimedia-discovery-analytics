@@ -41,6 +41,17 @@ def test_unregistered_dag_is_example_dag(dag_id):
     assert dag_dir == 'example_dags', dag.dag_id
 
 
+@pytest.mark.parametrize(
+    'task', all_tasks(),
+    ids=lambda task: f"{task.dag_id}-{task.task_id}"
+)
+def test_task_is_renderable(task, rendered_task):
+    # Nothing specific to test here, simply generating rendered_task from task is sufficient
+    # to verify tasks are renderable. On failure jinja2.exceptions.TemplateSyntaxError will
+    # be thrown when the fixtures build rendered_task.
+    assert 1
+
+
 @pytest.mark.parametrize('task', tasks(WrongSparkSubmitOperator))
 def test_use_spark_submit_from_our_plugin(task):
     assert 0, "Task {} is using the wrong SparkSubmitOperator implementation".format(task.task_id)
