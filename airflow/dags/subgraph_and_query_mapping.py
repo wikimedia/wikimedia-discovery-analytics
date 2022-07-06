@@ -130,7 +130,7 @@ with DAG(
         java_class="org.wikidata.query.rdf.spark.transform.structureddata.subgraphs.SubgraphMappingLauncher", # noqa
         max_executors=64,
         executor_cores=4,
-        executor_memory="8g",
+        executor_memory="12g",
         driver_memory="8g",
         application_args=[
             '--wikidata-table', wikidata_table_and_partition,
