@@ -124,13 +124,17 @@ with DAG(
         conf={
             # Delegate retries to airflow
             'spark.yarn.maxAppAttempts': '1',
+            # Job generates a tb+ shuffle, give it plenty of partitions
+            'spark.sql.shuffle.partitions': 4096,
         },
         application=WDQS_SPARK_TOOLS,
         pool='sequential',
         java_class="org.wikidata.query.rdf.spark.transform.structureddata.subgraphs.SubgraphMappingLauncher", # noqa
-        max_executors=64,
+        max_executors=48,
         executor_cores=4,
-        executor_memory="12g",
+        # Some of the joins used here have a significant skew, we need to provide extra memory
+        # to ensure to joins complete without OOM'ing.
+        executor_memory="24g",
         driver_memory="8g",
         application_args=[
             '--wikidata-table', wikidata_table_and_partition,
