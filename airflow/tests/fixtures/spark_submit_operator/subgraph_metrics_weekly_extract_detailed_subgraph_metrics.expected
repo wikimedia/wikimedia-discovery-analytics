@@ -21,17 +21,17 @@
     "/srv/deployment/wikimedia/discovery/analytics/artifacts/rdf-spark-tools-latest-jar-with-dependencies.jar",
     "detailed-subgraph-metrics",
     "--all-subgraphs-table",
-    "discovery.all_subgraphs/snapshot=20220620/wiki=wikidata",
+    "discovery.all_subgraphs/snapshot=20220627/wiki=wikidata",
     "--top-subgraph-items-table",
-    "discovery.top_subgraph_items/snapshot=20220620/wiki=wikidata",
+    "discovery.top_subgraph_items/snapshot=20220627/wiki=wikidata",
     "--top-subgraph-triples-table",
-    "discovery.top_subgraph_triples/snapshot=20220620/wiki=wikidata",
+    "discovery.top_subgraph_triples/snapshot=20220627/wiki=wikidata",
     "--general-subgraph-metrics-table",
-    "discovery.general_subgraph_metrics/snapshot=20220620/wiki=wikidata",
+    "discovery.general_subgraph_metrics/snapshot=20220627/wiki=wikidata",
     "--min-items",
     "10000",
     "--per-subgraph-metrics-table",
-    "discovery.per_subgraph_metrics/snapshot=20220620/wiki=wikidata",
+    "discovery.per_subgraph_metrics/snapshot=20220627/wiki=wikidata",
     "--subgraph-pair-metrics-table",
-    "discovery.subgraph_pair_metrics/snapshot=20220620/wiki=wikidata"
+    "discovery.subgraph_pair_metrics/snapshot=20220627/wiki=wikidata"
 ]

@@ -40,7 +40,7 @@ WIKI = dag_conf('wiki')
 
 # Default kwargs for all Operators
 default_args = {
-    'start_date': datetime(2022, 6, 20),
+    'start_date': datetime(2022, 7, 1),
 }
 
 with DAG(
@@ -101,16 +101,17 @@ with DAG(
 with DAG(
         'subgraph_mapping_weekly',
         default_args=default_args,
-        # wikidata dumps are available every monday ~6 UTC
-        # schedule this dag for monday to keep the dates in sync
-        schedule_interval='0 6 * * 1',
+        # wikidata dumps dated every monday are available the next friday ~6 UTC
+        # schedule this dag for friday and set last mondays date to keep the dates in sync
+        schedule_interval='0 7 * * 5',
         # As a weekly job there should never really be more than
         # one running at a time.
         max_active_runs=1,
         catchup=True,
 ) as subgraph_mapping_dag:
-    date = "{{ execution_date.format('%Y%m%d') }}"
-    wikidata_table_and_partition: str = '%s/date=%s/wiki=%s' % (WIKIDATA_TABLE, date, WIKI)
+    last_monday = "{{ execution_date.previous(day_of_week=p.MONDAY).format('%Y%m%d') }}"
+    wikidata_table_and_partition: str = '%s/date=%s/wiki=%s' % (
+        WIKIDATA_TABLE, last_monday, WIKI)
 
     wait_for_data = NamedHivePartitionSensor(
         task_id='wait_for_data',
@@ -139,11 +140,12 @@ with DAG(
         driver_memory="8g",
         application_args=[
             '--wikidata-table', wikidata_table_and_partition,
-            '--all-subgraphs-table', '%s/snapshot=%s/wiki=%s' % (ALL_SUBGRAPHS_TABLE, date, WIKI),
+            '--all-subgraphs-table',
+            '%s/snapshot=%s/wiki=%s' % (ALL_SUBGRAPHS_TABLE, last_monday, WIKI),
             '--top-subgraph-items-table',
-            '%s/snapshot=%s/wiki=%s' % (TOP_SUBGRAPH_ITEMS_TABLE, date, WIKI),
+            '%s/snapshot=%s/wiki=%s' % (TOP_SUBGRAPH_ITEMS_TABLE, last_monday, WIKI),
             '--top-subgraph-triples-table',
-            '%s/snapshot=%s/wiki=%s' % (TOP_SUBGRAPH_TRIPLES_TABLE, date, WIKI),
+            '%s/snapshot=%s/wiki=%s' % (TOP_SUBGRAPH_TRIPLES_TABLE, last_monday, WIKI),
             '--min-items', MIN_ITEMS
         ]
     )
@@ -241,13 +243,23 @@ with DAG(
             'p': pendulum,
         },
 ) as subgraph_query_mapping_dag:
-    last_monday = "{{ execution_date.previous(day_of_week=p.MONDAY).format('%Y%m%d') }}"
-    last_wikidata_table_and_partition: str = '%s/date=%s/wiki=%s' % (
-        WIKIDATA_TABLE, last_monday, WIKI)
+    # since wikidata and subgraph mappings are generated every friday (with snapshot date of the
+    # last monday), this daily job will fail to find any data for the last monday any time before
+    # friday. To solve it, this dag looks for data from two mondays ago, which will definitely be
+    # populated by then. For example in 2022, the dags for 28-30 June will use data from 20 June,
+    # since the data of 27 June is not available yet. On 1 July, Friday, the wikidata snapshot will
+    # become available but the dags continue to use 20 June's data until 4 July, from 5 July, they
+    # start looking for data at 27 June (because those of last monday 4 July, aren't yet available).
+
+    second_last_monday = "{{ execution_date.previous(day_of_week=p.MONDAY)" \
+                         ".previous(day_of_week=p.MONDAY).format('%Y%m%d') }}"
+    second_last_wikidata_table_and_partition: str = '%s/date=%s/wiki=%s' % (
+        WIKIDATA_TABLE, second_last_monday, WIKI)
+
     top_subgraph_items_table_and_partition: str = '%s/snapshot=%s/wiki=%s' % (
-        TOP_SUBGRAPH_ITEMS_TABLE, last_monday, WIKI)
+        TOP_SUBGRAPH_ITEMS_TABLE, second_last_monday, WIKI)
     top_subgraph_triples_table_and_partition: str = '%s/snapshot=%s/wiki=%s' % (
-        TOP_SUBGRAPH_TRIPLES_TABLE, last_monday, WIKI)
+        TOP_SUBGRAPH_TRIPLES_TABLE, second_last_monday, WIKI)
     processed_external_sparql_query_table_and_partition: str = '%s/%s/wiki=%s' % (
         PROCESSED_QUERY_TABLE, YMD_PARTITION, WIKI)
 
@@ -256,7 +268,7 @@ with DAG(
         mode='reschedule',
         sla=timedelta(days=1),
         retries=4,
-        partition_names=[last_wikidata_table_and_partition,
+        partition_names=[second_last_wikidata_table_and_partition,
                          top_subgraph_items_table_and_partition,
                          top_subgraph_triples_table_and_partition,
                          processed_external_sparql_query_table_and_partition],
@@ -276,7 +288,7 @@ with DAG(
         executor_memory="8g",
         driver_memory="8g",
         application_args=[
-            '--wikidata-table', last_wikidata_table_and_partition,
+            '--wikidata-table', second_last_wikidata_table_and_partition,
             '--top-subgraph-items-table', top_subgraph_items_table_and_partition,
             '--top-subgraph-triples-table', top_subgraph_triples_table_and_partition,
             '--processed-query-table', processed_external_sparql_query_table_and_partition,

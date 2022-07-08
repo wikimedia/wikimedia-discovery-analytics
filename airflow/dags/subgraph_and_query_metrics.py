@@ -17,10 +17,11 @@ from datetime import datetime, timedelta
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.hive_operator import HiveOperator
 from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
+from wmf_airflow.hive_partition_range_sensor import HivePartitionRangeSensor
 from wmf_airflow import DAG
 from wmf_airflow.spark_submit import SparkSubmitOperator
 from wmf_airflow.template import (DagConf, wmf_conf, YMD_PARTITION, WDQS_SPARK_TOOLS,
-                                  eventgate_partitions)
+                                  eventgate_partition_range)
 
 dag_conf = DagConf('subgraph_and_query_metrics_conf')
 
@@ -46,11 +47,9 @@ TOP_N = dag_conf('top_n')
 FILTERING_LIMIT = dag_conf('filtering_limit')
 WIKI = dag_conf('wiki')
 
-DATE = "{{ execution_date.format('%Y%m%d') }}"
-
 # Default kwargs for all Operators
 default_args = {
-    'start_date': datetime(2022, 6, 20),
+    'start_date': datetime(2022, 7, 1),
 }
 
 with DAG(
@@ -256,24 +255,26 @@ with DAG(
 with DAG(
         'subgraph_metrics_weekly',
         default_args=default_args,
-        # all input tables are available every monday
-        # schedule this dag for monday to keep the dates in sync
-        # wikidata dumps by 6 UTC and other tables take ~30 min more
-        schedule_interval='0 7 * * 1',
+        # all input tables are available every friday (snapshot dated for the previous monday)
+        # schedule this dag for friday and give previous monday's date to keep the dates in sync
+        # wikidata dumps come in by ~6 UTC and other tables start populating at 7 UTC
+        schedule_interval='0 9 * * 5',
         # As a weekly job there should never really be more than
         # one running at a time.
         max_active_runs=1,
         catchup=True,
 ) as subgraph_metrics_dag:
-    wikidata_table_and_partition: str = '%s/date=%s/wiki=%s' % (WIKIDATA_TABLE, DATE, WIKI)
+    last_monday = "{{ execution_date.previous(day_of_week=p.MONDAY).format('%Y%m%d') }}"
+    wikidata_table_and_partition: str = '%s/date=%s/wiki=%s' % (
+        WIKIDATA_TABLE, last_monday, WIKI)
     all_subgraphs_table_and_partition: str = '%s/snapshot=%s/wiki=%s' % (
-        ALL_SUBGRAPHS_TABLE, DATE, WIKI)
+        ALL_SUBGRAPHS_TABLE, last_monday, WIKI)
     top_subgraph_items_table_and_partition: str = '%s/snapshot=%s/wiki=%s' % (
-        TOP_SUBGRAPH_ITEMS_TABLE, DATE, WIKI)
+        TOP_SUBGRAPH_ITEMS_TABLE, last_monday, WIKI)
     top_subgraph_triples_table_and_partition: str = '%s/snapshot=%s/wiki=%s' % (
-        TOP_SUBGRAPH_TRIPLES_TABLE, DATE, WIKI)
+        TOP_SUBGRAPH_TRIPLES_TABLE, last_monday, WIKI)
     general_subgraph_metrics_table: str = '%s/snapshot=%s/wiki=%s' % (
-        GENERAL_SUBGRAPH_METRICS_TABLE, DATE, WIKI)
+        GENERAL_SUBGRAPH_METRICS_TABLE, last_monday, WIKI)
 
     wait_for_data = NamedHivePartitionSensor(
         task_id='wait_for_data',
@@ -331,9 +332,9 @@ with DAG(
             "--general-subgraph-metrics-table", general_subgraph_metrics_table,
             "--min-items", MIN_ITEMS,
             "--per-subgraph-metrics-table",
-            '%s/snapshot=%s/wiki=%s' % (PER_SUBGRAPH_METRICS_TABLE, DATE, WIKI),
+            '%s/snapshot=%s/wiki=%s' % (PER_SUBGRAPH_METRICS_TABLE, last_monday, WIKI),
             "--subgraph-pair-metrics-table",
-            '%s/snapshot=%s/wiki=%s' % (SUBGRAPH_PAIR_METRICS_TABLE, DATE, WIKI),
+            '%s/snapshot=%s/wiki=%s' % (SUBGRAPH_PAIR_METRICS_TABLE, last_monday, WIKI),
         ]
     )
     complete = DummyOperator(task_id='complete')
@@ -361,13 +362,15 @@ with DAG(
     subgraph_uri_match_table_and_partition: str = '%s/%s/wiki=%s' % (
         SUBGRAPH_URI_MATCH_TABLE, YMD_PARTITION, WIKI)
 
-    wait_for_event_sparql_queries = NamedHivePartitionSensor(
+    wait_for_event_sparql_queries = HivePartitionRangeSensor(
         task_id='wait_for_event_sparql_queries',
         mode='reschedule',
         sla=timedelta(days=1),
         retries=4,
-        partition_names=eventgate_partitions(EVENT_SPARQL_QUERY_TABLE, YMD_PARTITION)
-    )
+        table=EVENT_SPARQL_QUERY_TABLE,
+        period=timedelta(days=1),
+        partition_frequency='hours',
+        partition_specs=eventgate_partition_range())
 
     wait_for_subgraph_query_table = NamedHivePartitionSensor(
         task_id='wait_for_subgraph_query_table',

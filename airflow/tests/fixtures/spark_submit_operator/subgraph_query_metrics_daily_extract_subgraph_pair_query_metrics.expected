@@ -21,7 +21,7 @@
     "/srv/deployment/wikimedia/discovery/analytics/artifacts/rdf-spark-tools-latest-jar-with-dependencies.jar",
     "subgraph-pair-query-metrics",
     "--subgraph-query-table",
-    "discovery.subgraph_queries/year=2022/month=6/day=20/wiki=wikidata",
+    "discovery.subgraph_queries/year=2022/month=7/day=1/wiki=wikidata",
     "--subgraph-pair-query-metrics-table",
-    "discovery.subgraph_pair_query_metrics/year=2022/month=6/day=20/wiki=wikidata"
+    "discovery.subgraph_pair_query_metrics/year=2022/month=7/day=1/wiki=wikidata"
 ]
