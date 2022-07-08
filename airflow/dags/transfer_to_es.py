@@ -35,12 +35,14 @@ with DAG(
     sensors = [
         ExternalTaskSensor(
             task_id='wait_for_ores_predictions',
+            mode='reschedule',
             external_dag_id='ores_predictions_hourly',
             external_task_id='complete',
             **sensor_kwargs
         ),
         ExternalTaskSensor(
             task_id='wait_for_recommendations',
+            mode='reschedule',
             external_dag_id='mediawiki_revision_recommendation_create_hourly',
             external_task_id='complete',
             **sensor_kwargs
@@ -67,12 +69,14 @@ with DAG(
     sensors = [
         ExternalTaskSensor(
             task_id='wait_for_popularity_score',
+            mode='reschedule',
             external_dag_id='popularity_score_weekly',
             external_task_id='complete',
             **sensor_kwargs
         ),
         NamedHivePartitionSensor(
             task_id='wait_for_image_recommendations',
+            mode='reschedule',
             partition_names=[
                 "analytics_platform_eng.image_suggestions_search_index_delta/snapshot="
                 + "{{ execution_date.add(days=-6).format('%Y-%m-%d') }}",

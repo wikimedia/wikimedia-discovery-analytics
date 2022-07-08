@@ -277,6 +277,7 @@ with DAG(
 
     wait_for_data = NamedHivePartitionSensor(
         task_id='wait_for_data',
+        mode='reschedule',
         sla=timedelta(days=1),
         retries=4,
         partition_names=[wikidata_table_and_partition,
@@ -362,6 +363,7 @@ with DAG(
 
     wait_for_event_sparql_queries = NamedHivePartitionSensor(
         task_id='wait_for_event_sparql_queries',
+        mode='reschedule',
         sla=timedelta(days=1),
         retries=4,
         partition_names=eventgate_partitions(EVENT_SPARQL_QUERY_TABLE, YMD_PARTITION)
@@ -369,6 +371,7 @@ with DAG(
 
     wait_for_subgraph_query_table = NamedHivePartitionSensor(
         task_id='wait_for_subgraph_query_table',
+        mode='reschedule',
         sla=timedelta(days=1),
         retries=4,
         partition_names=[subgraph_query_table_and_partition]
@@ -376,6 +379,7 @@ with DAG(
 
     wait_for_data = NamedHivePartitionSensor(
         task_id='wait_for_data',
+        mode='reschedule',
         sla=timedelta(days=1),
         retries=4,
         partition_names=[

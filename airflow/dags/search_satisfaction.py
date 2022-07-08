@@ -51,6 +51,7 @@ with DAG(
     # Wait for the events that come from browsers
     wait_for_events = HivePartitionRangeSensor(
         task_id='wait_for_events',
+        mode='reschedule',
         timeout=int(timedelta(days=1).total_seconds()),
         email_on_retry=True,
         table=TABLE_SEARCH_EVENTS,
@@ -66,6 +67,7 @@ with DAG(
     # Wait for the logs (events, basically) that come from application severs
     wait_for_logs = HivePartitionRangeSensor(
         task_id='wait_for_logs',
+        mode='reschedule',
         timeout=int(timedelta(days=1).total_seconds()),
         email_on_retry=True,
         table=TABLE_SEARCH_LOGS,

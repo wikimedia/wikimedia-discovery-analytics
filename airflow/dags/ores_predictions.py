@@ -371,6 +371,7 @@ with DAG(
 ) as hourly_dag:
     wait_for_thresholds = ExternalTaskSensor(
         task_id='wait_for_thresholds',
+        mode='reschedule',
         external_dag_id='ores_predictions_daily',
         external_task_id='complete',
         # dt is a pendulum.datetime. We need the task for yesterday, because
@@ -379,6 +380,7 @@ with DAG(
 
     wait_for_hourly_data = NamedHivePartitionSensor(
         task_id='wait_for_hourly_data',
+        mode='reschedule',
         # We send a failure email once a day when the expected data is not
         # found. Since this is a weekly job we wait up to 4 days for the data
         # to show up before giving up and waiting for next scheduled run.
@@ -428,6 +430,7 @@ with DAG(
 ) as bulk_dag:
     wait_for_thresholds = ExternalTaskSensor(
         task_id='wait_for_thresholds',
+        mode='reschedule',
         external_dag_id='ores_predictions_daily',
         external_task_id='complete',
         # dt is a pendulum.datetime. We need the task for yesterday, because

@@ -94,10 +94,10 @@ with DAG(
     rdf_table_and_partition = '%s/date=%s/wiki=%s' % (RDF_DATA_TABLE, commons_ds, wiki)
 
     commons_sensor = HdfsCliSensor(task_id="wait_for_mediainfo_ttl_dump",
+                                   mode='reschedule',
                                    filepath=path,
                                    poke_interval=timedelta(hours=1).total_seconds(),
-                                   timeout=timedelta(days=1).total_seconds(),
-                                   mode='reschedule')
+                                   timeout=timedelta(days=1).total_seconds())
 
     input_path = "{base}/{commons_ds}/commons-{commons_ds}-mediainfo.ttl.bz2,".format(
                  base=COMMONS_DUMP_DIR,
@@ -168,17 +168,17 @@ with DAG(
     rdf_table_and_partition = '%s/date=%s/wiki=%s' % (RDF_DATA_TABLE, all_ttl_ds, wiki)
 
     all_ttl_sensor = HdfsCliSensor(task_id="wait_for_all_ttl_dump",
+                                   mode='reschedule',
                                    filepath=path,
                                    poke_interval=timedelta(hours=1).total_seconds(),
-                                   timeout=timedelta(days=1).total_seconds(),
-                                   mode='reschedule')
+                                   timeout=timedelta(days=1).total_seconds())
 
     path = "%s/%s/_IMPORTED" % (LEXEMES_TTL_DUMP_DIR, lexemes_ttl_ds)
     lexeme_ttl_sensor = HdfsCliSensor(task_id="wait_for_lexemes_ttl_dump",
+                                      mode='reschedule',
                                       filepath=path,
                                       poke_interval=timedelta(hours=1).total_seconds(),
-                                      timeout=timedelta(days=1).total_seconds(),
-                                      mode='reschedule')
+                                      timeout=timedelta(days=1).total_seconds())
 
     input_path = "{all_base}/{all_ttl_ds}/wikidata-{all_ttl_ds}-all-BETA.ttl.bz2," \
                  "{lexemes_base}/{lexemes_ttl_ds}/" \

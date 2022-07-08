@@ -67,6 +67,7 @@ with DAG(
 ) as dag:
     wait_for_data = NamedHivePartitionSensor(
         task_id='wait_for_data',
+        mode='reschedule',
         # We send a failure email every 6 hours and keep trying for a full day.
         timeout=60 * 60 * 6,
         retries=4,

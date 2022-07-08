@@ -21,6 +21,7 @@ CIRRUSSEARCH_REQUEST_TABLE = dag_conf('mediawiki_cirrussearch_request')
 def get_wait_sensor(table: str, sensor_name: str) -> NamedHivePartitionSensor:
     return NamedHivePartitionSensor(
         task_id='wait_for_data_in_{}'.format(sensor_name),
+        mode='reschedule',
         # We send a failure email every 6 hours and keep trying for a full day.
         timeout=60 * 60 * 6,
         retries=4,

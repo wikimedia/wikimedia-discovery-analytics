@@ -103,6 +103,7 @@ with DAG(
 
     wait_for_data = NamedHivePartitionSensor(
         task_id='wait_for_data',
+        mode='reschedule',
         # to be changed to hours=6 after backfill completes
         sla=timedelta(days=365),
         retries=4,

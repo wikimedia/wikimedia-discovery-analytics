@@ -65,6 +65,7 @@ with DAG(
     # Require hourly partitions to exist before running
     wait_for_pageview_hourly = HivePartitionRangeSensor(
         task_id='wait_for_pageview_hourly',
+        mode='reschedule',
         # We send a failure email once a day when the expected data is not
         # found. Since this is a weekly job we wait up to 4 days for the data
         # to show up before giving up and waiting for next scheduled run.

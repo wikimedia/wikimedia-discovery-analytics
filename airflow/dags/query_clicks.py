@@ -109,6 +109,7 @@ with DAG(
     sensors = [
         HivePartitionRangeSensor(
             task_id='wait_for_web_requests',
+            mode='reschedule',
             table=dag_conf('table_webrequest'),
             # Each hourly run requires it's own hour plus the following hour
             period=timedelta(hours=2),
@@ -123,6 +124,7 @@ with DAG(
         ),
         NamedHivePartitionSensor(
             task_id='wait_for_cirrus_requests',
+            mode='reschedule',
             timeout=60 * 60 * 6,  # 6 hours
             partition_names=eventgate_partitions(dag_conf('table_cirrus_requests')),
         ),
@@ -349,6 +351,7 @@ with DAG(
 ) as dag_daily:
     sensor = HivePartitionRangeSensor(
         task_id='wait_for_hourlies',
+        mode='reschedule',
         table=dag_conf('table_hourly'),
         period=timedelta(days=1),
         partition_frequency='hours',

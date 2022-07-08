@@ -88,6 +88,7 @@ with DAG(
     # Wait for backend logs from CirrusSearch
     wait_for_data = HivePartitionRangeSensor(
         task_id='wait_for_data',
+        mode='reschedule',
         timeout=int(timedelta(days=1).total_seconds()),
         email_on_retry=True,
         table=TABLE_CIRRUS_EVENT,

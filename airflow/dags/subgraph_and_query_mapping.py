@@ -114,6 +114,7 @@ with DAG(
 
     wait_for_data = NamedHivePartitionSensor(
         task_id='wait_for_data',
+        mode='reschedule',
         sla=timedelta(days=1),
         retries=4,
         partition_names=[wikidata_table_and_partition],
@@ -252,6 +253,7 @@ with DAG(
 
     wait_for_data = NamedHivePartitionSensor(
         task_id='wait_for_data',
+        mode='reschedule',
         sla=timedelta(days=1),
         retries=4,
         partition_names=[last_wikidata_table_and_partition,
