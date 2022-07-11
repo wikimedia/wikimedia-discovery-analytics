@@ -5,6 +5,8 @@
     "--conf",
     "spark.dynamicAllocation.maxExecutors=128",
     "--conf",
+    "spark.sql.shuffle.partitions=2048",
+    "--conf",
     "spark.yarn.maxAppAttempts=1",
     "--executor-cores",
     "4",

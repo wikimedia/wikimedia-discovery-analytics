@@ -290,6 +290,9 @@ with DAG(
         conf={
             # Delegate retries to airflow
             'spark.yarn.maxAppAttempts': '1',
+            # Job generates a 500GB+ shuffle, increase partition count to aim for
+            # 256-512MB per partition.
+            'spark.sql.shuffle.partitions': 2048,
         },
         application=WDQS_SPARK_TOOLS,
         pool='sequential',
