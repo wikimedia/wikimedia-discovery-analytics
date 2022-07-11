@@ -261,8 +261,6 @@ with DAG(
         TOP_SUBGRAPH_ITEMS_TABLE, second_last_monday, WIKI)
     top_subgraph_triples_table_and_partition: str = '%s/snapshot=%s/wiki=%s' % (
         TOP_SUBGRAPH_TRIPLES_TABLE, second_last_monday, WIKI)
-    processed_external_sparql_query_table_and_partition: str = '%s/%s/wiki=%s' % (
-        PROCESSED_QUERY_TABLE, YMD_PARTITION, WIKI)
 
     wait_for_data = NamedHivePartitionSensor(
         task_id='wait_for_data',
@@ -304,7 +302,8 @@ with DAG(
             '--wikidata-table', second_last_wikidata_table_and_partition,
             '--top-subgraph-items-table', top_subgraph_items_table_and_partition,
             '--top-subgraph-triples-table', top_subgraph_triples_table_and_partition,
-            '--processed-query-table', processed_external_sparql_query_table_and_partition,
+            '--processed-query-table',
+            '%s/%s/wiki=%s' % (PROCESSED_QUERY_TABLE, YMD_PARTITION, WIKI),
             '--subgraph-qitem-match-query-table',
             '%s/%s/wiki=%s' % (SUBGRAPH_QITEM_MATCH_TABLE, YMD_PARTITION, WIKI),
             '--subgraph-predicate-match-query-table',

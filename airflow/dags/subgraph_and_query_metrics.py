@@ -353,8 +353,6 @@ with DAG(
 ) as subgraph_query_metrics_dag:
     subgraph_query_table_and_partition: str = '%s/%s/wiki=%s' % (
         SUBGRAPH_QUERY_MAPPING_TABLE, YMD_PARTITION, WIKI)
-    processed_external_sparql_query_table_and_partitions: str = '%s/%s/wiki=%s' % (
-        PROCESSED_QUERY_TABLE, YMD_PARTITION, WIKI)
     subgraph_qitem_match_table_and_partition: str = '%s/%s/wiki=%s' % (
         SUBGRAPH_QITEM_MATCH_TABLE, YMD_PARTITION, WIKI)
     subgraph_predicate_match_table_and_partition: str = '%s/%s/wiki=%s' % (
@@ -399,7 +397,6 @@ with DAG(
         sla=timedelta(days=1),
         retries=4,
         partition_names=[
-            processed_external_sparql_query_table_and_partitions,
             subgraph_qitem_match_table_and_partition,
             subgraph_predicate_match_table_and_partition,
             subgraph_uri_match_table_and_partition
@@ -423,7 +420,8 @@ with DAG(
             "query-metrics",
             "--event-query-table",
             '%s/%s/wiki=%s' % (EVENT_SPARQL_QUERY_TABLE, YMD_PARTITION, WIKI),
-            "--processed-query-table", processed_external_sparql_query_table_and_partitions,
+            "--processed-query-table",
+            '%s/%s/wiki=%s' % (PROCESSED_QUERY_TABLE, YMD_PARTITION, WIKI),
             "--matched-Qitems-table", subgraph_qitem_match_table_and_partition,
             "--matched-predicates-table", subgraph_predicate_match_table_and_partition,
             "--matched-uris-table", subgraph_uri_match_table_and_partition,
