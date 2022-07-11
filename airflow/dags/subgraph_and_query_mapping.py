@@ -20,6 +20,7 @@ from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.hive_operator import HiveOperator
 from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 from wmf_airflow import DAG
+from wmf_airflow.hive_partition_range_sensor import HivePartitionRangeSensor
 from wmf_airflow.spark_submit import SparkSubmitOperator
 from wmf_airflow.template import (DagConf, wmf_conf, YMD_PARTITION, WDQS_SPARK_TOOLS)
 
@@ -270,8 +271,20 @@ with DAG(
         retries=4,
         partition_names=[second_last_wikidata_table_and_partition,
                          top_subgraph_items_table_and_partition,
-                         top_subgraph_triples_table_and_partition,
-                         processed_external_sparql_query_table_and_partition],
+                         top_subgraph_triples_table_and_partition]
+    )
+
+    wait_for_sparql_queries = HivePartitionRangeSensor(
+        task_id='wait_for_sparql_queries',
+        mode='reschedule',
+        sla=timedelta(days=1),
+        retries=4,
+        table=PROCESSED_QUERY_TABLE,
+        period=timedelta(days=1),
+        partition_frequency='hours',
+        partition_specs=[
+            [('year', None), ('month', None), ('day', None), ('hour', None), ('wiki', WIKI)]
+        ]
     )
 
     map_subgraphs_queries = SparkSubmitOperator(
@@ -306,4 +319,4 @@ with DAG(
 
     complete = DummyOperator(task_id='complete')
 
-    wait_for_data >> map_subgraphs_queries >> complete
+    [wait_for_data, wait_for_sparql_queries] >> map_subgraphs_queries >> complete

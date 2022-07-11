@@ -372,6 +372,19 @@ with DAG(
         partition_frequency='hours',
         partition_specs=eventgate_partition_range())
 
+    wait_for_processed_sparql_queries = HivePartitionRangeSensor(
+        task_id='wait_for_processed_sparql_queries',
+        mode='reschedule',
+        sla=timedelta(days=1),
+        retries=4,
+        table=PROCESSED_QUERY_TABLE,
+        period=timedelta(days=1),
+        partition_frequency='hours',
+        partition_specs=[
+            [('year', None), ('month', None), ('day', None), ('hour', None), ('wiki', WIKI)]
+        ]
+    )
+
     wait_for_subgraph_query_table = NamedHivePartitionSensor(
         task_id='wait_for_subgraph_query_table',
         mode='reschedule',
@@ -448,8 +461,14 @@ with DAG(
 
     complete = DummyOperator(task_id='complete')
 
-    ([wait_for_event_sparql_queries, wait_for_subgraph_query_table, wait_for_data]
+    ([
+        wait_for_event_sparql_queries,
+        wait_for_processed_sparql_queries,
+        wait_for_subgraph_query_table,
+        wait_for_data
+    ]
         >> extract_subgraph_query_metrics
-        >> complete)
+        >> complete
+    )
 
     wait_for_subgraph_query_table >> extract_subgraph_pair_query_metrics >> complete
