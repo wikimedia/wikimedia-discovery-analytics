@@ -2,7 +2,6 @@ from datetime import datetime, timedelta
 
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.sensors.external_task_sensor import ExternalTaskSensor
-from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 
 from wmf_airflow import DAG
 from wmf_airflow.transfer_to_es import convert_and_upload
@@ -73,16 +72,7 @@ with DAG(
             external_dag_id='popularity_score_weekly',
             external_task_id='complete',
             **sensor_kwargs
-        ),
-        NamedHivePartitionSensor(
-            task_id='wait_for_image_recommendations',
-            mode='reschedule',
-            partition_names=[
-                "analytics_platform_eng.image_suggestions_search_index_delta/snapshot="
-                + "{{ execution_date.add(days=-6).format('%Y-%m-%d') }}",
-            ],
-            **sensor_kwargs
-        ),
+        )
     ]
 
     convert, upload = convert_and_upload('weekly', 'freq=weekly')
