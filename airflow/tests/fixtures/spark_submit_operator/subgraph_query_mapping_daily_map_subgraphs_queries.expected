@@ -11,7 +11,7 @@
     "--executor-cores",
     "4",
     "--executor-memory",
-    "8g",
+    "12g",
     "--driver-memory",
     "8g",
     "--name",

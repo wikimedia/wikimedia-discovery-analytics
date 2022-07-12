@@ -299,7 +299,7 @@ with DAG(
         java_class="org.wikidata.query.rdf.spark.transform.queries.subgraphsqueries.SubgraphQueryMappingLauncher", # noqa
         max_executors=128,  # takes ~40 mins with 128 max executors and ~2 hrs with 64 max executors
         executor_cores=4,
-        executor_memory="8g",
+        executor_memory="12g",
         driver_memory="8g",
         application_args=[
             '--wikidata-table', second_last_wikidata_table_and_partition,
