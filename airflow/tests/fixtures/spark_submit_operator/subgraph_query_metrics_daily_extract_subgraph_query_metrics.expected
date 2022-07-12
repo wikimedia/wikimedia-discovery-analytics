@@ -21,7 +21,7 @@
     "/srv/deployment/wikimedia/discovery/analytics/artifacts/rdf-spark-tools-latest-jar-with-dependencies.jar",
     "query-metrics",
     "--event-query-table",
-    "event.wdqs_external_sparql_query/year=2022/month=7/day=1/wiki=wikidata",
+    "event.wdqs_external_sparql_query/year=2022/month=7/day=1",
     "--processed-query-table",
     "discovery.processed_external_sparql_query/year=2022/month=7/day=1/wiki=wikidata",
     "--matched-Qitems-table",

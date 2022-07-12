@@ -419,7 +419,7 @@ with DAG(
         application_args=[
             "query-metrics",
             "--event-query-table",
-            '%s/%s/wiki=%s' % (EVENT_SPARQL_QUERY_TABLE, YMD_PARTITION, WIKI),
+            '%s/%s' % (EVENT_SPARQL_QUERY_TABLE, YMD_PARTITION),
             "--processed-query-table",
             '%s/%s/wiki=%s' % (PROCESSED_QUERY_TABLE, YMD_PARTITION, WIKI),
             "--matched-Qitems-table", subgraph_qitem_match_table_and_partition,
