@@ -396,7 +396,7 @@ CONFIG: Mapping[str, Callable[[], Sequence[Table]]] = {
     'image_suggestion_manual': lambda: [
         # Full replacement of existing data
         Table(
-            table_name='analytics_platform_eng.image_suggestions_search_index_full',
+            table_name='analytics_platform_eng.image_suggestions_search_index_delta',
             partition_spec_tmpl='@dailysnapshot',
             join_on=JOIN_ON_WIKIID,
             update_kind=UPDATE_ALL,
