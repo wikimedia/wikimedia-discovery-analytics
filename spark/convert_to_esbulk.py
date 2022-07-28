@@ -625,7 +625,7 @@ def _document_data(
     header = {
         'update': {
             '_index': document.elastic_index,
-            '_type': 'page',
+            '_type': '_doc',
             '_id': document.page_id,
         }
     }
