@@ -31,7 +31,7 @@
     "--namespace-map-table",
     "discovery.cirrus_namespace_index_map",
     "--output",
-    "hdfs:///wmf/data/discovery/transfer_to_es/date=20220731/freq=weekly/image_suggestions",
+    "hdfs:///wmf/data/discovery/transfer_to_es/date=20220725/freq=weekly/image_suggestions",
     "--datetime",
-    "2022-07-31T00:00:00+00:00"
+    "2022-07-25T00:00:00+00:00"
 ]

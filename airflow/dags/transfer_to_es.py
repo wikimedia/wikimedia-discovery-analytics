@@ -94,7 +94,7 @@ with DAG(
 with DAG(
         'image_suggestions_weekly',
         default_args=default_args,
-        schedule_interval='@weekly',
+        schedule_interval='0 0 * * 1',
         start_date=datetime(2022, 7, 25),
         catchup=True
 ) as imagerec_dag_weekly:
@@ -104,7 +104,7 @@ with DAG(
     wait_for_data = NamedHivePartitionSensor(
         task_id='wait_for_data',
         mode='reschedule',
-        sla=timedelta(days=5),
+        sla=timedelta(days=6),
         partition_names=[table_name + '/snapshot={{ds}}'],
     )
     convert, upload = convert_and_upload(
