@@ -414,6 +414,27 @@ CONFIG: Mapping[str, Callable[[], Sequence[Table]]] = {
             ]
         )
     ],
+    'image_suggestion_weekly': lambda: [
+        # Full replacement of existing data
+        Table(
+            table_name='analytics_platform_eng.image_suggestions_search_index_delta',
+            partition_spec_tmpl='@dailysnapshot',
+            join_on=JOIN_ON_WIKIID,
+            update_kind=UPDATE_ALL,
+            fields=[
+                MultiListField(
+                    field='values',
+                    alias=WEIGHTED_TAGS,
+                    prefix=('tag', {
+                        'image.linked.from.wikipedia.lead_image',
+                        'image.linked.from.wikidata.p18',
+                        'image.linked.from.wikidata.p373',
+                        'recommendation.image',
+                    }),
+                )
+            ]
+        )
+    ],
 }
 
 

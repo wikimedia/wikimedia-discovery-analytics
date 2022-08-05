@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.sensors.external_task_sensor import ExternalTaskSensor
+from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 
 from wmf_airflow import DAG
 from wmf_airflow.transfer_to_es import convert_and_upload
@@ -88,3 +89,25 @@ with DAG(
         'image_suggestion_manual',
         'freq=manual/image_suggestions')
     convert >> upload >> DummyOperator(task_id='complete')
+
+
+with DAG(
+        'image_suggestions_weekly',
+        default_args=default_args,
+        schedule_interval='@weekly',
+        start_date=datetime(2022, 7, 25),
+        catchup=True
+) as imagerec_dag_weekly:
+
+    table_name = 'analytics_platform_eng.image_suggestions_search_index_delta'
+    # timeout should 7 days by default
+    wait_for_data = NamedHivePartitionSensor(
+        task_id='wait_for_data',
+        mode='reschedule',
+        sla=timedelta(days=5),
+        partition_names=[table_name + '/snapshot={{ds}}'],
+    )
+    convert, upload = convert_and_upload(
+        'image_suggestion_weekly',
+        'freq=weekly/image_suggestions')
+    wait_for_data >> convert >> upload >> DummyOperator(task_id='complete')
