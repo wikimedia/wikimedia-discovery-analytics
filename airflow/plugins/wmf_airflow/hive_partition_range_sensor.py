@@ -77,4 +77,12 @@ class HivePartitionRangeSensor(NamedHivePartitionSensor):
             end_dt = start_dt.copy().add_timedelta(self._period)
             self.partition_names = self.partition_names_for_range(
                 start_dt, end_dt)
-        return super().poke(context)
+        res = super().poke(context)
+        # When mode is the standard 'poke' setting we get feedback about what
+        # partitions are still waiting based on subsequent pokes, but with
+        # reschedule it always starts from the full list.  Help us to know
+        # which partitions are missing from the logs by directly reporting them.
+        if self.mode == 'reschedule' and not res:
+            for partition_name in self.partition_names:
+                self.log.info('Still waiting for %s', partition_name)
+        return res
