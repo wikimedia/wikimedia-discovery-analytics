@@ -137,30 +137,3 @@ with DAG(
         older_than_days=90,
         checksum='6fa0b352b56bae3b76e61794e1a43611',
     ) >> complete
-
-    refinery_drop_older_than(
-        task_id='drop_subgraph_mapping_and_metrics_partitions',
-        database='discovery',
-        tables=[
-            "all_subgraphs",
-            "top_subgraph_items",
-            "top_subgraph_triples"
-        ],
-        # we want to keep 4 partition (generated weekly) following wikidata dumps
-        older_than_days=29,
-        checksum='520493a0b4e21a40d16f0dea008bbf15',
-    ) >> complete
-
-    refinery_drop_older_than(
-        task_id='drop_subgraph_query_mapping_and_metrics_partitions',
-        database='discovery',
-        tables=[
-            "subgraph_qitems_match",
-            "subgraph_predicates_match",
-            "subgraph_uri_match",
-            "subgraph_queries"
-        ],
-        # kept 90 days following sparql queries, whose `id` is used here
-        older_than_days=90,
-        checksum='ac445b15727cfb08c6d1bb48de1484fb',
-    ) >> complete
