@@ -279,7 +279,7 @@ with DAG(
     wait_for_data = NamedHivePartitionSensor(
         task_id='wait_for_data',
         mode='reschedule',
-        sla=timedelta(days=1),
+        sla=timedelta(days=2),
         retries=4,
         partition_names=[wikidata_table_and_partition,
                          all_subgraphs_table_and_partition,
@@ -363,7 +363,7 @@ with DAG(
     wait_for_event_sparql_queries = HivePartitionRangeSensor(
         task_id='wait_for_event_sparql_queries',
         mode='reschedule',
-        sla=timedelta(days=1),
+        sla=timedelta(days=2),
         retries=4,
         table=EVENT_SPARQL_QUERY_TABLE,
         period=timedelta(days=1),
@@ -373,7 +373,7 @@ with DAG(
     wait_for_processed_sparql_queries = HivePartitionRangeSensor(
         task_id='wait_for_processed_sparql_queries',
         mode='reschedule',
-        sla=timedelta(days=1),
+        sla=timedelta(days=2),
         retries=4,
         table=PROCESSED_QUERY_TABLE,
         period=timedelta(days=1),
@@ -386,7 +386,7 @@ with DAG(
     wait_for_subgraph_query_table = NamedHivePartitionSensor(
         task_id='wait_for_subgraph_query_table',
         mode='reschedule',
-        sla=timedelta(days=1),
+        sla=timedelta(days=2),
         retries=4,
         partition_names=[subgraph_query_table_and_partition]
     )
@@ -394,7 +394,7 @@ with DAG(
     wait_for_data = NamedHivePartitionSensor(
         task_id='wait_for_data',
         mode='reschedule',
-        sla=timedelta(days=1),
+        sla=timedelta(days=2),
         retries=4,
         partition_names=[
             subgraph_qitem_match_table_and_partition,
