@@ -16,7 +16,7 @@
     "--py-files",
     "/srv/deployment/wikimedia/discovery/analytics/spark/wmf_spark.py",
     "--jars",
-    "/srv/deployment/wikimedia/discovery/analytics/artifacts/elasticsearch-hadoop-6.5.4.jar",
+    "/srv/deployment/wikimedia/discovery/analytics/artifacts/elasticsearch-hadoop-7.10.2.jar",
     "--name",
     "[Search Airflow Job] Export Queries To Relforge",
     "--queue",

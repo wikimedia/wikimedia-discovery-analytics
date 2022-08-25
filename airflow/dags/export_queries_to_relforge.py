@@ -42,7 +42,7 @@ with DAG(
     export_queries_to_relforge = SparkSubmitOperator(
         task_id='export_queries_to_relforge',
         max_executors=10,
-        jars=REPO_PATH + '/artifacts/elasticsearch-hadoop-6.5.4.jar',
+        jars=REPO_PATH + '/artifacts/elasticsearch-hadoop-7.10.2.jar',
         files=REPO_PATH + '/spark/resources/queries_index_settings.json',
         application=REPO_PATH + '/spark/export_queries_to_relforge.py',
         application_args=[
