@@ -25,6 +25,6 @@ six==1.16.0
 tqdm==4.61.0
 typing-extensions==3.10.0.0
 urllib3==1.26.5
-wmf-mjolnir==1.0
+wmf-mjolnir==1.1
 xgboost==0.90
 zipp==3.4.1
