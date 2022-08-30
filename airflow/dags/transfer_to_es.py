@@ -93,7 +93,10 @@ with DAG(
 
 with DAG(
         'image_suggestions_weekly',
-        default_args=default_args,
+        default_args={
+            'depends_on_past': True,
+            'email': ['discovery-alerts@lists.wikimedia.org', 'sd-alerts@lists.wikimedia.org'],
+        },
         schedule_interval='0 0 * * 1',
         start_date=datetime(2022, 7, 25),
         catchup=True

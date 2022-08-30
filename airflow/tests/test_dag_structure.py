@@ -101,6 +101,7 @@ def test_external_task_execution_date_fn(task):
 EMAIL_WHITELIST = {
     'ebernhardson@wikimedia.org',
     'discovery-alerts@lists.wikimedia.org',
+    'sd-alerts@lists.wikimedia.org'
 }
 
 
