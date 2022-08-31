@@ -17,6 +17,7 @@ def refinery_drop_older_than(
     # update the checksum reported in any automated usage.
     checksum: str,
     older_than_days: int = 60,
+    allowed_interval: int = 7,
     *args, **kwargs
 ):
     # Refinery isn't packaged like our own python, so it's hard
@@ -31,6 +32,7 @@ def refinery_drop_older_than(
         '--database=' + database,
         '--tables=^({})$'.format('|'.join(tables)),
         '--older-than=' + str(older_than_days),
+        '--allowed-interval=' + str(allowed_interval),
         '--execute=' + checksum,
     ]
 
@@ -68,7 +70,7 @@ with DAG(
         # The limits here are not related to privacy policy, glent is approved
         # to maintain its de-identified datasets indefinitly, but practical.
         older_than_days=29,
-        checksum='66e1a6a9afff6fa7a76e3b25f611287d',
+        checksum='9b7209e548e5d11e25b5a2af3ed09d4b',
     ) >> complete
 
     refinery_drop_older_than(
@@ -86,7 +88,7 @@ with DAG(
             # - model_parameters: Has no private data, useful for looking at
             #   training history.
         ],
-        checksum='fd1a8418fbe95f56beeaf0ddc5e81fbe',
+        checksum='ee78459921ebf210b384e561258abaa2',
     ) >> complete
 
     refinery_drop_older_than(
@@ -109,7 +111,7 @@ with DAG(
             # - wikibase_rdf: Managed somewhere else
             # - fulltext_head_queries: Handled below with shorter allowed lifetime
         ],
-        checksum='bd4c3f327371196380bb574cba281d09',
+        checksum='852a2075b5663ef22a383d145191c3b9',
     ) >> complete
 
     refinery_drop_older_than(
@@ -117,7 +119,7 @@ with DAG(
         older_than_days=6,  # Data derived from 84 day tables
         database='discovery',
         tables=['fulltext_head_queries'],
-        checksum='bc4207e7033413997a69e3473b0d6f5f',
+        checksum='851be7cd8add879c762e50563a5de233',
     ) >> complete
 
     refinery_drop_older_than(
@@ -127,7 +129,7 @@ with DAG(
         # we want to keep 4 partition (generated weekly). But since the data takes
         # multiple days to arrive we allow a 6 days tolerance here
         older_than_days=29 + 6,
-        checksum='b51f3fa319fc7bf71e3bc7128c855b4b',
+        checksum='deaff5e72f68130db18eec1ba64a3952',
     ) >> complete
 
     refinery_drop_older_than(
@@ -135,5 +137,5 @@ with DAG(
         database='discovery',
         tables=["processed_external_sparql_query"],
         older_than_days=90,
-        checksum='6fa0b352b56bae3b76e61794e1a43611',
+        checksum='f676bbf2aa0b04a22e226700b93a8bbe',
     ) >> complete
