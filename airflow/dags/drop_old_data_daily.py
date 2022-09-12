@@ -1,12 +1,30 @@
 from datetime import datetime
 import shlex
-from typing import Sequence
+from typing import List, Sequence
 
 from airflow.operators.bash_operator import BashOperator
 from airflow.operators.dummy_operator import DummyOperator
 
 from wmf_airflow import DAG
 from wmf_airflow.template import REPO_PATH, ANALYTICS_REFINERY_PATH
+
+
+def refinery_execute_python(
+    script_path: str,
+    script_args: List[str],
+    *args, **kwargs
+):
+
+    all_args = [
+        'PYTHONPATH={}/python/'.format(ANALYTICS_REFINERY_PATH),
+        REPO_PATH + '/environments/refinery/venv/bin/python',
+        script_path,
+    ] + script_args
+
+    safe_arguments = ' '.join(shlex.quote(x) for x in all_args)
+    bash_command = '/usr/bin/env' + ' ' + safe_arguments
+
+    return BashOperator(bash_command=bash_command, *args, **kwargs)
 
 
 def refinery_drop_older_than(
@@ -20,26 +38,16 @@ def refinery_drop_older_than(
     allowed_interval: int = 7,
     *args, **kwargs
 ):
-    # Refinery isn't packaged like our own python, so it's hard
-    # to invoke remotely with skein. Simply execute it locally
-    # with a venv that has the appropriate dependencies.
-    executable = '/usr/bin/env'
-    arguments = [
-        'PYTHONPATH={}/python/'.format(ANALYTICS_REFINERY_PATH),
-        REPO_PATH + '/environments/refinery/venv/bin/python',
+    return refinery_execute_python(
         ANALYTICS_REFINERY_PATH + '/bin/refinery-drop-older-than',
-        '--verbose',
-        '--database=' + database,
-        '--tables=^({})$'.format('|'.join(tables)),
-        '--older-than=' + str(older_than_days),
-        '--allowed-interval=' + str(allowed_interval),
-        '--execute=' + checksum,
-    ]
-
-    safe_arguments = ' '.join(shlex.quote(x) for x in arguments)
-    bash_command = executable + ' ' + safe_arguments
-
-    return BashOperator(bash_command=bash_command, *args, **kwargs)
+        [
+            '--verbose',
+            '--database=' + database,
+            '--tables=^({})$'.format('|'.join(tables)),
+            '--older-than=' + str(older_than_days),
+            '--allowed-interval=' + str(allowed_interval),
+            '--execute=' + checksum,
+        ], *args, **kwargs)
 
 
 with DAG(
@@ -138,4 +146,26 @@ with DAG(
         tables=["processed_external_sparql_query"],
         older_than_days=90,
         checksum='f676bbf2aa0b04a22e226700b93a8bbe',
+    ) >> complete
+
+    refinery_drop_older_than(
+        task_id='drop_subgraph_query_mapping_and_metrics_partitions',
+        database='discovery',
+        tables=[
+            "subgraph_qitems_match",
+            "subgraph_predicates_match",
+            "subgraph_uri_match",
+            "subgraph_queries"
+        ],
+        # kept 90 days following sparql queries, whose `id` is used here
+        older_than_days=90,
+        checksum='f1da9a0f127ec19a147a150ba1495f92',
+    ) >> complete
+
+    refinery_execute_python(
+        task_id='drop_snapshot_partitioned_partitions',
+        # Config is hardcoded into the script, so it was copied into this repo
+        # and config is managed inside.
+        script_path=REPO_PATH + '/bin/refinery-drop-mediawiki-snapshots.py',
+        script_args=['--verbose'],
     ) >> complete
