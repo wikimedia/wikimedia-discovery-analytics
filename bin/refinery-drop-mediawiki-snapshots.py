@@ -92,7 +92,7 @@ AFFECTED_TABLES = {
     }
 }
 
-# Tables partitioned by wiki_db in addition to by snapshot
+# Tables partitioned by wiki in addition to by snapshot
 WIKI_DB_TABLES = [
     'all_subgraphs',
     'top_subgraph_items',
@@ -107,7 +107,7 @@ def get_partitions_to_drop(hive, table, keep_snapshots):
 
     # For tables partitioned by dimensions other than snapshot
     # extract just the snapshot spec:
-    # snapshot=2017-01,wiki_db=enwiki => snapshot=2017-01
+    # snapshot=2017-01,wiki=enwiki => snapshot=2017-01
     if table in WIKI_DB_TABLES:
         snapshots = set([])
         for partition in partitions:
@@ -149,7 +149,7 @@ def drop_partitions(hive, table, partitions, dry_run):
         # the whole snapshot partition with all sub-partitions in it.
         if table in WIKI_DB_TABLES:
             partitions = [
-                Hive.partition_spec_separator.join([p, "wiki_db!=''"])
+                Hive.partition_spec_separator.join([p, "wiki!=''"])
                 for p in partitions
             ]
 
