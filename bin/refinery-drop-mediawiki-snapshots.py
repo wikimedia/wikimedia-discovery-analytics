@@ -127,20 +127,6 @@ def get_partitions_to_drop(hive, table, keep_snapshots):
 
     return partitions_to_drop
 
-# Returns the directories to be removed given a hive table
-# and its partitions to be dropped
-# Note: directories to be removed are computed from table base-path
-# joined to the snapshot partition. This script doesn't work
-# if the partition-path is set manually to a non hive-formatted location.
-def get_directories_to_remove(hive, table, partitions_to_drop):
-    logger.debug('Getting directories to remove...')
-    table_location = hive.table_location(table)
-
-    return [
-        HivePartition(p).path(table_location)
-        for p in partitions_to_drop
-    ]
-
 # Drop given hive table partitions (if dry_run, just print)
 def drop_partitions(hive, table, partitions, dry_run):
     if partitions:
@@ -166,20 +152,6 @@ def drop_partitions(hive, table, partitions, dry_run):
             .format(hive.database, table)
         )
 
-# Remove given data directories (if dry_run, just print)
-def remove_directories(hive, table, directories, dry_run):
-    table_location = hive.table_location(table)
-    if directories:
-        logger.info('Removing {0} directories from {1}'
-            .format(len(directories), table_location))
-        for directory in directories:
-            logger.debug('\t{0}'.format(directory))
-        if not dry_run:
-            Hdfs.rm(' '.join(directories))
-    else:
-        logger.info('No directories need to be removed for {0}'.format(table_location))
-
-
 if __name__ == '__main__':
     # Parse arguments
     arguments = docopt(__doc__)
@@ -203,6 +175,4 @@ if __name__ == '__main__':
         for table, keep_snapshot in tables_and_keep_snapshots.items():
             logger.debug('Processing table {0} keeping {1} snapshots'.format(table, keep_snapshot))
             partitions = get_partitions_to_drop(hive, table, keep_snapshot)
-            directories = get_directories_to_remove(hive, table, partitions)
             drop_partitions(hive, table, partitions, dry_run)
-            remove_directories(hive, table, directories, dry_run)
