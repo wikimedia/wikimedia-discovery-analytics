@@ -1,0 +1,11 @@
+{
+    "import_cirrus_indexes_conf": {
+        "cirrus_indexes_table": "discovery.cirrus_index",
+        "cirrus_indexes_location": "cirrus/index",
+        "elasticsearch_clusters": [
+            "https://search.svc.codfw.wmnet:9243",
+            "https://search.svc.codfw.wmnet:9443",
+            "https://search.svc.codfw.wmnet:9643"
+        ]
+    }
+}

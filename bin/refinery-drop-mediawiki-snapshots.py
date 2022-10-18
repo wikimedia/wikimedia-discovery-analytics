@@ -89,6 +89,7 @@ AFFECTED_TABLES = {
         'all_subgraphs': 4,
         'top_subgraph_items': 4,
         'top_subgraph_triples': 4,
+        'cirrus_index': 4,
     }
 }
 
@@ -97,6 +98,7 @@ WIKI_DB_TABLES = [
     'all_subgraphs',
     'top_subgraph_items',
     'top_subgraph_triples',
+    'cirrus_index',
 ]
 
 

@@ -37,6 +37,8 @@ all_dag_ids = [
     'image_suggestions_manual',
     'image_suggestions_weekly',
     'import_commons_ttl',
+    'import_cirrus_indexes_init',
+    'import_cirrus_indexes_weekly',
     'mjolnir',
     'ores_predictions_v4_init',
     'ores_predictions_hourly',
