@@ -18,7 +18,7 @@
     "--py-files",
     "/srv/deployment/wikimedia/discovery/analytics/spark/wmf_spark.py",
     "--executor-cores",
-    "2",
+    "1",
     "--executor-memory",
     "4g",
     "--name",

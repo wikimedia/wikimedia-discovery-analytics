@@ -107,7 +107,7 @@ with DAG(
         # Keep down the number of connections we are making to the prod cluster
         # by limiting executors
         max_executors=36,
-        executor_cores=2,
+        executor_cores=1,
         executor_memory='4g',
         application=REPO_PATH + '/spark/import_cirrus_indexes.py',
         application_args=[
