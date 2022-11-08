@@ -109,6 +109,7 @@ with DAG(
         max_executors=36,
         executor_cores=1,
         executor_memory='4g',
+        driver_memory='8g',
         application=REPO_PATH + '/spark/import_cirrus_indexes.py',
         application_args=[
             '--elasticsearch', '{{ ",".join(dag_conf.elasticsearch_clusters) }}',

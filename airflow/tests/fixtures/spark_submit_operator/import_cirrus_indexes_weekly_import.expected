@@ -21,6 +21,8 @@
     "1",
     "--executor-memory",
     "4g",
+    "--driver-memory",
+    "8g",
     "--name",
     "[Search Airflow Job] Import Cirrus Indexes Weekly: Import",
     "--queue",
