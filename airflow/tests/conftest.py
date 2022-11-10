@@ -40,6 +40,8 @@ all_dag_ids = [
     'import_commons_ttl',
     'import_cirrus_indexes_init',
     'import_cirrus_indexes_weekly',
+    'incoming_links_init',
+    'incoming_links_weekly',
     'mjolnir',
     'ores_predictions_v4_init',
     'ores_predictions_hourly',

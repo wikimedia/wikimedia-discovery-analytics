@@ -73,7 +73,14 @@ with DAG(
             external_dag_id='popularity_score_weekly',
             external_task_id='complete',
             **sensor_kwargs
-        )
+        ),
+        ExternalTaskSensor(
+            task_id='wait_for_incoming_links',
+            mode='reschedule',
+            external_dag_id='incoming_links_weekly',
+            external_task_id='complete',
+            **sensor_kwargs
+        ),
     ]
 
     convert, upload = convert_and_upload('weekly', 'freq=weekly')

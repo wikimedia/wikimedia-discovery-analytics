@@ -339,6 +339,7 @@ IMAGE_SUGGESTION_MULTI_LIST_FIELD = MultiListField(
     })
 )
 POPULARITY_SCORE = 'popularity_score'
+INCOMING_LINKS = 'incoming_links'
 
 
 # Each map entry defines a named list of tables to load from hive and the
@@ -390,6 +391,15 @@ CONFIG: Mapping[str, Callable[[], Sequence[Table]]] = {
             update_kind=UPDATE_CONTENT_ONLY,
             fields=[
                 WithinPercentageField(field='score', alias=POPULARITY_SCORE, percentage=20)
+            ]
+        ),
+        Table(
+            table_name='discovery.incoming_links_update',
+            partition_spec_tmpl='@dailysnapshot',
+            join_on=JOIN_ON_WIKIID,
+            update_kind=UPDATE_ALL,
+            fields=[
+                EqualsField(field='incoming_links', alias=INCOMING_LINKS),
             ]
         ),
     ],

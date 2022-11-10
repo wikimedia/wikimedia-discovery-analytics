@@ -89,7 +89,7 @@ with DAG(
     user_defined_macros={
         'dag_conf': dag_conf.macro,
     },
-    schedule_interval='@weekly',
+    schedule_interval='0 0 * * 0',
     max_active_runs=1,
     catchup=False,
     template_undefined=jinja2.StrictUndefined,

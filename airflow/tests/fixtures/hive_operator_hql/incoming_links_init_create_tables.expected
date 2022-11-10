@@ -1,0 +1,11 @@
+
+CREATE TABLE discovery.incoming_links_update (
+  `wiki` string,
+  `page_id` bigint,
+  `page_namespace` int,
+  `dbkey` string,
+  `incoming_links` bigint)
+PARTITIONED BY (
+  `snapshot` string)
+STORED AS parquet
+LOCATION 'hdfs:///wmf/data/discovery/cirrus/incoming_links_update'

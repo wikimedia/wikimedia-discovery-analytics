@@ -90,6 +90,7 @@ AFFECTED_TABLES = {
         'top_subgraph_items': 4,
         'top_subgraph_triples': 4,
         'cirrus_index': 4,
+        'incoming_links_update': 4,
     }
 }
 

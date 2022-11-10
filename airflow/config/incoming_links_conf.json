@@ -1,0 +1,7 @@
+{
+    "incoming_links_conf": {
+        "cirrus_indexes_table": "discovery.cirrus_index",
+        "incoming_links_table": "discovery.incoming_links_update",
+        "incoming_links_location": "cirrus/incoming_links_update"
+    }
+}
