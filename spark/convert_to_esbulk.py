@@ -422,7 +422,7 @@ CONFIG: Mapping[str, Callable[[], Sequence[Table]]] = {
             fields=[IMAGE_SUGGESTION_MULTI_LIST_FIELD]
         )
     ],
-    'image_suggestion_fixup_T320656': lambda: [
+    'image_suggestions_fixup_T320656': lambda: [
         Table(
             table_name='cormac.image_suggestions_search_index_delta',
             # would be nice if some arbitrary template vars could be passed from cli args
