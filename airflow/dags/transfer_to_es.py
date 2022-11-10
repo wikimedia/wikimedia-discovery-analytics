@@ -92,6 +92,18 @@ with DAG(
 
 
 with DAG(
+        'image_suggestions_fixup_T320656',
+        default_args=default_args,
+        schedule_interval=None,
+) as imagerec_fixup_T320656_dag:
+    # See https://phabricator.wikimedia.org/T320656
+    convert, upload = convert_and_upload(
+        'image_suggestions_fixup_T320656',
+        'freq=manual/image_suggestions_fixup_T320656')
+    convert >> upload >> DummyOperator(task_id='complete')
+
+
+with DAG(
         'image_suggestions_weekly',
         default_args={
             'depends_on_past': True,

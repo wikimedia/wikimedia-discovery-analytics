@@ -35,6 +35,7 @@ all_dag_ids = [
     'mediawiki_revision_recommendation_create_init',
     'mediawiki_revision_recommendation_create_hourly',
     'image_suggestions_manual',
+    'image_suggestions_fixup_T320656',
     'image_suggestions_weekly',
     'import_commons_ttl',
     'import_cirrus_indexes_init',

@@ -1,0 +1,45 @@
+{
+    "acls": {
+        "enable": false,
+        "modify_groups": [],
+        "modify_users": [],
+        "ui_users": [],
+        "view_groups": [],
+        "view_users": []
+    },
+    "file_systems": [],
+    "master": {
+        "env": {},
+        "files": {
+            "swift_auth.env": {
+                "size": 0,
+                "source": "hdfs://analytics-hadoop/user/analytics/swift_auth_analytics_admin.env",
+                "timestamp": 0,
+                "type": "FILE",
+                "visibility": "APPLICATION"
+            },
+            "swift_upload.py": {
+                "size": 0,
+                "source": "hdfs://analytics-hadoop/wmf/refinery/current/oozie/util/swift/upload/swift_upload.py",
+                "timestamp": 0,
+                "type": "FILE",
+                "visibility": "APPLICATION"
+            }
+        },
+        "log_level": "INFO",
+        "resources": {
+            "fpgas": 0,
+            "gpus": 0,
+            "memory": 1024,
+            "vcores": 1
+        },
+        "script": "set -o errexit\npython3 swift_upload.py --swift-overwrite false --swift-delete-after 2592000 --swift-auto-version true --swift-object-prefix 20210124T0/freq=manual/image_suggestions_fixup_T320656 --event-per-object true --event-stream swift.search_updates.upload-complete --event-service-url https://eventgate-analytics.svc.eqiad.wmnet:4592/v1/events swift_auth.env search_updates hdfs:///wmf/data/discovery/transfer_to_es/date=20210124/freq=manual/image_suggestions_fixup_T320656"
+    },
+    "max_attempts": 1,
+    "name": "upload_to_swift",
+    "node_label": "",
+    "queue": "default",
+    "services": {},
+    "tags": [],
+    "user": ""
+}

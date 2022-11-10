@@ -328,6 +328,16 @@ class Table:
 
 # Constants for fields in elasticsearch
 WEIGHTED_TAGS = 'weighted_tags'
+IMAGE_SUGGESTION_MULTI_LIST_FIELD = MultiListField(
+    field='values',
+    alias=WEIGHTED_TAGS,
+    prefix=('tag', {
+        'image.linked.from.wikipedia.lead_image',
+        'image.linked.from.wikidata.p18',
+        'image.linked.from.wikidata.p373',
+        'recommendation.image'
+    })
+)
 POPULARITY_SCORE = 'popularity_score'
 
 
@@ -400,39 +410,26 @@ CONFIG: Mapping[str, Callable[[], Sequence[Table]]] = {
             partition_spec_tmpl='@dailysnapshot',
             join_on=JOIN_ON_WIKIID,
             update_kind=UPDATE_ALL,
-            fields=[
-                MultiListField(
-                    field='values',
-                    alias=WEIGHTED_TAGS,
-                    prefix=('tag', {
-                        'image.linked.from.wikipedia.lead_image',
-                        'image.linked.from.wikidata.p18',
-                        'image.linked.from.wikidata.p373',
-                        'recommendation.image',
-                    }),
-                )
-            ]
+            fields=[IMAGE_SUGGESTION_MULTI_LIST_FIELD]
         )
     ],
     'image_suggestion_weekly': lambda: [
-        # Full replacement of existing data
         Table(
             table_name='analytics_platform_eng.image_suggestions_search_index_delta',
             partition_spec_tmpl='@dailysnapshot',
             join_on=JOIN_ON_WIKIID,
             update_kind=UPDATE_ALL,
-            fields=[
-                MultiListField(
-                    field='values',
-                    alias=WEIGHTED_TAGS,
-                    prefix=('tag', {
-                        'image.linked.from.wikipedia.lead_image',
-                        'image.linked.from.wikidata.p18',
-                        'image.linked.from.wikidata.p373',
-                        'recommendation.image',
-                    }),
-                )
-            ]
+            fields=[IMAGE_SUGGESTION_MULTI_LIST_FIELD]
+        )
+    ],
+    'image_suggestion_fixup_T320656': lambda: [
+        Table(
+            table_name='cormac.image_suggestions_search_index_delta',
+            # would be nice if some arbitrary template vars could be passed from cli args
+            partition_spec_tmpl='{table_name}/snapshot=fixup-T320656-2',
+            join_on=JOIN_ON_WIKIID,
+            update_kind=UPDATE_ALL,
+            fields=[IMAGE_SUGGESTION_MULTI_LIST_FIELD]
         )
     ],
 }
