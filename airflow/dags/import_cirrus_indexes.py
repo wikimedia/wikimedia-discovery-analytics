@@ -113,6 +113,6 @@ with DAG(
         application=REPO_PATH + '/spark/import_cirrus_indexes.py',
         application_args=[
             '--elasticsearch', '{{ ",".join(dag_conf.elasticsearch_clusters) }}',
-            '--output-partition', '{{ dag_conf.cirrus_indexes_table }}/snapshot={{ ds }}',
+            '--output-partition', '{{ dag_conf.cirrus_indexes_table }}/snapshot={{ ds_nodash }}',
         ]
     ) >> DummyOperator(task_id='complete')

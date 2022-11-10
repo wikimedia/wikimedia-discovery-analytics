@@ -31,5 +31,5 @@
     "--elasticsearch",
     "https://search.svc.codfw.wmnet:9243,https://search.svc.codfw.wmnet:9443,https://search.svc.codfw.wmnet:9643",
     "--output-partition",
-    "discovery.cirrus_index/snapshot=2022-10-30"
+    "discovery.cirrus_index/snapshot=20221030"
 ]
