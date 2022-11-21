@@ -79,7 +79,6 @@ with DAG(
             mode='reschedule',
             external_dag_id='incoming_links_weekly',
             external_task_id='complete',
-            depends_on_past=False,
             **sensor_kwargs
         ),
     ]
