@@ -1,6 +1,6 @@
 
 CREATE TABLE discovery.incoming_links_update (
-  `wiki` string,
+  `wikiid` string,
   `page_id` bigint,
   `page_namespace` int,
   `dbkey` string,

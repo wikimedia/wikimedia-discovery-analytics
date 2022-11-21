@@ -44,6 +44,8 @@ def calc_incoming_links(df: DataFrame) -> DataFrame:
         # sending 150M+ pages that didn't change since the previous snapshot.
         .where(F.col('old_incoming_links') != F.col('incoming_links'))
         .drop(F.col('old_incoming_links'))
+        # Match expected column names in convert_to_esbulk.py
+        .withColumnRenamed('wiki', 'wikiid')
     )
 
 

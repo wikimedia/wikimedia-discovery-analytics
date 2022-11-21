@@ -27,7 +27,7 @@ with DAG(
         task_id='create_tables',
         hql="""
             CREATE TABLE {{ dag_conf.incoming_links_table }} (
-              `wiki` string,
+              `wikiid` string,
               `page_id` bigint,
               `page_namespace` int,
               `dbkey` string,
