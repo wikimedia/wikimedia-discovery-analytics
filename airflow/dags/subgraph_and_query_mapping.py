@@ -265,7 +265,7 @@ with DAG(
     wait_for_data = NamedHivePartitionSensor(
         task_id='wait_for_data',
         mode='reschedule',
-        sla=timedelta(days=2),
+        sla=timedelta(days=4),
         retries=4,
         partition_names=[second_last_wikidata_table_and_partition,
                          top_subgraph_items_table_and_partition,
@@ -275,7 +275,7 @@ with DAG(
     wait_for_sparql_queries = HivePartitionRangeSensor(
         task_id='wait_for_sparql_queries',
         mode='reschedule',
-        sla=timedelta(days=2),
+        sla=timedelta(days=4),
         retries=4,
         table=PROCESSED_QUERY_TABLE,
         period=timedelta(days=1),
