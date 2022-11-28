@@ -79,7 +79,11 @@ with DAG(
             mode='reschedule',
             external_dag_id='incoming_links_weekly',
             external_task_id='complete',
-            **sensor_kwargs
+            sla=timedelta(hours=30),
+            **dict(
+                sensor_kwargs,
+                timeout=timedelta(hours=12).total_seconds()
+            ),
         ),
     ]
 
