@@ -40,11 +40,8 @@ Options:
 
 
 from docopt import docopt
-from refinery.hive import Hive, HivePartition
-from refinery.hdfs import Hdfs
-import datetime
+from refinery.hive import Hive
 import logging
-import os
 import re
 import sys
 
@@ -59,8 +56,9 @@ class LessThanFilter(logging.Filter):
         self.max_level = exclusive_maximum
 
     def filter(self, record):
-        #non-zero return means we log this message
+        # non-zero return means we log this message
         return 1 if record.levelno < self.max_level else 0
+
 
 logger = logging.getLogger()
 logger.setLevel(logging.NOTSET)
@@ -103,8 +101,8 @@ WIKI_DB_TABLES = [
 ]
 
 
-# Returns the partitions to be dropped given a hive table
 def get_partitions_to_drop(hive, table, keep_snapshots):
+    """Returns the partitions to be dropped given a hive table"""
     logger.debug('Getting partitions to drop...')
     partitions = hive.partition_specs(table)
 
@@ -125,13 +123,14 @@ def get_partitions_to_drop(hive, table, keep_snapshots):
     ]
 
     # Select partitions to drop (keep the most recent <keep_snapshots> ones)
-    partitions.sort(reverse = True)
+    partitions.sort(reverse=True)
     partitions_to_drop = partitions[keep_snapshots:]
 
     return partitions_to_drop
 
-# Drop given hive table partitions (if dry_run, just print)
+
 def drop_partitions(hive, table, partitions, dry_run):
+    """Drop given hive table partitions (if dry_run, just print)"""
     if partitions:
         # HACK: For tables partitioned by dimensions other than snapshot
         # add <dimension>!='' to snapshot spec, so that Hive deletes
@@ -155,11 +154,12 @@ def drop_partitions(hive, table, partitions, dry_run):
             .format(hive.database, table)
         )
 
+
 if __name__ == '__main__':
     # Parse arguments
     arguments = docopt(__doc__)
-    verbose         = arguments['--verbose']
-    dry_run         = arguments['--dry-run']
+    verbose = arguments['--verbose']
+    dry_run = arguments['--dry-run']
 
     # Setup logging level
     logger.setLevel(logging.INFO)
