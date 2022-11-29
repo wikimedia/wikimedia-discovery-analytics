@@ -323,6 +323,9 @@ with DAG(
     # If we don't run for a given week there is no use in re-running it,
     # the process always reads the full query_clicks history.
     catchup=False,
+    # Works together with catchup to ensure we don't have multiples running
+    # at the same time
+    max_active_runs=1,
     user_defined_filters={
         'hive_table_path': HiveTablePath(),
     },
