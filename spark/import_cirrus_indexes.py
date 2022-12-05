@@ -255,16 +255,16 @@ def coerce_types(hit):
 
     if 'file_text' in hit and (hit['file_text'] == [] or hit['file_text'] is False):
         # file_text is not particularly standardized. Should probably be fixed in cirrus
-        del hit['file_text']
+        hit['file_text'] = None
 
     if 'labels' in hit and hit['labels'] == []:
         # php json encodes the empty map as a list...should probably fix in cirrus?
-        hit['labels'] = {}
+        hit['labels'] = None
 
-    if 'descriptions' in hit:
+    if 'descriptions' in hit and hit['descriptions'] is not None:
         if hit['descriptions'] == []:
             # php json encodes the empty map as a list...should probably fix in cirrus?
-            hit['descriptions'] = {}
+            hit['descriptions'] = None
         else:
             for k, v in list(hit['descriptions'].items()):
                 # It seems on wikidata descriptions are map<str, str>, but on commons

@@ -246,29 +246,29 @@ def test_search_after_inclusive_max_id():
         ]}
     ),
     (
-        'drops file_text as array',
+        'converts file_text as array into None',
         {'file_text': []},
-        {}
+        {'file_text': None}
     ),
     (
-        'drops file_text as False',
+        'converts file_text as False into None',
         {'file_text': False},
-        {}
+        {'file_text': None}
     ),
     (
-        'doesnt drop appropriate file_text',
+        'doesnt change appropriate file_text',
         {'file_text': 'lorem ipsum dolor sit amet'},
         {'file_text': 'lorem ipsum dolor sit amet'}
     ),
     (
-        'converts empty labels array into dict',
+        'converts empty labels array into None',
         {'labels': []},
-        {'labels': {}}
+        {'labels': None}
     ),
     (
-        'converts empty descriptions array into dict',
+        'converts empty descriptions array into None',
         {'descriptions': []},
-        {'descriptions': {}},
+        {'descriptions': None},
     ),
     (
         'converts single description into array of descriptions',
