@@ -56,7 +56,7 @@ with DAG(
     wait_for_data = ExternalTaskSensor(
         task_id='wait_for_data',
         mode='reschedule',
-        sla=timedelta(days=1),
+        sla=timedelta(hours=28),
         external_dag_id='import_cirrus_indexes_weekly',
         external_task_id='complete',
     )

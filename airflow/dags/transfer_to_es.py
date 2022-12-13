@@ -79,11 +79,8 @@ with DAG(
             mode='reschedule',
             external_dag_id='incoming_links_weekly',
             external_task_id='complete',
-            sla=timedelta(hours=30),
-            **dict(
-                sensor_kwargs,
-                timeout=timedelta(hours=12).total_seconds()
-            ),
+            sla=timedelta(hours=30),  # 28hours for cirrus imports + 2 hours for inc_links
+            **sensor_kwargs,
         ),
     ]
 
