@@ -18,7 +18,7 @@ default_args = {
 }
 
 
-sensor_kwargs = dict(
+sensor_timeout_kwargs = dict(
     timeout=timedelta(hours=3).total_seconds(),
     retries=4,
     email_on_retry=True)
@@ -38,14 +38,14 @@ with DAG(
             mode='reschedule',
             external_dag_id='ores_predictions_hourly',
             external_task_id='complete',
-            **sensor_kwargs
+            **sensor_timeout_kwargs
         ),
         ExternalTaskSensor(
             task_id='wait_for_recommendations',
             mode='reschedule',
             external_dag_id='mediawiki_revision_recommendation_create_hourly',
             external_task_id='complete',
-            **sensor_kwargs
+            **sensor_timeout_kwargs
         ),
     ]
 
@@ -72,15 +72,16 @@ with DAG(
             mode='reschedule',
             external_dag_id='popularity_score_weekly',
             external_task_id='complete',
-            **sensor_kwargs
+            **sensor_timeout_kwargs
         ),
+        # prefer SLA notification for the wait_for_incoming_links sensor instead of
+        # notifications on timeouts&retries
         ExternalTaskSensor(
             task_id='wait_for_incoming_links',
             mode='reschedule',
             external_dag_id='incoming_links_weekly',
             external_task_id='complete',
             sla=timedelta(hours=30),  # 28hours for cirrus imports + 2 hours for inc_links
-            **sensor_kwargs,
         ),
     ]
 
