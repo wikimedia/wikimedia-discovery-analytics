@@ -112,8 +112,10 @@ def get_partitions_to_drop(hive, table, keep_snapshots):
     if table in WIKI_DB_TABLES:
         snapshots = set([])
         for partition in partitions:
-            snapshot = partition.split(Hive.partition_spec_separator)[0]
-            snapshots.add(snapshot)
+            for kv in partition.split(Hive.partition_spec_separator):
+                if kv.startswith('snapshot='):
+                    snapshots.add(kv)
+                    break
         partitions = list(snapshots)
 
     # Filter out ad-hoc or private snapshots
