@@ -96,6 +96,7 @@ with DAG(
 ) as weekly_dag:
     SparkSubmitOperator(
         task_id='import',
+        conn_id='spark3',
         conf={
             # Outputing giant rows seems to need excessive memory overhead to work
             'spark.executor.memoryOverhead': '4096M',
