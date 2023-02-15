@@ -16,8 +16,6 @@
     "[Search Airflow Job] Import Commons Ttl: Gen Rev Map",
     "--class",
     "org.wikidata.query.rdf.spark.transform.structureddata.dumps.EntityRevisionMapGenerator",
-    "--queue",
-    "root.default",
     "/srv/deployment/wikimedia/discovery/analytics/artifacts/rdf-spark-tools-latest-jar-with-dependencies.jar",
     "--input-table",
     "discovery.wikibase_rdf/date=20210221/wiki=commons",

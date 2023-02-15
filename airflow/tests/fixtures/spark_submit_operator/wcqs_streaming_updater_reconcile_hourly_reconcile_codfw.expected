@@ -16,8 +16,6 @@
     "[Search Airflow Job] Wcqs Streaming Updater Reconcile Hourly: Reconcile Codfw",
     "--class",
     "org.wikidata.query.rdf.updater.reconcile.UpdaterReconcile",
-    "--queue",
-    "root.default",
     "/srv/deployment/wikimedia/discovery/analytics/artifacts/rdf-spark-tools-latest-jar-with-dependencies.jar",
     "--domain",
     "commons.wikimedia.org",

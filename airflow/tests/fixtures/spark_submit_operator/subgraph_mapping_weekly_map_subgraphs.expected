@@ -18,8 +18,6 @@
     "[Search Airflow Job] Subgraph Mapping Weekly: Map Subgraphs",
     "--class",
     "org.wikidata.query.rdf.spark.transform.structureddata.subgraphs.SubgraphMappingLauncher",
-    "--queue",
-    "root.default",
     "/srv/deployment/wikimedia/discovery/analytics/artifacts/rdf-spark-tools-latest-jar-with-dependencies.jar",
     "--wikidata-table",
     "discovery.wikibase_rdf/date=20220627/wiki=wikidata",

@@ -289,6 +289,7 @@ with DAG(
 
     extract_general_subgraph_metrics = SparkSubmitOperator(
         task_id='extract_general_subgraph_metrics',
+        conn_id='spark3',
         conf={
             # Delegate retries to airflow
             'spark.yarn.maxAppAttempts': '1',
@@ -313,6 +314,7 @@ with DAG(
 
     extract_detailed_subgraph_metrics = SparkSubmitOperator(
         task_id='extract_detailed_subgraph_metrics',
+        conn_id='spark3',
         conf={
             # Delegate retries to airflow
             'spark.yarn.maxAppAttempts': '1',
@@ -405,6 +407,7 @@ with DAG(
 
     extract_subgraph_query_metrics = SparkSubmitOperator(
         task_id='extract_subgraph_query_metrics',
+        conn_id='spark3',
         conf={
             # Delegate retries to airflow
             'spark.yarn.maxAppAttempts': '1',
@@ -438,6 +441,7 @@ with DAG(
 
     extract_subgraph_pair_query_metrics = SparkSubmitOperator(
         task_id='extract_subgraph_pair_query_metrics',
+        conn_id='spark3',
         conf={
             # Delegate retries to airflow
             'spark.yarn.maxAppAttempts': '1',

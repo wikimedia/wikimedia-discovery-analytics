@@ -114,6 +114,7 @@ with DAG(
     # process query to proper format for saving.
     extract_queries = SparkSubmitOperator(
         task_id='extract_queries',
+        conn_id='spark3',
         conf={
             # Delegate retries to airflow
             'spark.yarn.maxAppAttempts': '1',

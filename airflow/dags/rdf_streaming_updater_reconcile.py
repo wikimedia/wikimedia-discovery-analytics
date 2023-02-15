@@ -82,6 +82,7 @@ def submit_reconciliation(name: str,
                           sideoutputs: SideOutputs) -> SparkSubmitOperator:
     return SparkSubmitOperator(
         task_id=name,
+        conn_id='spark3',
         application=WDQS_SPARK_TOOLS,
         java_class="org.wikidata.query.rdf.updater.reconcile.UpdaterReconcile",
         max_executors=25,

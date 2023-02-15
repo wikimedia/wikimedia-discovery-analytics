@@ -124,6 +124,7 @@ with DAG(
 
     map_subgraphs = SparkSubmitOperator(
         task_id='map_subgraphs',
+        conn_id='spark3',
         conf={
             # Delegate retries to airflow
             'spark.yarn.maxAppAttempts': '1',
@@ -287,6 +288,7 @@ with DAG(
 
     map_subgraphs_queries = SparkSubmitOperator(
         task_id='map_subgraphs_queries',
+        conn_id='spark3',
         conf={
             # Delegate retries to airflow
             'spark.yarn.maxAppAttempts': '1',

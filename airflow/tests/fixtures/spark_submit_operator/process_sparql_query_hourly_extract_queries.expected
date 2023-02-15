@@ -16,8 +16,6 @@
     "[Search Airflow Job] Process Sparql Query Hourly: Extract Queries",
     "--class",
     "org.wikidata.query.rdf.spark.transform.queries.sparql.QueryExtractor",
-    "--queue",
-    "root.default",
     "/srv/deployment/wikimedia/discovery/analytics/artifacts/rdf-spark-tools-latest-jar-with-dependencies.jar",
     "--input-table",
     "event.wdqs_external_sparql_query/year=2021/month=6/day=1/hour=0",

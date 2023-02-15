@@ -16,8 +16,6 @@
     "[Search Airflow Job] Import Wikidata Ttl: Munge Dumps",
     "--class",
     "org.wikidata.query.rdf.spark.transform.structureddata.dumps.WikibaseRDFDumpConverter",
-    "--queue",
-    "root.default",
     "/srv/deployment/wikimedia/discovery/analytics/artifacts/rdf-spark-tools-latest-jar-with-dependencies.jar",
     "--input-path",
     "hdfs://analytics-hadoop/wmf/data/raw/wikidata/dumps/all_ttl/20210222/wikidata-20210222-all-BETA.ttl.bz2,hdfs://analytics-hadoop/wmf/data/raw/wikidata/dumps/lexemes_ttl/20210219/wikidata-20210219-lexemes-BETA.ttl.bz2",

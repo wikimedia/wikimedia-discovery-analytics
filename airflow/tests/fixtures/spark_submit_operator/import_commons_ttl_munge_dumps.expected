@@ -16,8 +16,6 @@
     "[Search Airflow Job] Import Commons Ttl: Munge Dumps",
     "--class",
     "org.wikidata.query.rdf.spark.transform.structureddata.dumps.WikibaseRDFDumpConverter",
-    "--queue",
-    "root.default",
     "/srv/deployment/wikimedia/discovery/analytics/artifacts/rdf-spark-tools-latest-jar-with-dependencies.jar",
     "--input-path",
     "hdfs://analytics-hadoop/wmf/data/raw/commons/dumps/mediainfo-ttl/20210221/commons-20210221-mediainfo.ttl.bz2,",

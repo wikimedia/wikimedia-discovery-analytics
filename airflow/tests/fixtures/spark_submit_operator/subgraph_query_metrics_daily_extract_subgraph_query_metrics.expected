@@ -16,8 +16,6 @@
     "[Search Airflow Job] Subgraph Query Metrics Daily: Extract Subgraph Query Metrics",
     "--class",
     "org.wikidata.query.rdf.spark.metrics.SubgraphMetricsLauncher",
-    "--queue",
-    "root.default",
     "/srv/deployment/wikimedia/discovery/analytics/artifacts/rdf-spark-tools-latest-jar-with-dependencies.jar",
     "query-metrics",
     "--event-query-table",
