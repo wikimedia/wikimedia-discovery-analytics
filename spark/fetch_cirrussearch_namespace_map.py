@@ -42,6 +42,9 @@ def filter_wikiid_to_domain_name_map(df: DataFrame) -> DataFrame:
         .where(F.col('database_group') != 'login')
         # test wikis related to horizon/cloud
         .where(F.col('database_group') != 'labtest')
+        # new wikis can be added to the list before the domain name is known.
+        # Typically empty string but could be null.
+        .where(F.col('domain_name').isNotNull() & (F.col('domain_name') != ''))
         .select('database_code', 'domain_name')
     )
 
